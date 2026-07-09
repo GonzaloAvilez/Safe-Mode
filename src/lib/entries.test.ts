@@ -19,6 +19,7 @@ const {
   recordEmbeddingSpendMock,
   findClosestPhraseMock,
   createResponseMock,
+  insertCrisisContentMock,
 } = vi.hoisted(() => ({
   fromMock: vi.fn(),
   insertMock: vi.fn(),
@@ -30,6 +31,7 @@ const {
   recordEmbeddingSpendMock: vi.fn(),
   findClosestPhraseMock: vi.fn(),
   createResponseMock: vi.fn(),
+  insertCrisisContentMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -54,6 +56,10 @@ vi.mock("@/lib/responses", () => ({
   createResponse: createResponseMock,
 }));
 
+vi.mock("@/lib/crisis-entries", () => ({
+  insertCrisisContent: insertCrisisContentMock,
+}));
+
 const { submitEntry } = await import("@/lib/entries");
 
 function setUpInsertChain() {
@@ -76,13 +82,25 @@ describe("submitEntry — crisis route", () => {
 
     expect(result).toEqual({ type: "crisis", entryId: insertEntrySuccessFixture.data.id });
     expect(insertMock).toHaveBeenCalledWith({
-      text: "texto de crisis",
+      text: null,
       flagged_crisis: true,
       flagged_general: false,
       embedding: null,
     });
+    expect(insertCrisisContentMock).toHaveBeenCalledWith(
+      insertEntrySuccessFixture.data.id,
+      "texto de crisis"
+    );
     expect(canSpendTodayMock).not.toHaveBeenCalled();
     expect(getEmbeddingMock).not.toHaveBeenCalled();
+  });
+
+  it("propagates the error when saving the isolated crisis content fails", async () => {
+    setUpInsertChain();
+    moderateTextMock.mockResolvedValueOnce(concerningModerationCheckFixture);
+    insertCrisisContentMock.mockRejectedValueOnce(new Error("insert failed"));
+
+    await expect(submitEntry("texto de crisis")).rejects.toThrow("insert failed");
   });
 });
 

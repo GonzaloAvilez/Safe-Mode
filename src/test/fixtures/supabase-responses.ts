@@ -75,3 +75,11 @@ export const insertEntryErrorFixture = {
   data: null,
   error: new Error("insert failed"),
 };
+
+export const insertCrisisContentSuccessFixture = {
+  error: null,
+};
+
+export const insertCrisisContentErrorFixture = {
+  error: new Error("insert failed"),
+};
