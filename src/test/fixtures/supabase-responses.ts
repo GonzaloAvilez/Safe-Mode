@@ -65,3 +65,13 @@ export const insertResponseErrorFixture = {
   data: null,
   error: new Error("insert failed"),
 };
+
+export const insertEntrySuccessFixture = {
+  data: { id: "entry-1" },
+  error: null,
+};
+
+export const insertEntryErrorFixture = {
+  data: null,
+  error: new Error("insert failed"),
+};
