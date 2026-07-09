@@ -41,9 +41,17 @@ describe("getEmbedding", () => {
   it("returns the embedding vector from the first result", async () => {
     createEmbeddingMock.mockResolvedValueOnce(embeddingResponseFixture);
 
-    const embedding = await getEmbedding("me siento perdido hoy");
+    const result = await getEmbedding("me siento perdido hoy");
 
-    expect(embedding).toEqual(embeddingResponseFixture.data[0].embedding);
+    expect(result.embedding).toEqual(embeddingResponseFixture.data[0].embedding);
+  });
+
+  it("returns the total token count from the response usage", async () => {
+    createEmbeddingMock.mockResolvedValueOnce(embeddingResponseFixture);
+
+    const result = await getEmbedding("me siento perdido hoy");
+
+    expect(result.totalTokens).toBe(embeddingResponseFixture.usage.total_tokens);
   });
 
   it("propagates the error when the embeddings API call fails", async () => {
