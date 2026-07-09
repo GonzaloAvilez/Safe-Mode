@@ -2,6 +2,21 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { moderateText } from "@/lib/openai";
 import { resolvePhraseModerationStatus, shouldActivatePhrase } from "@/lib/safety/phrase-moderation";
 
+export type PhraseMatch = {
+  id: string;
+  text: string;
+  similarity: number;
+};
+
+// Closest active phrase to the given embedding, or null when the corpus has no match (e.g. before D7 seeding).
+export async function findClosestPhrase(embedding: number[]): Promise<PhraseMatch | null> {
+  const { data, error } = await supabaseAdmin.rpc("match_phrase", { query_embedding: embedding });
+
+  if (error) throw error;
+
+  return data?.[0] ?? null;
+}
+
 // Inserts with the table defaults: moderation_status='pending', active=false.
 // The phrase is never visible in the public corpus until finalizeUserPhraseModeration runs.
 export async function submitUserPhrase(text: string): Promise<{ id: string }> {

@@ -40,3 +40,18 @@ export const incrementDailySpendErrorFixture = {
   data: null,
   error: new Error("rpc failed"),
 };
+
+export const matchPhraseFoundFixture = {
+  data: [{ id: "phrase-1", text: "no estás solo en esto", similarity: 0.87 }],
+  error: null,
+};
+
+export const matchPhraseNoneFoundFixture = {
+  data: [],
+  error: null,
+};
+
+export const matchPhraseErrorFixture = {
+  data: null,
+  error: new Error("rpc failed"),
+};
