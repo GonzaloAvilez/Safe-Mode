@@ -6,6 +6,7 @@ import { estimateEmbeddingCostUsd } from "@/lib/safety/embedding-cost";
 import { canSpendToday, recordEmbeddingSpend } from "@/lib/spend";
 import { findClosestPhrase, type PhraseMatch } from "@/lib/phrases";
 import { createResponse } from "@/lib/responses";
+import { insertCrisisContent } from "@/lib/crisis-entries";
 
 type InsertEntryParams = {
   text: string;
@@ -18,7 +19,8 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
   const { data, error } = await supabaseAdmin
     .from("entries")
     .insert({
-      text: params.text,
+      // Crisis text is never stored here — it lives only in crisis_entries (see P2 of #20).
+      text: params.flaggedCrisis ? null : params.text,
       flagged_crisis: params.flaggedCrisis,
       flagged_general: params.flaggedGeneral,
       embedding: params.embedding,
@@ -27,6 +29,10 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
     .single();
 
   if (error) throw error;
+
+  if (params.flaggedCrisis) {
+    await insertCrisisContent(data.id, params.text);
+  }
 
   return { id: data.id };
 }
