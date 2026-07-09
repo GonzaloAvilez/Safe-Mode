@@ -6,31 +6,34 @@ import {
 import {
   insertPhraseErrorFixture,
   insertPhraseSuccessFixture,
+  matchPhraseErrorFixture,
+  matchPhraseFoundFixture,
+  matchPhraseNoneFoundFixture,
   updateErrorFixture,
   updateSuccessFixture,
 } from "@/test/fixtures/supabase-responses";
 
-const { fromMock, insertMock, selectMock, singleMock, updateMock, eqMock, moderateTextMock } = vi.hoisted(
-  () => ({
+const { fromMock, insertMock, selectMock, singleMock, updateMock, eqMock, rpcMock, moderateTextMock } =
+  vi.hoisted(() => ({
     fromMock: vi.fn(),
     insertMock: vi.fn(),
     selectMock: vi.fn(),
     singleMock: vi.fn(),
     updateMock: vi.fn(),
     eqMock: vi.fn(),
+    rpcMock: vi.fn(),
     moderateTextMock: vi.fn(),
-  })
-);
+  }));
 
 vi.mock("@/lib/supabase", () => ({
-  supabaseAdmin: { from: fromMock },
+  supabaseAdmin: { from: fromMock, rpc: rpcMock },
 }));
 
 vi.mock("@/lib/openai", () => ({
   moderateText: moderateTextMock,
 }));
 
-const { submitUserPhrase, finalizeUserPhraseModeration } = await import("@/lib/phrases");
+const { submitUserPhrase, finalizeUserPhraseModeration, findClosestPhrase } = await import("@/lib/phrases");
 
 function setUpInsertChain() {
   fromMock.mockReturnValue({ insert: insertMock, update: updateMock });
@@ -121,5 +124,37 @@ describe("finalizeUserPhraseModeration", () => {
     await expect(finalizeUserPhraseModeration("phrase-1", "una frase anonima")).rejects.toThrow(
       "network error"
     );
+  });
+});
+
+describe("findClosestPhrase", () => {
+  it("calls the match_phrase RPC with the given embedding", async () => {
+    rpcMock.mockResolvedValueOnce(matchPhraseNoneFoundFixture);
+
+    await findClosestPhrase([0.1, 0.2, 0.3]);
+
+    expect(rpcMock).toHaveBeenCalledWith("match_phrase", { query_embedding: [0.1, 0.2, 0.3] });
+  });
+
+  it("returns the closest phrase when a match is found", async () => {
+    rpcMock.mockResolvedValueOnce(matchPhraseFoundFixture);
+
+    const result = await findClosestPhrase([0.1, 0.2, 0.3]);
+
+    expect(result).toEqual(matchPhraseFoundFixture.data[0]);
+  });
+
+  it("returns null when the corpus has no active phrases to match", async () => {
+    rpcMock.mockResolvedValueOnce(matchPhraseNoneFoundFixture);
+
+    const result = await findClosestPhrase([0.1, 0.2, 0.3]);
+
+    expect(result).toBeNull();
+  });
+
+  it("throws when the RPC call fails", async () => {
+    rpcMock.mockResolvedValueOnce(matchPhraseErrorFixture);
+
+    await expect(findClosestPhrase([0.1, 0.2, 0.3])).rejects.toThrow("rpc failed");
   });
 });
