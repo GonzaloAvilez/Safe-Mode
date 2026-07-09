@@ -83,3 +83,18 @@ export const insertCrisisContentSuccessFixture = {
 export const insertCrisisContentErrorFixture = {
   error: new Error("insert failed"),
 };
+
+export const anonymizeCrisisEntriesSuccessFixture = {
+  data: [{ entry_id: "entry-1" }, { entry_id: "entry-2" }],
+  error: null,
+};
+
+export const anonymizeCrisisEntriesNoneDueFixture = {
+  data: [],
+  error: null,
+};
+
+export const anonymizeCrisisEntriesErrorFixture = {
+  data: null,
+  error: new Error("update failed"),
+};
