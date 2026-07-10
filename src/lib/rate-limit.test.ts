@@ -34,6 +34,8 @@ vi.mock("@/lib/logging", () => ({
 
 const { isRateLimited } = await import("@/lib/rate-limit");
 
+const identifiers = { ip: "203.0.113.10", sessionId: "session-1" };
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -43,19 +45,28 @@ describe("isRateLimited", () => {
     expect(slidingWindowMock).toHaveBeenCalledWith(10, "60 s");
   });
 
-  it("returns false when the sliding window still has room for this IP", async () => {
-    limitMock.mockResolvedValueOnce(rateLimitAllowedFixture);
+  it("returns false when neither the IP nor the session has hit the window", async () => {
+    limitMock.mockResolvedValueOnce(rateLimitAllowedFixture).mockResolvedValueOnce(rateLimitAllowedFixture);
 
-    const result = await isRateLimited("203.0.113.10");
+    const result = await isRateLimited(identifiers);
 
     expect(result).toBe(false);
-    expect(limitMock).toHaveBeenCalledWith("203.0.113.10");
+    expect(limitMock).toHaveBeenCalledWith("ip:203.0.113.10");
+    expect(limitMock).toHaveBeenCalledWith("session:session-1");
   });
 
-  it("returns true once the IP has exceeded the sliding window", async () => {
-    limitMock.mockResolvedValueOnce(rateLimitBlockedFixture);
+  it("returns true when the IP has exceeded the window, even if the session hasn't", async () => {
+    limitMock.mockResolvedValueOnce(rateLimitBlockedFixture).mockResolvedValueOnce(rateLimitAllowedFixture);
 
-    const result = await isRateLimited("203.0.113.10");
+    const result = await isRateLimited(identifiers);
+
+    expect(result).toBe(true);
+  });
+
+  it("returns true when the session has exceeded the window, even if the IP hasn't", async () => {
+    limitMock.mockResolvedValueOnce(rateLimitAllowedFixture).mockResolvedValueOnce(rateLimitBlockedFixture);
+
+    const result = await isRateLimited(identifiers);
 
     expect(result).toBe(true);
   });
@@ -64,17 +75,17 @@ describe("isRateLimited", () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     limitMock.mockRejectedValueOnce(new Error("fetch failed"));
 
-    const result = await isRateLimited("203.0.113.10");
+    const result = await isRateLimited(identifiers);
 
     expect(result).toBe(false);
     consoleErrorSpy.mockRestore();
   });
 
-  it("logs a rate_limit_unavailable outcome when Upstash is unreachable", async () => {
+  it("logs a rate_limit_unavailable outcome (keyed by IP) when Upstash is unreachable", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     limitMock.mockRejectedValueOnce(new Error("fetch failed"));
 
-    await isRateLimited("203.0.113.10");
+    await isRateLimited(identifiers);
 
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "rate_limit_unavailable");
   });

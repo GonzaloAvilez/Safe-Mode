@@ -44,7 +44,11 @@ export type EntryOutcome =
   | { type: "no_match"; entryId: string }
   | { type: "matched"; entryId: string; phrase: PhraseMatch };
 
-export async function submitEntry(text: string, scaleBefore?: number): Promise<EntryOutcome> {
+export async function submitEntry(
+  text: string,
+  sessionId: string,
+  scaleBefore?: number
+): Promise<EntryOutcome> {
   const moderation = await moderateText(text);
   const flags = resolveModerationFlags(moderation);
 
@@ -76,7 +80,7 @@ export async function submitEntry(text: string, scaleBefore?: number): Promise<E
     embedding,
   });
 
-  await createResponse(entry.id, scaleBefore);
+  await createResponse(entry.id, sessionId, scaleBefore);
 
   const match = await findClosestPhrase(embedding);
 

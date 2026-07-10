@@ -8,6 +8,8 @@ import { embeddingResultFixture } from "@/test/fixtures/embedding-result";
 import { phraseMatchFixture } from "@/test/fixtures/phrase-match";
 import { insertEntryErrorFixture, insertEntrySuccessFixture } from "@/test/fixtures/supabase-responses";
 
+const TEST_SESSION_ID = "session-1";
+
 const {
   fromMock,
   insertMock,
@@ -78,7 +80,7 @@ describe("submitEntry — crisis route", () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(concerningModerationCheckFixture);
 
-    const result = await submitEntry("texto de crisis");
+    const result = await submitEntry("texto de crisis", TEST_SESSION_ID);
 
     expect(result).toEqual({ type: "crisis", entryId: insertEntrySuccessFixture.data.id });
     expect(insertMock).toHaveBeenCalledWith({
@@ -100,7 +102,7 @@ describe("submitEntry — crisis route", () => {
     moderateTextMock.mockResolvedValueOnce(concerningModerationCheckFixture);
     insertCrisisContentMock.mockRejectedValueOnce(new Error("insert failed"));
 
-    await expect(submitEntry("texto de crisis")).rejects.toThrow("insert failed");
+    await expect(submitEntry("texto de crisis", TEST_SESSION_ID)).rejects.toThrow("insert failed");
   });
 });
 
@@ -109,7 +111,7 @@ describe("submitEntry — general_flagged route", () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(generalFlaggedModerationCheckFixture);
 
-    const result = await submitEntry("texto violento");
+    const result = await submitEntry("texto violento", TEST_SESSION_ID);
 
     expect(result).toEqual({ type: "general_flagged", entryId: insertEntrySuccessFixture.data.id });
     expect(insertMock).toHaveBeenCalledWith({
@@ -128,7 +130,7 @@ describe("submitEntry — cap_reached route", () => {
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
     canSpendTodayMock.mockResolvedValueOnce(false);
 
-    const result = await submitEntry("un dia normal");
+    const result = await submitEntry("un dia normal", TEST_SESSION_ID);
 
     expect(result).toEqual({ type: "cap_reached", entryId: insertEntrySuccessFixture.data.id });
     expect(canSpendTodayMock).toHaveBeenCalled();
@@ -145,7 +147,7 @@ describe("submitEntry — proceed route", () => {
     findClosestPhraseMock.mockResolvedValueOnce(null);
     createResponseMock.mockResolvedValueOnce({ id: "response-1" });
 
-    await submitEntry("un dia normal");
+    await submitEntry("un dia normal", TEST_SESSION_ID);
 
     expect(recordEmbeddingSpendMock).toHaveBeenCalledWith(embeddingResultFixture.totalTokens);
     expect(insertMock).toHaveBeenCalledWith({
@@ -156,7 +158,7 @@ describe("submitEntry — proceed route", () => {
     });
   });
 
-  it("creates a response with the entry id and the given scaleBefore", async () => {
+  it("creates a response with the entry id, session id, and the given scaleBefore", async () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
     canSpendTodayMock.mockResolvedValueOnce(true);
@@ -164,9 +166,13 @@ describe("submitEntry — proceed route", () => {
     findClosestPhraseMock.mockResolvedValueOnce(null);
     createResponseMock.mockResolvedValueOnce({ id: "response-1" });
 
-    await submitEntry("un dia normal", 4);
+    await submitEntry("un dia normal", TEST_SESSION_ID, 4);
 
-    expect(createResponseMock).toHaveBeenCalledWith(insertEntrySuccessFixture.data.id, 4);
+    expect(createResponseMock).toHaveBeenCalledWith(
+      insertEntrySuccessFixture.data.id,
+      TEST_SESSION_ID,
+      4
+    );
   });
 
   it("returns 'matched' with the phrase when the corpus has a close match", async () => {
@@ -177,7 +183,7 @@ describe("submitEntry — proceed route", () => {
     findClosestPhraseMock.mockResolvedValueOnce(phraseMatchFixture);
     createResponseMock.mockResolvedValueOnce({ id: "response-1" });
 
-    const result = await submitEntry("un dia normal");
+    const result = await submitEntry("un dia normal", TEST_SESSION_ID);
 
     expect(result).toEqual({
       type: "matched",
@@ -194,7 +200,7 @@ describe("submitEntry — proceed route", () => {
     findClosestPhraseMock.mockResolvedValueOnce(null);
     createResponseMock.mockResolvedValueOnce({ id: "response-1" });
 
-    const result = await submitEntry("un dia normal");
+    const result = await submitEntry("un dia normal", TEST_SESSION_ID);
 
     expect(result).toEqual({ type: "no_match", entryId: insertEntrySuccessFixture.data.id });
   });
@@ -207,6 +213,6 @@ describe("submitEntry — failures", () => {
     singleMock.mockResolvedValueOnce(insertEntryErrorFixture);
     moderateTextMock.mockResolvedValueOnce(concerningModerationCheckFixture);
 
-    await expect(submitEntry("texto de crisis")).rejects.toThrow("insert failed");
+    await expect(submitEntry("texto de crisis", TEST_SESSION_ID)).rejects.toThrow("insert failed");
   });
 });
