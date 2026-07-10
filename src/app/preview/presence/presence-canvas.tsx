@@ -22,6 +22,27 @@ const COLLISION_DIST = 42;
 const COLLISION_STRENGTH = 0.06;
 const TOOLTIP_MAX_LENGTH = 60;
 
+// A held-hover pause before the phrase reveals itself — "la transformación necesita reposar":
+// text landing instantly reads as a UI tooltip, text that waits a beat reads as a moment.
+const TOOLTIP_REVEAL_DELAY_MS = 450;
+
+// A cursor is precise; a fingertip isn't. Touch needs a much larger hit radius than
+// mouse hover or almost every tap misses the small dots entirely.
+const MOUSE_HOVER_RADIUS = 14;
+const TOUCH_HOVER_RADIUS = 28;
+
+// The lead line frames someone else's act, never the viewer's state — it must hold up
+// whether the visitor arrives sleepy, mid-focus, already relaxed, or restless, so it
+// stays short, concrete, and free of any claim about how the viewer feels right now.
+// One is picked per session (not per hover) so a single visit reads as consistent.
+const LEAD_PHRASES = [
+  "alguien decidió no esconder esto",
+  "esto existía antes de que llegaras",
+  "alguien lo dejó, tal como es",
+  "alguien decidió compartirlo y soltarlo",
+  "alguien decidió compartir esto tal como es",
+];
+
 // Global repulsion (all pairs, falls off with distance) keeps distinct clusters apart —
 // without it, attraction alone collapses the whole corpus toward one blob, since enough
 // pairs clear the similarity threshold that the graph behaves like a small world.
@@ -37,6 +58,33 @@ const ATTRACTION_MAX_DIST = 260; // cap so far-flung similar pairs don't oversho
 // A minority of points occasionally flare up like the central node, then recede —
 // unsynchronized, so it reads as presences quietly surfacing one at a time, not a strobe.
 const FLASH_CHANCE = 0.15;
+
+// Fixed UI chrome (the enter button, the corner caption) sits over the canvas at all
+// viewport sizes, but on narrow/mobile widths it covers proportionally more of the
+// screen — without a keep-out halo, drifting points collide with it visually.
+const UI_EXCLUSION_MARGIN = 60;
+const UI_EXCLUSION_STRENGTH = 0.4;
+
+type Rect = { left: number; top: number; right: number; bottom: number };
+
+function repelFromZone(p: Point, zone: Rect, margin: number, strength: number) {
+  const closestX = Math.max(zone.left, Math.min(p.x, zone.right));
+  const closestY = Math.max(zone.top, Math.min(p.y, zone.bottom));
+  const dx = p.x - closestX;
+  const dy = p.y - closestY;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d >= margin) return;
+
+  if (d === 0) {
+    // Sitting exactly inside the zone (e.g. right after a resize) — no direction to
+    // push away from, so nudge upward rather than leaving velocity untouched.
+    p.vy -= strength;
+    return;
+  }
+  const force = (1 - d / margin) * strength;
+  p.vx += (dx / d) * force;
+  p.vy += (dy / d) * force;
+}
 
 function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
@@ -86,11 +134,9 @@ class Point {
   update(width: number, height: number, mouse: { x: number; y: number }) {
     if (this.isCentral) return;
 
-    // Check hover against the position from the previous frame, before moving.
-    const mx = mouse.x - this.x;
-    const my = mouse.y - this.y;
-    this.hovered = Math.sqrt(mx * mx + my * my) < 14;
-
+    // `hovered` is set from the outside (by whichever point matches the current
+    // hoverTarget) rather than computed here — mouse and touch share that one
+    // source of truth instead of each running their own distance check.
     if (this.hovered) {
       // Frozen while its phrase is being read — otherwise it drifts out from under
       // the cursor and the tooltip flickers away mid-sentence.
@@ -160,11 +206,19 @@ export function PresenceCanvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipLeadRef = useRef<HTMLDivElement>(null);
+  const tooltipTextRef = useRef<HTMLDivElement>(null);
+  const buttonZoneRef = useRef<HTMLDivElement>(null);
+  const captionZoneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const tooltip = tooltipRef.current;
-    if (!canvas || !tooltip) return;
+    const tooltipLead = tooltipLeadRef.current;
+    const tooltipText = tooltipTextRef.current;
+    const buttonZoneEl = buttonZoneRef.current;
+    const captionZoneEl = captionZoneRef.current;
+    if (!canvas || !tooltip || !tooltipLead || !tooltipText || !buttonZoneEl || !captionZoneEl) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -175,17 +229,27 @@ export function PresenceCanvas({
     let centerY = 0;
     let points: Point[] = [];
     const mouse = { x: -999, y: -999 };
+    let buttonZone: Rect = { left: 0, top: 0, right: 0, bottom: 0 };
+    let captionZone: Rect = { left: 0, top: 0, right: 0, bottom: 0 };
+
+    function measureUiZones() {
+      const b = buttonZoneEl!.getBoundingClientRect();
+      const c = captionZoneEl!.getBoundingClientRect();
+      buttonZone = { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
+      captionZone = { left: c.left, top: c.top, right: c.right, bottom: c.bottom };
+    }
 
     function resize() {
       width = canvas!.width = window.innerWidth;
       height = canvas!.height = window.innerHeight;
       centerX = width / 2;
       centerY = height / 2;
+      measureUiZones();
     }
 
     function initPoints() {
       points = [];
-      points.push(new Point(centerX, centerY, 6, [200, 160, 30], true));
+      points.push(new Point(centerX, centerY, 9, [200, 160, 30], true));
 
       phrases.forEach((phrase, i) => {
         const angle = Math.random() * Math.PI * 2;
@@ -207,23 +271,108 @@ export function PresenceCanvas({
       initPoints();
     }
 
+    // One lead phrase for the whole session, not re-rolled per hover — otherwise the
+    // same visit would show a different framing line on every point, which reads as
+    // random UI copy rather than a single consistent presence.
+    const leadPhrase = LEAD_PHRASES[Math.floor(Math.random() * LEAD_PHRASES.length)];
+
+    // Which point is currently held under the cursor, and the pending timer that will
+    // reveal its phrase — tracked outside handleMouseMove so a reveal in flight can be
+    // cancelled the instant the cursor moves off before the pause finishes.
+    let hoverTarget: Point | null = null;
+    let revealTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Updated once the real phrase text is measured, so positioning can clamp against
+    // the tooltip's actual footprint instead of guessing — a two-word phrase and a
+    // six-line one need different amounts of edge margin.
+    let tooltipSize = { width: 240, height: 60 };
+
+    function positionTooltip(clientX: number, clientY: number) {
+      const margin = 16;
+      const maxLeft = window.innerWidth - tooltipSize.width - margin;
+      const maxTop = window.innerHeight - tooltipSize.height - margin;
+      const left = Math.min(clientX + 14, Math.max(margin, maxLeft));
+      const top = Math.max(margin, Math.min(clientY - 20, Math.max(margin, maxTop)));
+      tooltip!.style.left = `${left}px`;
+      tooltip!.style.top = `${top}px`;
+    }
+
+    // Single source of truth for "which point is under the pointer right now" — used
+    // by both mouse (continuous, small radius) and touch (discrete tap, larger radius)
+    // instead of each input type running its own hit-test.
+    function findHoveredPoint(x: number, y: number, radius: number): Point | null {
+      return (
+        points.find((p) => {
+          if (p.isCentral || !p.phraseText) return false;
+          const dx = p.x - x;
+          const dy = p.y - y;
+          return Math.sqrt(dx * dx + dy * dy) < radius;
+        }) ?? null
+      );
+    }
+
+    function setHoverTarget(hovered: Point | null, clientX: number, clientY: number) {
+      if (hovered === hoverTarget) {
+        if (hoverTarget) positionTooltip(clientX, clientY);
+        return;
+      }
+
+      hoverTarget = hovered;
+      if (revealTimer) clearTimeout(revealTimer);
+      tooltip!.classList.remove("visible");
+
+      if (hovered) {
+        const phraseText = hovered.phraseText!;
+        revealTimer = setTimeout(() => {
+          tooltipLead!.textContent = leadPhrase;
+          tooltipText!.textContent = truncate(phraseText, TOOLTIP_MAX_LENGTH);
+          tooltipSize = {
+            width: tooltip!.offsetWidth,
+            height: tooltip!.offsetHeight,
+          };
+          positionTooltip(clientX, clientY);
+          tooltip!.classList.add("visible");
+        }, TOOLTIP_REVEAL_DELAY_MS);
+      }
+    }
+
+    // Once a real touch happens, stop reacting to mousemove — mobile browsers fire a
+    // single synthetic mousemove/click after touchend, and letting both handlers run
+    // double-processes the same tap with two different (and conflicting) hit radii.
+    let isTouchMode = false;
+
     function handleMouseMove(e: MouseEvent) {
+      if (isTouchMode) return;
       mouse.x = e.clientX;
       mouse.y = e.clientY;
+      const hovered = findHoveredPoint(e.clientX, e.clientY, MOUSE_HOVER_RADIUS);
+      setHoverTarget(hovered, e.clientX, e.clientY);
+    }
 
-      const hovered = points.find((p) => p.hovered && !p.isCentral && p.phraseText);
-      if (hovered && tooltip) {
-        tooltip.textContent = truncate(hovered.phraseText!, TOOLTIP_MAX_LENGTH);
-        tooltip.style.left = `${e.clientX + 14}px`;
-        tooltip.style.top = `${e.clientY - 20}px`;
-        tooltip.classList.add("visible");
-      } else if (tooltip) {
-        tooltip.classList.remove("visible");
+    function handleTouchStart(e: TouchEvent) {
+      const touch = e.touches[0];
+      if (!touch) return;
+      isTouchMode = true;
+
+      if (hoverTarget) {
+        // A tap while something is open only dismisses it — it must never also open
+        // whatever neighboring dot the same tap happened to land near, or closing one
+        // reads as "randomly opened another" (exactly the mobile bug being fixed).
+        mouse.x = -999;
+        mouse.y = -999;
+        setHoverTarget(null, touch.clientX, touch.clientY);
+        return;
       }
+
+      mouse.x = touch.clientX;
+      mouse.y = touch.clientY;
+      const hovered = findHoveredPoint(touch.clientX, touch.clientY, TOUCH_HOVER_RADIUS);
+      setHoverTarget(hovered, touch.clientX, touch.clientY);
     }
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -284,6 +433,15 @@ export function PresenceCanvas({
         }
       }
 
+      points.forEach((p) => {
+        if (p.isCentral) return;
+        repelFromZone(p, buttonZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
+        repelFromZone(p, captionZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
+      });
+
+      points.forEach((p) => {
+        p.hovered = p === hoverTarget;
+      });
       points.forEach((p) => p.update(width, height, mouse));
 
       for (let i = 0; i < points.length; i++) {
@@ -317,7 +475,9 @@ export function PresenceCanvas({
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchstart", handleTouchStart);
       if (rafId) cancelAnimationFrame(rafId);
+      if (revealTimer) clearTimeout(revealTimer);
     };
   }, [phrases, similarities]);
 
@@ -326,22 +486,27 @@ export function PresenceCanvas({
       <canvas ref={canvasRef} className="fixed inset-0 h-full w-full" />
 
       <div className="fixed top-10 left-12 z-10">
-        <div className="text-[22px] font-light tracking-[5px] text-white/82">REFUGIO</div>
+        <div className="text-[22px] font-light tracking-[5px] text-white/82">Refugio[Safe Mode]</div>
         <div className="mt-1 text-[11px] tracking-[2.5px] text-white/25">
-          ecosistema de presencias
+          Ecosistema de presencias
         </div>
       </div>
 
-      <div className="fixed bottom-12 left-12 z-10 max-w-[220px] text-[13px] leading-[1.8] tracking-[.3px] text-white/22">
-        Un espacio vivo donde
+      <div
+        ref={captionZoneRef}
+        className="fixed top-24 left-12 z-10 max-w-[220px] text-[13px] leading-[1.8] tracking-[.3px] text-white/22 sm:top-auto sm:bottom-12"
+      >
+        Cada luz que ves
         <br />
-        cada presencia deja huella,
-        <br />
-        cada huella conecta,
-        <br />y cada conexión sostiene.
+        es alguien que se atrevió
+        <br />a mostrarse por un instante.
       </div>
 
-      <div className="fixed bottom-12 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5">
+      <div
+        ref={buttonZoneRef}
+        className="fixed bottom-12 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5"
+      >
+
         <div className="group flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-transparent transition-all duration-400 hover:scale-110 hover:border-[rgba(200,160,30,0.7)]">
           <div className="h-2.5 w-2.5 rounded-full bg-[rgba(200,160,30,0.55)] transition-colors group-hover:bg-[rgba(200,160,30,0.9)]" />
         </div>
@@ -350,8 +515,11 @@ export function PresenceCanvas({
 
       <div
         ref={tooltipRef}
-        className="pointer-events-none fixed text-center text-[10px] tracking-[.5px] text-white/60 opacity-0 transition-opacity duration-300 [&.visible]:opacity-100"
-      />
+        className="pointer-events-none fixed max-w-[240px] text-center opacity-0 transition-opacity duration-700 [&.visible]:opacity-100"
+      >
+        <div ref={tooltipLeadRef} className="text-[9px] tracking-[1.5px] text-white/35 uppercase" />
+        <div ref={tooltipTextRef} className="mt-1 text-[10px] tracking-[.5px] text-white/60" />
+      </div>
     </>
   );
 }
