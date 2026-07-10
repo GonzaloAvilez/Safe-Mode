@@ -25,30 +25,38 @@ afterEach(() => {
 });
 
 describe("createResponse", () => {
-  it("inserts a response row with the entry id and scale_before", async () => {
+  it("inserts a response row with the entry id, session id, and scale_before", async () => {
     setUpInsertChain();
     singleMock.mockResolvedValueOnce(insertResponseSuccessFixture);
 
-    await createResponse("entry-1", 3);
+    await createResponse("entry-1", "session-1", 3);
 
     expect(fromMock).toHaveBeenCalledWith("responses");
-    expect(insertMock).toHaveBeenCalledWith({ entry_id: "entry-1", scale_before: 3 });
+    expect(insertMock).toHaveBeenCalledWith({
+      entry_id: "entry-1",
+      session_id: "session-1",
+      scale_before: 3,
+    });
   });
 
   it("inserts scale_before as null when not provided", async () => {
     setUpInsertChain();
     singleMock.mockResolvedValueOnce(insertResponseSuccessFixture);
 
-    await createResponse("entry-1");
+    await createResponse("entry-1", "session-1");
 
-    expect(insertMock).toHaveBeenCalledWith({ entry_id: "entry-1", scale_before: null });
+    expect(insertMock).toHaveBeenCalledWith({
+      entry_id: "entry-1",
+      session_id: "session-1",
+      scale_before: null,
+    });
   });
 
   it("returns the id of the inserted response", async () => {
     setUpInsertChain();
     singleMock.mockResolvedValueOnce(insertResponseSuccessFixture);
 
-    const result = await createResponse("entry-1", 3);
+    const result = await createResponse("entry-1", "session-1", 3);
 
     expect(result).toEqual({ id: insertResponseSuccessFixture.data.id });
   });
@@ -57,6 +65,6 @@ describe("createResponse", () => {
     setUpInsertChain();
     singleMock.mockResolvedValueOnce(insertResponseErrorFixture);
 
-    await expect(createResponse("entry-1", 3)).rejects.toThrow("insert failed");
+    await expect(createResponse("entry-1", "session-1", 3)).rejects.toThrow("insert failed");
   });
 });

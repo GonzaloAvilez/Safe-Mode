@@ -2,13 +2,15 @@ import { submitEntry } from "@/lib/entries";
 import { isRateLimited } from "@/lib/rate-limit";
 import { getRequestIp } from "@/lib/request-ip";
 import { logRequestOutcome } from "@/lib/logging";
+import { getOrCreateSessionId } from "@/lib/session";
 
 const MAX_TEXT_LENGTH = 800;
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request);
+  const sessionId = await getOrCreateSessionId();
 
-  if (await isRateLimited(ip)) {
+  if (await isRateLimited({ ip, sessionId })) {
     logRequestOutcome(ip, "rate_limited");
     return Response.json({ error: "too many requests" }, { status: 429 });
   }
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await submitEntry(text, scaleBefore);
+  const result = await submitEntry(text, sessionId, scaleBefore);
   logRequestOutcome(ip, result.type);
 
   return Response.json(result);

@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { isRateLimitedMock, submitEntryMock, logRequestOutcomeMock } = vi.hoisted(() => ({
-  isRateLimitedMock: vi.fn(),
-  submitEntryMock: vi.fn(),
-  logRequestOutcomeMock: vi.fn(),
-}));
+const { isRateLimitedMock, submitEntryMock, logRequestOutcomeMock, getOrCreateSessionIdMock } = vi.hoisted(
+  () => ({
+    isRateLimitedMock: vi.fn(),
+    submitEntryMock: vi.fn(),
+    logRequestOutcomeMock: vi.fn(),
+    getOrCreateSessionIdMock: vi.fn().mockResolvedValue("session-1"),
+  })
+);
 
 vi.mock("@/lib/rate-limit", () => ({
   isRateLimited: isRateLimitedMock,
@@ -16,6 +19,10 @@ vi.mock("@/lib/entries", () => ({
 
 vi.mock("@/lib/logging", () => ({
   logRequestOutcome: logRequestOutcomeMock,
+}));
+
+vi.mock("@/lib/session", () => ({
+  getOrCreateSessionId: getOrCreateSessionIdMock,
 }));
 
 const { POST } = await import("@/app/api/entries/route");
@@ -33,12 +40,13 @@ afterEach(() => {
 });
 
 describe("POST /api/entries", () => {
-  it("returns 429 and never calls submitEntry when the IP is rate limited", async () => {
+  it("returns 429 and never calls submitEntry when the IP or session is rate limited", async () => {
     isRateLimitedMock.mockResolvedValueOnce(true);
 
     const response = await POST(postRequest({ text: "hola" }));
 
     expect(response.status).toBe(429);
+    expect(isRateLimitedMock).toHaveBeenCalledWith({ ip: "203.0.113.10", sessionId: "session-1" });
     expect(submitEntryMock).not.toHaveBeenCalled();
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "rate_limited");
   });
@@ -60,7 +68,7 @@ describe("POST /api/entries", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 200 with the submitEntry outcome when allowed", async () => {
+  it("returns 200 with the submitEntry outcome when allowed, forwarding the session id", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
     submitEntryMock.mockResolvedValueOnce({ type: "no_match", entryId: "entry-1" });
 
@@ -69,6 +77,7 @@ describe("POST /api/entries", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ type: "no_match", entryId: "entry-1" });
+    expect(submitEntryMock).toHaveBeenCalledWith("un dia normal", "session-1", undefined);
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "no_match");
   });
 });
