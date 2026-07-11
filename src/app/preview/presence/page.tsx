@@ -1,0 +1,47 @@
+import { supabaseAdmin } from "@/lib/supabase";
+import { PresenceCanvas } from "./presence-canvas";
+
+// pgvector returns embeddings either as a real array or a "[0.1,0.2,...]" string, depending on driver path.
+function parseEmbedding(raw: unknown): number[] {
+  return Array.isArray(raw) ? raw : JSON.parse(raw as string);
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+export default async function PresencePreviewPage() {
+  const { data, error } = await supabaseAdmin
+    .from("phrases")
+    .select("id, text, embedding")
+    .eq("active", true)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const embeddings = rows.map((row) => parseEmbedding(row.embedding));
+
+  // Precompute the full pairwise similarity matrix server-side — the client only ever
+  // needs these scores, never the 1536-dim vectors themselves.
+  const similarities: number[][] = rows.map(() => new Array(rows.length).fill(0));
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      const sim = cosineSimilarity(embeddings[i], embeddings[j]);
+      similarities[i][j] = sim;
+      similarities[j][i] = sim;
+    }
+  }
+
+  const phrases = rows.map((row) => ({ id: row.id, text: row.text }));
+
+  return <PresenceCanvas phrases={phrases} similarities={similarities} />;
+}
