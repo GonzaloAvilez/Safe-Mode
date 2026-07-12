@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { SCENE_BG_HEX } from "../_shared/scene";
+import { startAnimationLoop } from "../_shared/animation-loop";
 
 // Only golden tones for Arrive — warm, contained, intimate. The multi-color range
 // belongs to Observe, once you've actually seen other people's presence; here it's
@@ -217,28 +219,21 @@ export function ArriveCanvas() {
       }
     }
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let t = 0;
-    let rafId: number;
-
-    function frame() {
+    function drawFrame() {
       ctx!.clearRect(0, 0, width, height);
-      ctx!.fillStyle = "#08090e";
+      ctx!.fillStyle = SCENE_BG_HEX;
       ctx!.fillRect(0, 0, width, height);
       t += 0.01;
       particles.forEach((p) => p.update(width, height, t));
       drawConnections();
       particles.forEach((p) => p.draw(ctx!, t));
-
-      if (!prefersReducedMotion) {
-        rafId = requestAnimationFrame(frame);
-      }
     }
-    frame();
+    const { stop } = startAnimationLoop(drawFrame);
 
     return () => {
       window.removeEventListener("resize", handleResize);
-      if (rafId) cancelAnimationFrame(rafId);
+      stop();
     };
   }, []);
 

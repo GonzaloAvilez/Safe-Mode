@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { PresenceCanvas } from "./presence-canvas";
+import { ScreenHeader } from "../_shared/screen-header";
+import { ObserveCanvas } from "./observe-canvas";
 
 // pgvector returns embeddings either as a real array or a "[0.1,0.2,...]" string, depending on driver path.
 function parseEmbedding(raw: unknown): number[] {
@@ -18,7 +19,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-export default async function PresencePreviewPage() {
+export default async function ObservePage() {
   const { data, error } = await supabaseAdmin
     .from("phrases")
     .select("id, text, embedding")
@@ -43,5 +44,10 @@ export default async function PresencePreviewPage() {
 
   const phrases = rows.map((row) => ({ id: row.id, text: row.text }));
 
-  return <PresenceCanvas phrases={phrases} similarities={similarities} />;
+  return (
+    <>
+      <ObserveCanvas phrases={phrases} similarities={similarities} />
+      <ScreenHeader tagline="Ecosistema de presencias" />
+    </>
+  );
 }
