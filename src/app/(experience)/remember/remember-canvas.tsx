@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { SCENE_BG_HEX } from "../_shared/scene";
+import { startAnimationLoop } from "../_shared/animation-loop";
 
 // A pale, quiet tone — not gold (Arrive, still just you before seeing anyone else)
 // and not the multicolor corpus (Observe, other people's presences). This light is
@@ -88,8 +90,6 @@ export function RememberCanvas() {
     }
     window.addEventListener("resize", handleResize);
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     function withinHit(x: number, y: number, radius: number) {
       const dx = x - centerX;
       const dy = y - centerY;
@@ -98,7 +98,7 @@ export function RememberCanvas() {
 
     function draw(scale: number) {
       ctx!.clearRect(0, 0, width, height);
-      ctx!.fillStyle = "#0a0c10";
+      ctx!.fillStyle = SCENE_BG_HEX;
       ctx!.fillRect(0, 0, width, height);
 
       const [r, g, b] = SELF;
@@ -130,6 +130,20 @@ export function RememberCanvas() {
       ctx!.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx!.fillStyle = `rgba(${r},${g},${b},${Math.min(1, alpha)})`;
       ctx!.fill();
+    }
+
+    function drawFrame(elapsedMs: number) {
+      const scale = breathingScale(elapsedMs);
+      draw(scale);
+      touchBoost *= TOUCH_DECAY;
+      if (touchBoost < 0.001) touchBoost = 0;
+    }
+    const { stop, prefersReducedMotion } = startAnimationLoop(drawFrame);
+    if (prefersReducedMotion) {
+      // startAnimationLoop already drew one frame at elapsedMs=0 (scale=0, fully
+      // exhaled) — override with the resting-but-alive mid-breath frame this screen
+      // actually wants a static visitor to see.
+      draw(0.5);
     }
 
     function triggerPulse() {
@@ -170,28 +184,11 @@ export function RememberCanvas() {
       window.setTimeout(() => echoEl.classList.remove("visible"), ECHO_VISIBLE_MS);
     }
 
-    const start = performance.now();
-    let rafId: number;
-
-    function frame(now: number) {
-      const scale = breathingScale(now - start);
-      draw(scale);
-      touchBoost *= TOUCH_DECAY;
-      if (touchBoost < 0.001) touchBoost = 0;
-      rafId = requestAnimationFrame(frame);
-    }
-
-    if (prefersReducedMotion) {
-      draw(0.5);
-    } else {
-      rafId = requestAnimationFrame(frame);
-    }
-
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("click", handleClick);
       window.removeEventListener("touchstart", handleTouchStart);
-      if (rafId) cancelAnimationFrame(rafId);
+      stop();
     };
   }, []);
 

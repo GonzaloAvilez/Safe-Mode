@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { SCENE_BG_HEX } from "../_shared/scene";
+import { startAnimationLoop } from "../_shared/animation-loop";
+import { ScreenCta } from "../_shared/screen-cta";
 
 type Phrase = {
   id: string;
@@ -197,7 +200,7 @@ class Point {
   }
 }
 
-export function PresenceCanvas({
+export function ObserveCanvas({
   phrases,
   similarities,
 }: {
@@ -208,7 +211,7 @@ export function PresenceCanvas({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const tooltipLeadRef = useRef<HTMLDivElement>(null);
   const tooltipTextRef = useRef<HTMLDivElement>(null);
-  const buttonZoneRef = useRef<HTMLDivElement>(null);
+  const buttonZoneRef = useRef<HTMLAnchorElement>(null);
   const captionZoneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -374,14 +377,10 @@ export function PresenceCanvas({
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     let t = 0;
-    let rafId: number;
-
-    function frame() {
+    function drawFrame() {
       ctx!.clearRect(0, 0, width, height);
-      ctx!.fillStyle = "#080c14";
+      ctx!.fillStyle = SCENE_BG_HEX;
       ctx!.fillRect(0, 0, width, height);
       t += 0.012;
 
@@ -465,18 +464,14 @@ export function PresenceCanvas({
       }
 
       points.forEach((p) => p.draw(ctx!, t));
-
-      if (!prefersReducedMotion) {
-        rafId = requestAnimationFrame(frame);
-      }
     }
-    frame();
+    const { stop } = startAnimationLoop(drawFrame);
 
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("touchstart", handleTouchStart);
-      if (rafId) cancelAnimationFrame(rafId);
+      stop();
       if (revealTimer) clearTimeout(revealTimer);
     };
   }, [phrases, similarities]);
@@ -484,13 +479,6 @@ export function PresenceCanvas({
   return (
     <>
       <canvas ref={canvasRef} className="fixed inset-0 h-full w-full" />
-
-      <div className="fixed top-10 left-12 z-10">
-        <div className="text-[22px] font-light tracking-[5px] text-white/82">Refugio[Safe Mode]</div>
-        <div className="mt-1 text-[11px] tracking-[2.5px] text-white/25">
-          Ecosistema de presencias
-        </div>
-      </div>
 
       <div
         ref={captionZoneRef}
@@ -502,16 +490,7 @@ export function PresenceCanvas({
         <br />a mostrarse por un instante.
       </div>
 
-      <div
-        ref={buttonZoneRef}
-        className="fixed bottom-12 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5"
-      >
-
-        <div className="group flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-transparent transition-all duration-400 hover:scale-110 hover:border-[rgba(200,160,30,0.7)]">
-          <div className="h-2.5 w-2.5 rounded-full bg-[rgba(200,160,30,0.55)] transition-colors group-hover:bg-[rgba(200,160,30,0.9)]" />
-        </div>
-        <div className="text-[10px] tracking-[1.5px] text-white/22">entra sin hacer nada</div>
-      </div>
+      <ScreenCta ref={buttonZoneRef} href="/remember" label="entra sin hacer nada" accentRgb="200,160,30" />
 
       <div
         ref={tooltipRef}
