@@ -28,7 +28,11 @@ export default async function ObservePage() {
 
   if (error) throw error;
 
-  const rows = data ?? [];
+  // An active row with no embedding shouldn't exist (finalizeUserPhraseModeration
+  // only ever sets active:true alongside a real embedding, in the same write) — but
+  // this is exactly the null that made this page 500 for every visitor before that
+  // fix (2026-07-12), so it stays defensive here too: drop rather than crash on it.
+  const rows = (data ?? []).filter((row) => row.embedding !== null);
   const embeddings = rows.map((row) => parseEmbedding(row.embedding));
 
   // Precompute the full pairwise similarity matrix server-side — the client only ever
