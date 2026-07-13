@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
+import { useRouter } from "next/navigation";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
+import { writeMirrorHandoff } from "../../_shared/mirror-handoff";
 import { Searching } from "./searching";
 
 const MAX_TEXT_LENGTH = 800;
@@ -10,11 +12,10 @@ type Outcome =
   | { type: "crisis" }
   | { type: "general_flagged" }
   | { type: "cap_reached" }
-  | { type: "no_match" }
-  | { type: "matched"; phraseText: string }
   | { type: "error"; message: string };
 
 export function EntryForm() {
+  const router = useRouter();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -34,17 +35,30 @@ export function EntryForm() {
 
       if (!res.ok) {
         setOutcome({ type: "error", message: body.error ?? "Algo salió mal." });
+        setSubmitting(false);
         return;
       }
 
-      setOutcome(
-        body.type === "matched"
-          ? { type: "matched", phraseText: body.phrase.text }
-          : { type: body.type }
-      );
+      if (body.type === "matched") {
+        writeMirrorHandoff({ outcome: "matched", text: body.phrase.text, entryId: body.entryId });
+        router.push("/mirror");
+        // Leave submitting=true — Searching stays on screen through the route swap
+        // instead of the form flashing back for a frame first.
+        return;
+      }
+
+      if (body.type === "no_match") {
+        // No phrase to mirror back, but the visitor still passes through Mirror
+        // rather than dead-ending here — see MirrorPage's no_match rendering.
+        writeMirrorHandoff({ outcome: "no_match", entryId: body.entryId });
+        router.push("/mirror");
+        return;
+      }
+
+      setOutcome({ type: body.type });
+      setSubmitting(false);
     } catch {
       setOutcome({ type: "error", message: "No pudimos conectar. Intenta de nuevo." });
-    } finally {
       setSubmitting(false);
     }
   }
@@ -121,18 +135,6 @@ function OutcomeMessage({ outcome }: { outcome: Outcome }) {
       return (
         <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
           Ya usamos todo el espacio de hoy, vuelve mañana.
-        </p>
-      );
-    case "no_match":
-      return (
-        <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
-          Tu presencia quedó registrada. Aún no encontramos un reflejo para ti.
-        </p>
-      );
-    case "matched":
-      return (
-        <p className="text-[15px] leading-[1.9] tracking-[.3px] text-white/70">
-          &ldquo;{outcome.phraseText}&rdquo;
         </p>
       );
     case "error":
