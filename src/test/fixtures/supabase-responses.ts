@@ -16,6 +16,26 @@ export const updateErrorFixture = {
   error: new Error("update failed"),
 };
 
+export const selectPhraseNeedsEmbeddingFixture = {
+  data: { text: "una frase anonima", embedding: null, moderation_status: "approved" },
+  error: null,
+};
+
+export const selectPhraseAlreadyEmbeddedFixture = {
+  data: { text: "una frase anonima", embedding: [0.01, -0.02, 0.03], moderation_status: "approved" },
+  error: null,
+};
+
+export const selectPhraseNotApprovedFixture = {
+  data: { text: "una frase anonima", embedding: null, moderation_status: "pending" },
+  error: null,
+};
+
+export const selectPhraseErrorFixture = {
+  data: null,
+  error: new Error("select failed"),
+};
+
 export const dailySpendExistingRowFixture = {
   data: { total_usd: 1.5 },
   error: null,
