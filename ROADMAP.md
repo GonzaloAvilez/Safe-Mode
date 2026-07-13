@@ -14,7 +14,7 @@ The real UX evolved past the original day-by-day spec in places — see "Added s
 - [x] **D5-6 Build** — Core end-to-end flow: text → moderation → embedding → match (`POST /api/entries`).
 - [x] **D7 Build** — 50 seed phrases with embeddings, wide emotional diversity (`scripts/seed-phrases.ts`).
 
-**Post-hoc fix to D3 (2026-07-11):** `match_phrase` had no minimum-similarity floor — it always returned the single nearest phrase regardless of how far away it actually was. Confirmed empirically: nonsense input ("test foo") matched a real phrase at similarity 0.077. Fixed by requiring similarity > 0.5 (same threshold already used by Observe's canvas, empirically ~p90 of the real corpus's own pairwise similarity distribution). Branch `week1/match-phrase-similarity-threshold`, pushed, not yet merged to `master`.
+**Post-hoc fix to D3 (2026-07-11):** `match_phrase` had no minimum-similarity floor — it always returned the single nearest phrase regardless of how far away it actually was. Confirmed empirically: nonsense input ("test foo") matched a real phrase at similarity 0.077. Fixed by requiring similarity > 0.5 (same threshold already used by Observe's canvas, empirically ~p90 of the real corpus's own pairwise similarity distribution). Branch `week1/match-phrase-similarity-threshold`, merged to `master` via PR #33.
 
 ## Issue #20 — Security hardening pass ✅ complete
 
@@ -29,7 +29,7 @@ The real UX evolved past the original day-by-day spec in places — see "Added s
 - [ ] **D10 Generative audio** — Web Audio API soundscape triggered by interaction. **Not started — no audio exists anywhere in the codebase.** (The handpan-audio ideas from an earlier ChatGPT conversation never made it into real code.)
 - [~] **D11 Writing field + safety text** — Write. 800-char limit exists; no visible calm counter (e.g. "245/800"); no territory/rules notice before the field. Partial.
 - [~] **D12 Crisis screen** — exists as an outcome state inside Write's result (not a dedicated screen), shows `findahelpline.com`. Functionally working.
-- [~] **D13 Mirror screen** — exists as Write's "matched" outcome state (closest anonymous phrase, no name/photo), not a separate screen. Functionally working.
+- [~] **D13 Mirror screen** — exists as Write's "matched" outcome state (closest anonymous phrase, no name/photo), not a separate screen. Functionally working, but felt "cold/automatic" in real testing (2026-07-12) — no canvas, no transition, just an inline text swap. Real mockups found the same day confirm it should become its own dedicated screen (`/mirror`, screen 06 of 8) — see "Added scope" below.
 - [ ] **D14 Public URL + domain** — **nothing is deployed to `master`/production yet.** Deliberate decision (screens stay on `preview` until ready), but this is the official Week 2 deliverable and it isn't met yet.
 
 **Week 2 deliverable ("app live on the internet, full flow working end to end") not yet met** — blocked on D10, D14, and the non-negotiable checklist below.
@@ -38,6 +38,11 @@ The real UX evolved past the original day-by-day spec in places — see "Added s
 
 - [~] **Remember screen** — reflective pause between Observe and Write (breathing point, box-breathing cadence). Your own design addition, sourced from a separate 6-screen design brief (Toy Story 5 / "Refugio"), not from the official D-day plan. Built, merged to `preview`.
 - **Feel Safe** — was part of that same richer 6-screen vision, then cut after design review (redundant with what Observe already does — see [[project_refugio_design_brief]]). Was never part of the official plan either, so cutting it doesn't affect D-day scope.
+- [ ] **Searching, Mirror, Gratitude — three more screens, discovered 2026-07-12.** Real mockups (`refugio-all-screens.html`, `bocetos_pantallas_05_06_08.html`, `refugio_spec_design_v3.png`, all dropped in `~/Downloads` same day — spec image now also at `docs/design/refugio_spec_design_v3.png`, see below) revealed the flow is actually **8 screens**, not 5: Arrive → Observe → Remember → Write → **Searching** → **Mirror** → **Gratitude** → Leave a Trace. None of these three existed in any prior plan or code:
+  - **Searching** — not a separate route; a full-screen ritualized loading state (gold point pulsing, particles scattering) shown while the real `POST /api/entries` request is in flight. Mockup's own note: "la latencia técnica se vuelve ritual."
+  - **Mirror** — promotes D13 from an inline Write outcome state into its own screen (`/mirror`): violet "other" node, quote fades in letter-by-letter, "resonó conmigo" button advances to Gratitude. Only reached on `matched`; `no_match` skips straight to Gratitude.
+  - **Gratitude** (`/gratitude`) — static closing message screen ("Gracias por permitirte estar aquí"), densest/warmest ecosystem visual of the flow, no input. Separate from Leave a Trace, confirmed to come *before* it.
+  - Write itself also gets a visual update per the same mockups (violet accent canvas, replacing its current canvas-less static gradient) — not previously scoped either.
 
 ## 🔴 Non-negotiable before D26 (soft launch) — current gaps
 
