@@ -40,8 +40,8 @@ export async function submitUserPhrase(text: string): Promise<{ id: string }> {
 // setPhraseActive for the activation half so the embedding/spend-cap logic only lives in
 // one place, shared with the admin "Aprobar"/"Activar" actions below.
 export async function finalizeUserPhraseModeration(id: string, text: string): Promise<void> {
-  const { flagged } = await moderateText(text);
-  const status = resolvePhraseModerationStatus({ flagged });
+  const moderation = await moderateText(text);
+  const status = resolvePhraseModerationStatus(moderation);
 
   const { error } = await supabaseAdmin.from("phrases").update({ moderation_status: status }).eq("id", id);
   if (error) throw error;
