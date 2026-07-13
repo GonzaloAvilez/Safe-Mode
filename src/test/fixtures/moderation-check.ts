@@ -27,3 +27,15 @@ export const generalFlaggedModerationCheckFixture: ModerationCheck = {
     "self-harm/instructions": 0,
   },
 };
+
+// Not flagged by OpenAI's own categories, but crosses the app's own conservative
+// self-harm threshold (CRISIS_THRESHOLD, 0.2) — the case the raw `flagged` boolean
+// alone would miss.
+export const selfHarmOnlyModerationCheckFixture: ModerationCheck = {
+  flagged: false,
+  selfHarmScores: {
+    "self-harm": 0.25,
+    "self-harm/intent": 0,
+    "self-harm/instructions": 0,
+  },
+};
