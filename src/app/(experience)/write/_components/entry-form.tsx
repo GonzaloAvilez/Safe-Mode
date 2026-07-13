@@ -2,6 +2,7 @@
 
 import { useState, type SubmitEvent } from "react";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
+import { Searching } from "./searching";
 
 const MAX_TEXT_LENGTH = 800;
 
@@ -53,6 +54,10 @@ export function EntryForm() {
     setOutcome(null);
   }
 
+  if (submitting) {
+    return <Searching />;
+  }
+
   if (outcome) {
     return (
       <div className="flex w-full max-w-md flex-col items-center gap-6 text-center">
@@ -81,10 +86,10 @@ export function EntryForm() {
       />
       <button
         type="submit"
-        disabled={submitting || text.trim().length === 0}
+        disabled={text.trim().length === 0}
         className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[11px] tracking-[1.5px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
       >
-        {submitting ? "enviando…" : "enviar"}
+        enviar
       </button>
     </form>
   );
