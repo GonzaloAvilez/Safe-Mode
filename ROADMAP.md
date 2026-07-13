@@ -29,20 +29,20 @@ The real UX evolved past the original day-by-day spec in places — see "Added s
 - [ ] **D10 Generative audio** — Web Audio API soundscape triggered by interaction. **Not started — no audio exists anywhere in the codebase.** (The handpan-audio ideas from an earlier ChatGPT conversation never made it into real code.)
 - [~] **D11 Writing field + safety text** — Write. 800-char limit exists; no visible calm counter (e.g. "245/800"); no territory/rules notice before the field. Partial.
 - [~] **D12 Crisis screen** — exists as an outcome state inside Write's result (not a dedicated screen), shows `findahelpline.com`. Functionally working.
-- [~] **D13 Mirror screen** — exists as Write's "matched" outcome state (closest anonymous phrase, no name/photo), not a separate screen. Functionally working, but felt "cold/automatic" in real testing (2026-07-12) — no canvas, no transition, just an inline text swap. Real mockups found the same day confirm it should become its own dedicated screen (`/mirror`, screen 06 of 8) — see "Added scope" below.
-- [ ] **D14 Public URL + domain** — **nothing is deployed to `master`/production yet.** Deliberate decision (screens stay on `preview` until ready), but this is the official Week 2 deliverable and it isn't met yet.
+- [~] **D13 Mirror screen** — resolved 2026-07-13. Promoted out of Write's inline "matched" outcome state into its own screen (`/mirror`, screen 06 of 8): violet "other" node, quote reveals letter-by-letter, "resonó conmigo" toggle. Also now reached on `no_match` (not just `matched`) — the node dims instead of disappearing, so the visitor never dead-ends back in Write. Built, merged to `preview` via PR #37.
+- [ ] **D14 Public URL + domain** — **nothing is deployed to `master`/production yet.** Deliberate decision (screens stay on `preview` until ready), but this is the official Week 2 deliverable and it isn't met yet. **This is the actual bottleneck now** — the full 8-screen flow is built and merged to `preview` as of 2026-07-13, but none of it exists for a real visitor until this lands.
 
-**Week 2 deliverable ("app live on the internet, full flow working end to end") not yet met** — blocked on D10, D14, and the non-negotiable checklist below.
+**Week 2 deliverable ("app live on the internet, full flow working end to end") not yet met** — blocked on D10, D14, and the non-negotiable checklist below. The flow itself is no longer the blocker; getting it in front of anyone is.
 
 ## Added scope — not in the original 4-week plan
 
 - [~] **Remember screen** — reflective pause between Observe and Write (breathing point, box-breathing cadence). Your own design addition, sourced from a separate 6-screen design brief (Toy Story 5 / "Refugio"), not from the official D-day plan. Built, merged to `preview`.
 - **Feel Safe** — was part of that same richer 6-screen vision, then cut after design review (redundant with what Observe already does — see [[project_refugio_design_brief]]). Was never part of the official plan either, so cutting it doesn't affect D-day scope.
-- [ ] **Searching, Mirror, Gratitude — three more screens, discovered 2026-07-12.** Real mockups (`refugio-all-screens.html`, `bocetos_pantallas_05_06_08.html`, `refugio_spec_design_v3.png`, all dropped in `~/Downloads` same day — spec image now also at `docs/design/refugio_spec_design_v3.png`, see below) revealed the flow is actually **8 screens**, not 5: Arrive → Observe → Remember → Write → **Searching** → **Mirror** → **Gratitude** → Leave a Trace. None of these three existed in any prior plan or code:
-  - **Searching** — not a separate route; a full-screen ritualized loading state (gold point pulsing, particles scattering) shown while the real `POST /api/entries` request is in flight. Mockup's own note: "la latencia técnica se vuelve ritual."
-  - **Mirror** — promotes D13 from an inline Write outcome state into its own screen (`/mirror`): violet "other" node, quote fades in letter-by-letter, "resonó conmigo" button advances to Gratitude. Only reached on `matched`; `no_match` skips straight to Gratitude.
-  - **Gratitude** (`/gratitude`) — static closing message screen ("Gracias por permitirte estar aquí"), densest/warmest ecosystem visual of the flow, no input. Separate from Leave a Trace, confirmed to come *before* it.
-  - Write itself also gets a visual update per the same mockups (violet accent canvas, replacing its current canvas-less static gradient) — not previously scoped either.
+- [~] **Searching, Mirror, Gratitude — three more screens, discovered 2026-07-12, built 2026-07-13.** Real mockups (`refugio-all-screens.html`, `bocetos_pantallas_05_06_08.html`, `refugio_spec_design_v3.png`, all dropped in `~/Downloads` same day — spec image now also at `docs/design/refugio_spec_design_v3.png`, see below) revealed the flow is actually **8 screens**, not 5: Arrive → Observe → Remember → Write → **Searching** → **Mirror** → **Gratitude** → Leave a Trace. All three built and merged to `preview` (PRs #36-38):
+  - **Searching** (`src/app/(experience)/write/_components/searching.tsx`) — not a separate route; a full-screen ritualized loading state (gold sonar rings + orbiting particles converging on a pulsing core) shown while the real `POST /api/entries` request is in flight. Mockup's own note: "la latencia técnica se vuelve ritual."
+  - **Mirror** (`/mirror`) — promotes D13 from an inline Write outcome state into its own screen: violet "other" node, quote reveals letter-by-letter, "resonó conmigo" toggle (persists to `responses.wants_reply` via `POST /api/entries/[id]/resonate`). Deviated from the original mockup during build: also reached on `no_match`, not just `matched` — the visitor still passes through Mirror with the node dimmed rather than dead-ending in Write. **Flagged by the user for a follow-up adjustment pass — scope not yet defined.**
+  - **Gratitude** (`/gratitude`) — static closing message screen ("Gracias por permitirte estar aquí"), densest/warmest ecosystem visual of the flow (reuses Arrive's particle pattern with Observe's full multicolor palette), no input. Reached from Mirror regardless of outcome. **Also flagged by the user for a follow-up adjustment pass — scope not yet defined.**
+  - Write itself did *not* get the violet-accent-canvas visual update the same mockups implied — deprioritized, still just a static gradient glow. Open if picked back up later.
 
 ## 🔴 Non-negotiable before D26 (soft launch) — current gaps
 
@@ -58,8 +58,9 @@ The plan specifies English-speaking testers for D18-19 and "in English" for D26 
 ## Week 3 — Real users (not started)
 
 - [ ] **D15 Before/after scale** — 1-5 question, saved to Supabase. Schema exists (`scale_before`/`scale_after` columns), no UI control on any screen yet.
-- [ ] **D16 Fake door — reply** — flag in Supabase, no real chat, measures connection intent. Not built.
-- [ ] **D17 Leave a phrase** — this is "Leave a Trace" from the 5-screen flow. Optional, 120 chars, through Moderation before joining the pool. Backend plumbing exists (`submitUserPhrase`/`finalizeUserPhraseModeration` in `src/lib/phrases.ts`), unwired to any screen.
+- [~] **D16 Fake door — reply** — partially covered, not by design. Mirror's "resonó conmigo" toggle (2026-07-13) writes to the same `responses.wants_reply` column this item names, but it signals "this phrase resonated with me," not the "I want to reply" intent D16 originally specced. Worth a decision: treat as done, or still build the originally-intended fake-door reply gesture separately.
+- [~] **D17 Leave a phrase** — this is "Leave a Trace", screen 08 of 8, the last in the sequence, after Gratitude. Built 2026-07-13: `/leave-a-trace`, optional (120 chars, explicit "prefiero no dejar nada" skip), reuses Write's textarea/button spec, submits via `POST /api/phrases`. Merged to `preview` via PR #39 — not in `master` yet.
+  - **Post-hoc fix, same day:** `finalizeUserPhraseModeration` was activating approved user phrases without ever computing an embedding — `active=true`, `embedding=NULL`. `observe/page.tsx`'s pairwise similarity loop threw on the null, which would have 500'd `/observe` for every visitor the moment the first user phrase got approved. Fixed before this screen shipped: activation now only happens in the same write that also computes and stores a real embedding, gated by the same daily spend cap D4 already enforces for entries. Observe also got a defensive filter dropping any active-but-embedding-less row, in case a manual Supabase Studio edit ever reintroduces the state.
 - [ ] **D18-19 5 real users** — blocked on D14 (public URL) and the language decision above.
 - [ ] **D20-21 Adjustments from feedback** — depends on D18-19.
 
@@ -74,16 +75,21 @@ The plan specifies English-speaking testers for D18-19 and "in English" for D26 
 ## Open / deferred
 
 - [ ] **CI test suite** — gate PRs on `test`/`lint`/`build`. Only migrations auto-deploy today.
-- [ ] **`wants_reply` UI** — no screen holds this control yet (the `scale_before`/`scale_after` half of this is tracked under D15 above).
+- [~] **`wants_reply` UI** — resolved 2026-07-13 via Mirror's "resonó conmigo" toggle (on `preview`, not `master`), though see the D16 note above on whether it's the *right* control for what this item originally meant. (The `scale_before`/`scale_after` half of this is still tracked under D15 above — that part remains unbuilt.)
 - [~] **Spend-cap-reached UX** — partially resolved: Write's restyled outcome states now include this copy ("Ya usamos todo el espacio de hoy, vuelve mañana"), never explicitly tested end-to-end.
 - [ ] **Bot/abuse protection** — rate limiting done; honeypot field + submission-timing check still pending (deprioritized).
 - [ ] **In-app admin review panel** — deferred post-MVP; Supabase Studio is the manual-review fallback.
 - [ ] **`match_phrase` vector index** — full table scan today, fine at current scale (~50 phrases). Revisit if active phrases approach ~5,000–10,000 rows — see [[project_match_phrase_scaling_tripwire]].
 
-## Experience flow (Arrive → Observe → Remember → Write → Leave a Trace)
+## Experience flow (Arrive → Observe → Remember → Write → Searching → Mirror → Gratitude → Leave a Trace)
+
+All 8 screens now built and merged to `preview` (PRs #29-31, #36-39) — **none deployed to `master`/production yet, see D14.**
 
 - [~] **Arrive** — `src/app/(experience)/arrive` — built, on `preview`.
 - [~] **Observe** — `src/app/(experience)/observe` — built, on `preview`. (Maps to D8-9.)
 - [~] **Remember** — `src/app/(experience)/remember` — built, on `preview`. Added scope, see above.
-- [~] **Write** — `src/app/(experience)/write` — functional + visually redesigned, on `preview`. (Maps to D11-13.)
-- [ ] **Leave a Trace** — not built. (Maps to D17, Week 3.)
+- [~] **Write** — `src/app/(experience)/write` — functional + visually redesigned, on `preview`. (Maps to D11-13.) Still missing the violet-canvas visual update the 2026-07-12 mockups implied — see "Added scope" above.
+- [~] **Searching** — `src/app/(experience)/write/_components/searching.tsx` — built, on `preview`. Not a route, see "Added scope" above.
+- [~] **Mirror** — `src/app/(experience)/mirror` — built, on `preview`. Flagged for a follow-up adjustment pass, scope TBD. (Maps to D13.)
+- [~] **Gratitude** — `src/app/(experience)/gratitude` — built, on `preview`. Flagged for a follow-up adjustment pass, scope TBD.
+- [~] **Leave a Trace** — `src/app/(experience)/leave-a-trace` — built, on `preview`. (Maps to D17.)
