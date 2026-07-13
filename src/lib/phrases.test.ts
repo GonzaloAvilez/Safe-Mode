@@ -3,6 +3,7 @@ import {
   benignModerationCheckFixture,
   concerningModerationCheckFixture,
 } from "@/test/fixtures/moderation-check";
+import { embeddingResultFixture } from "@/test/fixtures/embedding-result";
 import {
   insertPhraseErrorFixture,
   insertPhraseSuccessFixture,
@@ -13,17 +14,31 @@ import {
   updateSuccessFixture,
 } from "@/test/fixtures/supabase-responses";
 
-const { fromMock, insertMock, selectMock, singleMock, updateMock, eqMock, rpcMock, moderateTextMock } =
-  vi.hoisted(() => ({
-    fromMock: vi.fn(),
-    insertMock: vi.fn(),
-    selectMock: vi.fn(),
-    singleMock: vi.fn(),
-    updateMock: vi.fn(),
-    eqMock: vi.fn(),
-    rpcMock: vi.fn(),
-    moderateTextMock: vi.fn(),
-  }));
+const {
+  fromMock,
+  insertMock,
+  selectMock,
+  singleMock,
+  updateMock,
+  eqMock,
+  rpcMock,
+  moderateTextMock,
+  getEmbeddingMock,
+  canSpendTodayMock,
+  recordEmbeddingSpendMock,
+} = vi.hoisted(() => ({
+  fromMock: vi.fn(),
+  insertMock: vi.fn(),
+  selectMock: vi.fn(),
+  singleMock: vi.fn(),
+  updateMock: vi.fn(),
+  eqMock: vi.fn(),
+  rpcMock: vi.fn(),
+  moderateTextMock: vi.fn(),
+  getEmbeddingMock: vi.fn(),
+  canSpendTodayMock: vi.fn(),
+  recordEmbeddingSpendMock: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase", () => ({
   supabaseAdmin: { from: fromMock, rpc: rpcMock },
@@ -31,6 +46,12 @@ vi.mock("@/lib/supabase", () => ({
 
 vi.mock("@/lib/openai", () => ({
   moderateText: moderateTextMock,
+  getEmbedding: getEmbeddingMock,
+}));
+
+vi.mock("@/lib/spend", () => ({
+  canSpendToday: canSpendTodayMock,
+  recordEmbeddingSpend: recordEmbeddingSpendMock,
 }));
 
 const { submitUserPhrase, finalizeUserPhraseModeration, findClosestPhrase } = await import("@/lib/phrases");
@@ -78,6 +99,8 @@ describe("finalizeUserPhraseModeration", () => {
   it("moderates the given text", async () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(true);
+    getEmbeddingMock.mockResolvedValueOnce(embeddingResultFixture);
     eqMock.mockResolvedValueOnce(updateSuccessFixture);
 
     await finalizeUserPhraseModeration("phrase-1", "una frase anonima");
@@ -85,31 +108,53 @@ describe("finalizeUserPhraseModeration", () => {
     expect(moderateTextMock).toHaveBeenCalledWith("una frase anonima");
   });
 
-  it("approves and activates the phrase when moderation does not flag it", async () => {
+  it("approves and activates the phrase with its embedding when moderation does not flag it", async () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(true);
+    getEmbeddingMock.mockResolvedValueOnce(embeddingResultFixture);
     eqMock.mockResolvedValueOnce(updateSuccessFixture);
 
     await finalizeUserPhraseModeration("phrase-1", "una frase anonima");
 
     expect(fromMock).toHaveBeenCalledWith("phrases");
-    expect(updateMock).toHaveBeenCalledWith({ moderation_status: "approved", active: true });
+    expect(getEmbeddingMock).toHaveBeenCalledWith("una frase anonima");
+    expect(recordEmbeddingSpendMock).toHaveBeenCalledWith(embeddingResultFixture.totalTokens);
+    expect(updateMock).toHaveBeenCalledWith({
+      moderation_status: "approved",
+      active: true,
+      embedding: embeddingResultFixture.embedding,
+    });
     expect(eqMock).toHaveBeenCalledWith("id", "phrase-1");
   });
 
-  it("rejects and deactivates the phrase when moderation flags it", async () => {
+  it("rejects the phrase without touching active or embedding when moderation flags it", async () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(concerningModerationCheckFixture);
     eqMock.mockResolvedValueOnce(updateSuccessFixture);
 
     await finalizeUserPhraseModeration("phrase-1", "texto preocupante");
 
-    expect(updateMock).toHaveBeenCalledWith({ moderation_status: "rejected", active: false });
+    expect(getEmbeddingMock).not.toHaveBeenCalled();
+    expect(updateMock).toHaveBeenCalledWith({ moderation_status: "rejected" });
+  });
+
+  it("leaves the phrase inactive without an embedding when the daily spend cap is reached", async () => {
+    setUpInsertChain();
+    moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(false);
+
+    await finalizeUserPhraseModeration("phrase-1", "una frase anonima");
+
+    expect(getEmbeddingMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
   });
 
   it("throws when the update fails", async () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(true);
+    getEmbeddingMock.mockResolvedValueOnce(embeddingResultFixture);
     eqMock.mockResolvedValueOnce(updateErrorFixture);
 
     await expect(finalizeUserPhraseModeration("phrase-1", "una frase anonima")).rejects.toThrow(
