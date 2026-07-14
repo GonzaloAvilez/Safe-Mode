@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ScreenCta } from "../_shared/screen-cta";
 import { ScreenHeader } from "../_shared/screen-header";
+import { ScreenPrompt } from "../_shared/screen-prompt";
 import { GratitudeCanvas } from "../gratitude/gratitude-canvas";
 import { TraceForm } from "./_components/trace-form";
 
@@ -25,21 +26,20 @@ export default function LeaveATracePage() {
 
         <ScreenHeader tagline="El ciclo cierra." />
 
-        <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center gap-3 px-8 text-center">
-          <div className="translate-y-[6vh]">
-            <div className="text-[15px] leading-[1.9] tracking-[.3px] text-white/78">
-              Tu presencia ahora
-              <br />
-              también forma parte
-              <br />
-              de este ecosistema.
-            </div>
-            {phase === "skipped" && (
-              <div className="mx-auto mt-4 max-w-[280px] text-[12px] leading-[1.8] tracking-[.3px] text-white/40">
-                Y no dejar nada también es una forma de estar aquí.
-              </div>
-            )}
-          </div>
+        <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
+          <ScreenPrompt
+            className="translate-y-[6vh]"
+            headline={
+              <>
+                Tu presencia ahora
+                <br />
+                también forma parte
+                <br />
+                de este ecosistema.
+              </>
+            }
+            subcopy={phase === "skipped" ? "Y no dejar nada también es una forma de estar aquí." : undefined}
+          />
         </div>
 
         <ScreenCta href="/arrive" label="volver al inicio" accentRgb="210,158,32" />
@@ -56,6 +56,11 @@ export default function LeaveATracePage() {
       <ScreenHeader tagline="Tu presencia también transforma este lugar." />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-8 py-24">
+        <ScreenPrompt
+          headline="Deja algo para quien llegue después."
+          subcopy="No tiene que ser profundo. Alguien más lo va a encontrar, así como vos encontraste lo de otro."
+        />
+
         <TraceForm onResolved={setPhase} />
       </div>
     </>
