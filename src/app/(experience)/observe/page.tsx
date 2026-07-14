@@ -2,6 +2,13 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { ScreenHeader } from "../_shared/screen-header";
 import { ObserveCanvas } from "./observe-canvas";
 
+// No Request-time API (cookies/headers) is used anywhere in this page, so without this
+// Next would treat it as eligible for full static prerendering — baking in whatever the
+// corpus looked like at build time and freezing it there until the next deploy. Found
+// while wiring up CI: a real production bug (visitors would never see newly-approved
+// phrases from /admin or organic auto-approval), not just a build-time inconvenience.
+export const dynamic = "force-dynamic";
+
 // pgvector returns embeddings either as a real array or a "[0.1,0.2,...]" string, depending on driver path.
 function parseEmbedding(raw: unknown): number[] {
   return Array.isArray(raw) ? raw : JSON.parse(raw as string);
