@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master, preview]
+  push:
+    branches: [master, preview]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values, not secrets — next build evaluates supabase.ts/openai.ts at the
+      # module level while collecting page data, so these two clients must construct
+      # without throwing even though no route actually calls out to either service
+      # during a build. Real secrets live in Vercel's own env, not here.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+      OPENAI_API_KEY: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run test
+      - run: npm run build
