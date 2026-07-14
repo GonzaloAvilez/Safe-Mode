@@ -34,5 +34,8 @@ jobs:
       - run: npx next typegen
       - run: npm run lint
       - run: npx tsc --noEmit
-      - run: npm run test
+      # Informational only — no coverage.thresholds set in vitest.config.ts, so a low
+      # or 0% number for any file logs here but never fails the build. Scoped to
+      # src/lib only; see vitest.config.ts for why src/app isn't included.
+      - run: npm run test:coverage
       - run: npm run build
