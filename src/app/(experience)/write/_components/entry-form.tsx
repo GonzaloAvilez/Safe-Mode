@@ -93,7 +93,7 @@ export function EntryForm() {
         value={text}
         onChange={(event) => setText(event.target.value)}
         maxLength={MAX_TEXT_LENGTH}
-        placeholder="escribe aquí..."
+        placeholder="escribe aquí, tal como es..."
         rows={7}
         required
         className="w-full resize-none rounded-lg border border-white/12 bg-white/[0.02] p-4 text-[14px] leading-[1.8] tracking-[.2px] text-white/85 placeholder:text-white/25 outline-none transition-colors duration-300 focus:border-[rgba(200,160,30,0.4)]"
