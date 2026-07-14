@@ -27,6 +27,11 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # Generates .next/dev/types/routes.d.ts, which declares the global RouteContext
+      # type (used by src/app/api/entries/[id]/resonate/route.ts). Locally this happens
+      # implicitly via `next dev`/`next build`, but a fresh CI checkout has no .next dir
+      # yet — skipping this step makes tsc fail with "Cannot find name 'RouteContext'".
+      - run: npx next typegen
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm run test
