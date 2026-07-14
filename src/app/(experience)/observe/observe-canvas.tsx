@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { SCENE_BG_HEX } from "../_shared/scene";
 import { startAnimationLoop } from "../_shared/animation-loop";
 import { ScreenCta } from "../_shared/screen-cta";
+import { playRandomNote } from "../_shared/handpan-audio";
 
 type Phrase = {
   id: string;
@@ -62,6 +63,11 @@ const ATTRACTION_MAX_DIST = 260; // cap so far-flung similar pairs don't oversho
 // unsynchronized, so it reads as presences quietly surfacing one at a time, not a strobe.
 const FLASH_CHANCE = 0.15;
 
+// A flash peak that gets a sound at all, and how "peaked" it has to be to count.
+const FLASH_SOUND_THRESHOLD = 0.92;
+const FLASH_SOUND_RESET_THRESHOLD = 0.3;
+const FLASH_SOUND_CHANCE = 0.35;
+
 // Fixed UI chrome (the enter button, the corner caption) sits over the canvas at all
 // viewport sizes, but on narrow/mobile widths it covers proportionally more of the
 // screen — without a keep-out halo, drifting points collide with it visually.
@@ -108,6 +114,7 @@ class Point {
   hovered: boolean;
   flashSpeed: number;
   flashPhase: number;
+  flashSounded: boolean;
 
   constructor(
     x: number,
@@ -132,6 +139,7 @@ class Point {
     this.hovered = false;
     this.flashSpeed = !isCentral && Math.random() < FLASH_CHANCE ? 0.4 + Math.random() * 0.5 : 0;
     this.flashPhase = Math.random() * Math.PI * 2;
+    this.flashSounded = false;
   }
 
   update(width: number, height: number, mouse: { x: number; y: number }) {
@@ -177,6 +185,18 @@ class Point {
     const flash =
       this.flashSpeed > 0 ? Math.max(0, Math.sin(t * this.flashSpeed + this.flashPhase)) ** 6 : 0;
     pulse += flash * 0.5;
+
+    // Fires once per peak, not every frame while the flash is high (the ^6 keeps
+    // that window short but not instantaneous) — and only sounds a fraction of the
+    // peaks, so the ambient texture stays occasional rather than a note per flash.
+    if (this.flashSpeed > 0) {
+      if (flash > FLASH_SOUND_THRESHOLD && !this.flashSounded) {
+        this.flashSounded = true;
+        if (Math.random() < FLASH_SOUND_CHANCE) playRandomNote();
+      } else if (flash < FLASH_SOUND_RESET_THRESHOLD) {
+        this.flashSounded = false;
+      }
+    }
 
     const [r, g, b] = this.color;
     const alpha = this.brightness * pulse * (this.hovered ? 1.4 : 1);

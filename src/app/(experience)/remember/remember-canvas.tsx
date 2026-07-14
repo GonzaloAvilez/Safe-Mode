@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { SCENE_BG_HEX } from "../_shared/scene";
 import { startAnimationLoop } from "../_shared/animation-loop";
+import { playDing } from "../_shared/handpan-audio";
 
 // A pale, quiet tone — not gold (Arrive, still just you before seeing anyone else)
 // and not the multicolor corpus (Observe, other people's presences). This light is
@@ -147,6 +148,9 @@ export function RememberCanvas() {
     }
 
     function triggerPulse() {
+      // The ding (root note), not a random scale note — deeper, more resonant, closer
+      // to a heart sighing than a random tone. Matches the touch's own lub-dub pulse.
+      playDing();
       if (prefersReducedMotion) {
         // No continuous animation loop to fold a ripple into — two boosted frames
         // in sequence are the reduced-motion equivalent of the lub-dub pulse.

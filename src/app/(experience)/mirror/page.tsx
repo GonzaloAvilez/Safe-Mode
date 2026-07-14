@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ScreenCta } from "../_shared/screen-cta";
 import { ScreenHeader } from "../_shared/screen-header";
 import { readMirrorHandoff, type MirrorHandoff } from "../_shared/mirror-handoff";
+import { playRandomNote } from "../_shared/handpan-audio";
 import { MirrorCanvas } from "./mirror-canvas";
 import { QuoteReveal } from "./_components/quote-reveal";
 
@@ -39,6 +40,7 @@ export default function MirrorPage() {
   async function handleResonate() {
     const next = !resonated;
     setResonated(next);
+    if (next) playRandomNote();
     if (handoff!.outcome !== "matched") return;
     try {
       await fetch(`/api/entries/${handoff!.entryId}/resonate`, {
