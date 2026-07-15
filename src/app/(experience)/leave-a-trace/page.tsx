@@ -42,7 +42,7 @@ export default function LeaveATracePage() {
           />
         </div>
 
-        <ScreenCta href="/arrive" label="volver al inicio" accentRgb="210,158,32" />
+        <ScreenCta href="/" label="volver al inicio" accentRgb="210,158,32" />
       </>
     );
   }
