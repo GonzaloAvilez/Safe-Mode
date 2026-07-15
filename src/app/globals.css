@@ -128,3 +128,23 @@
     @apply font-sans;
   }
 }
+
+/* Slow, permanent drift for AmbientGlowBackground's outer glow layer. */
+@keyframes ambient-drift {
+  from {
+    transform: translate(-3%, -2%) rotate(0deg) scale(1);
+  }
+  to {
+    transform: translate(3%, 4%) rotate(8deg) scale(1.08);
+  }
+}
+
+.ambient-drift {
+  animation: ambient-drift 48s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-drift {
+    animation: none;
+  }
+}
