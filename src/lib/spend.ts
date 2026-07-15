@@ -25,10 +25,13 @@ export async function canSpendToday(estimatedCostUsd: number): Promise<boolean> 
 }
 
 // Post-call bookkeeping: record the real cost from the embeddings response's token usage.
+// tokens rides along at no extra API cost — it's already in the response we just got back,
+// previously computed into amount_usd and then discarded instead of persisted.
 export async function recordEmbeddingSpend(totalTokens: number): Promise<void> {
   const { error } = await supabaseAdmin.rpc("increment_daily_spend", {
     spend_date: todayDateString(),
     amount_usd: actualEmbeddingCostUsd(totalTokens),
+    tokens: totalTokens,
   });
 
   if (error) throw error;
