@@ -1,8 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import { ScreenHeader } from "../_shared/screen-header";
 import { ScreenPrompt } from "../_shared/screen-prompt";
-import { EntryForm } from "./_components/entry-form";
+import { EntryForm, type Outcome } from "./_components/entry-form";
 
 export default function WritePage() {
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+
   return (
     <>
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center">
@@ -12,12 +17,14 @@ export default function WritePage() {
       <ScreenHeader tagline="Sin la presión de quedar bien." />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-8 py-24">
-        <ScreenPrompt
-          headline="Ahora, ponle palabras."
-          subcopy="No hace falta que sea bonito ni que tenga sentido para nadie más. Solo que sea tuyo."
-        />
+        {!outcome && (
+          <ScreenPrompt
+            headline="Ahora, ponle palabras."
+            subcopy="No hace falta que sea bonito ni que tenga sentido para nadie más. Solo que sea tuyo."
+          />
+        )}
 
-        <EntryForm />
+        <EntryForm outcome={outcome} onOutcomeChange={setOutcome} />
       </div>
     </>
   );
