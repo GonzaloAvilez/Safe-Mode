@@ -18,7 +18,7 @@ export default function ArrivePage() {
             <>
               This is a safe place
               <br />
-              to be you.
+              to be who you are.
             </>
           }
         />

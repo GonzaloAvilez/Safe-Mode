@@ -55,7 +55,7 @@ export default function MirrorPage() {
     <>
       <MirrorCanvas otherIntensity={matched ? 1 : NO_MATCH_OTHER_INTENSITY} />
 
-      <ScreenHeader tagline={matched ? "Someone felt the same thing." : "Your presence stayed here."} />
+      <ScreenHeader tagline={matched ? "Someone felt this too." : "Your presence stayed here."} />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center">
         <div className="w-full max-w-[360px] rounded-lg border border-white/[0.06] bg-white/[0.03] px-6 py-6">

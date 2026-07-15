@@ -11,13 +11,13 @@ export default function GratitudePage() {
     <>
       <GratitudeCanvas />
 
-      <ScreenHeader tagline="The cycle closes." />
+      <ScreenHeader tagline="The circle closes." />
 
       <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
         <ScreenPrompt
           className="translate-y-[22vh]"
           headline="Thank you for letting yourself be here."
-          subcopy="Your presence is already light for someone who hasn't arrived yet."
+          subcopy="Your presence is already a light for someone who hasn't arrived yet."
         />
       </div>
 
