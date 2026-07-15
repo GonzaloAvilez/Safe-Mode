@@ -25,6 +25,12 @@ export function ObserveScreen() {
   const [data, setData] = useState<ObserveData | null>(null);
   const [showMeditation, setShowMeditation] = useState(false);
 
+  // Whether the meditation fallback should trigger this render — latched below rather
+  // than in an effect, since a later retry succeeding must not un-trigger it; only
+  // ObserveMeditation's onResume can turn showMeditation back off.
+  const meditationTriggered = animationDone && fetchState === "error";
+  const [committedMeditationTriggered, setCommittedMeditationTriggered] = useState(meditationTriggered);
+
   useEffect(() => {
     let cancelled = false;
     let attempting = false;
@@ -71,14 +77,15 @@ export function ObserveScreen() {
     };
   }, []);
 
-  // Enter the meditation fallback once, as soon as both the ritual is done and the
-  // fetch has definitively failed — never re-triggered by a later retry, since a
-  // recovery mid-meditation should be offered (readyToResume), not force an exit.
-  useEffect(() => {
-    if (animationDone && fetchState === "error") {
+  // Adjusting state during render (React's recommended alternative to an effect here:
+  // https://react.dev/learn/you-might-not-need-an-effect) — fires exactly once, the
+  // render where meditationTriggered first flips true.
+  if (meditationTriggered !== committedMeditationTriggered) {
+    setCommittedMeditationTriggered(meditationTriggered);
+    if (meditationTriggered) {
       setShowMeditation(true);
     }
-  }, [animationDone, fetchState]);
+  }
 
   const outcomeReady = animationDone && fetchState !== "loading";
 
