@@ -11,17 +11,17 @@ export default function GratitudePage() {
     <>
       <GratitudeCanvas />
 
-      <ScreenHeader tagline="El ciclo cierra." />
+      <ScreenHeader tagline="The circle closes." />
 
       <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
         <ScreenPrompt
           className="translate-y-[22vh]"
-          headline="Gracias por permitirte estar aquí."
-          subcopy="Tu presencia ya es luz para alguien que aún no ha llegado."
+          headline="Thank you for letting yourself be here."
+          subcopy="Your presence is already a light for someone who hasn't arrived yet."
         />
       </div>
 
-      <ScreenCta href="/leave-a-trace" label="seguir" accentRgb="210,158,32" />
+      <ScreenCta href="/leave-a-trace" label="Continue" accentRgb="210,158,32" />
     </>
   );
 }

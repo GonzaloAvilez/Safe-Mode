@@ -55,7 +55,7 @@ export default function MirrorPage() {
     <>
       <MirrorCanvas otherIntensity={matched ? 1 : NO_MATCH_OTHER_INTENSITY} />
 
-      <ScreenHeader tagline={matched ? "Alguien sintió lo mismo." : "Tu presencia quedó aquí."} />
+      <ScreenHeader tagline={matched ? "Someone felt this too." : "Your presence stayed here."} />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center">
         <div className="w-full max-w-[360px] rounded-lg border border-white/[0.06] bg-white/[0.03] px-6 py-6">
@@ -65,19 +65,19 @@ export default function MirrorPage() {
               <p className="mt-1 text-[15px] leading-[1.8] tracking-[.2px] text-white/72 italic">
                 <QuoteReveal text={handoff.text} />
               </p>
-              <div className="mt-3 text-[11px] tracking-[.5px] text-white/25">— alguien en este lugar</div>
+              <div className="mt-3 text-[11px] tracking-[.5px] text-white/25">— someone in this place</div>
             </>
           ) : (
             <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/35">
-              Todavía no hay nadie que haya sentido justo esto.
+              No one has felt exactly this yet.
             </p>
           )}
         </div>
 
         <div className="mt-6 max-w-[280px] text-[12px] leading-[1.8] tracking-[.3px] text-white/45">
           {matched
-            ? "No eres la primera persona que sintió esto."
-            : "Tu presencia quedó aquí, esperando encontrarse con la de alguien más."}
+            ? "You're not the first person who felt this."
+            : "Your presence stayed here, waiting to meet someone else's."}
         </div>
 
         {matched && (
@@ -91,12 +91,12 @@ export default function MirrorPage() {
                 : "border-[rgba(165,125,220,0.3)] text-[rgba(165,125,220,0.6)] hover:border-[rgba(165,125,220,0.5)]"
             }`}
           >
-            resonó conmigo
+            This resonated with me
           </button>
         )}
       </div>
 
-      <ScreenCta href="/gratitude" label="seguir" accentRgb="170,130,230" />
+      <ScreenCta href="/gratitude" label="Continue" accentRgb="170,130,230" />
     </>
   );
 }

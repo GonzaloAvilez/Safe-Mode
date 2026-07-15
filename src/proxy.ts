@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { isSitePublic } from "@/lib/settings";
+import { isContributeOpen, isSitePublic } from "@/lib/settings";
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
 // cookies() internally, which isn't how Proxy reads cookies (req.cookies instead) — this
@@ -10,11 +10,15 @@ import { isSitePublic } from "@/lib/settings";
 const ADMIN_SESSION_COOKIE_NAME = "sm_admin_session";
 const SESSION_PAYLOAD = "admin";
 
-// Always reachable regardless of the site_public flag — /admin so the flag can be
-// flipped back on, /closed so the redirect target itself doesn't loop, /api/cron so
-// scheduled data-hygiene jobs (crisis-entry anonymization) keep running even while
-// the public site is closed.
-const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron"];
+// Always reachable regardless of either visibility flag — /admin so the flags can be
+// flipped, /closed so the redirect target itself doesn't loop, /api/cron so scheduled
+// data-hygiene jobs (crisis-entry anonymization) keep running while the public site is
+// closed. /api/phrases is here too (not just gated with /contribute below) since it's
+// shared with Leave a Trace's own submit — gating it on contribute_open would break the
+// main flow when Contribute is off, and gating it on site_public alone would break
+// Contribute while the main site is closed. Its own rate limiting/moderation are the
+// real defense here, not this proxy check.
+const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron", "/api/phrases"];
 
 function isValidAdminCookie(value: string | undefined): boolean {
   if (!value) return false;
@@ -45,6 +49,13 @@ export async function proxy(request: NextRequest) {
   }
 
   if (ALWAYS_ALLOWED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  // Independent of site_public — lets /contribute stay reachable (via its own flag)
+  // while the rest of the site is closed, or vice versa: closing contribute_open alone
+  // once the workshop wraps up, without touching site_public at all.
+  if (pathname.startsWith("/contribute") && (await isContributeOpen())) {
     return NextResponse.next();
   }
 

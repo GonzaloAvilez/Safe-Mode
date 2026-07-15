@@ -4,7 +4,7 @@
 export default function ClosedPage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-[#0a0c10] px-8 text-center text-white">
-      <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/45">Todavía no está abierto al público.</p>
+      <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/45">Not open to the public yet.</p>
     </div>
   );
 }

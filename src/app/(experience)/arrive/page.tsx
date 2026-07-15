@@ -8,23 +8,23 @@ export default function ArrivePage() {
     <>
       <ArriveCanvas />
 
-      <ScreenHeader tagline="No tienes que demostrar nada." />
+      <ScreenHeader tagline="You don't have to prove anything." />
 
       <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
         <ScreenPrompt
           className="-translate-y-[10vh]"
-          headline="Bienvenido."
+          headline="Welcome."
           subcopy={
             <>
-              Este es un lugar seguro
+              This is a safe place
               <br />
-              para ser tú.
+              to be who you are.
             </>
           }
         />
       </div>
 
-      <ScreenCta href="/observe" label="entrar" accentRgb="200,160,30" />
+      <ScreenCta href="/observe" label="Enter" accentRgb="200,160,30" />
     </>
   );
 }

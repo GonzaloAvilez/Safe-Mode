@@ -211,7 +211,7 @@ export function ObserveTransition({ onComplete }: { onComplete: () => void }) {
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
         <div className="flex translate-y-[16vh] flex-col gap-2">
           <span className="text-[11px] tracking-[1.5px] text-white/35">
-            {"un instante para encontrarnos"}
+            {"a moment to find each other"}
           </span>
           <span className="text-[11px] tracking-[2px] text-white/20">· · ·</span>
         </div>

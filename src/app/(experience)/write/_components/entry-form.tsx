@@ -38,7 +38,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       const body = await res.json();
 
       if (!res.ok) {
-        onOutcomeChange({ type: "error", message: body.error ?? "Algo salió mal." });
+        onOutcomeChange({ type: "error", message: body.error ?? "Something went wrong." });
         setSubmitting(false);
         return;
       }
@@ -62,7 +62,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       onOutcomeChange({ type: body.type });
       setSubmitting(false);
     } catch {
-      onOutcomeChange({ type: "error", message: "No pudimos conectar. Intenta de nuevo." });
+      onOutcomeChange({ type: "error", message: "We couldn't connect. Try again." });
       setSubmitting(false);
     }
   }
@@ -85,7 +85,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
           onClick={reset}
           className="rounded-full border border-white/20 px-6 py-2 text-[11px] tracking-[1.5px] text-white/50 transition-colors duration-300 hover:border-[rgba(200,160,30,0.5)] hover:text-white/75"
         >
-          escribir otra vez
+          Write again
         </button>
       </div>
     );
@@ -97,7 +97,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         value={text}
         onChange={(event) => setText(event.target.value)}
         maxLength={MAX_TEXT_LENGTH}
-        placeholder="escribe aquí, tal como es..."
+        placeholder="write here, just as it is..."
         rows={7}
         required
         className="w-full resize-none rounded-lg border border-white/12 bg-white/[0.02] p-4 text-[14px] leading-[1.8] tracking-[.2px] text-white/85 placeholder:text-white/25 outline-none transition-colors duration-300 focus:border-[rgba(200,160,30,0.4)]"
@@ -107,7 +107,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         disabled={text.trim().length === 0}
         className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[11px] tracking-[1.5px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
       >
-        enviar
+        Send
       </button>
     </form>
   );
@@ -118,7 +118,7 @@ function OutcomeMessage({ outcome }: { outcome: Outcome }) {
     case "crisis":
       return (
         <div className="flex flex-col gap-3 text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
-          <p>No estás solo. Si sientes que necesitas hablar con alguien ahora, aquí hay ayuda:</p>
+          <p>You&rsquo;re not alone. If you feel like you need to talk to someone right now, here&rsquo;s help:</p>
           <a
             href={CRISIS_RESOURCE_URL}
             target="_blank"
@@ -132,13 +132,13 @@ function OutcomeMessage({ outcome }: { outcome: Outcome }) {
     case "general_flagged":
       return (
         <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
-          Tu texto no pudo ser publicado esta vez.
+          Your text couldn&rsquo;t be published this time.
         </p>
       );
     case "cap_reached":
       return (
         <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
-          Ya usamos todo el espacio de hoy, vuelve mañana.
+          We&rsquo;ve used up today&rsquo;s space, come back tomorrow.
         </p>
       );
     case "error":
