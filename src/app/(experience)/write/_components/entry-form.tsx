@@ -8,17 +8,21 @@ import { Searching } from "./searching";
 
 const MAX_TEXT_LENGTH = 800;
 
-type Outcome =
+export type Outcome =
   | { type: "crisis" }
   | { type: "general_flagged" }
   | { type: "cap_reached" }
   | { type: "error"; message: string };
 
-export function EntryForm() {
+type EntryFormProps = {
+  outcome: Outcome | null;
+  onOutcomeChange: (outcome: Outcome | null) => void;
+};
+
+export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -34,7 +38,7 @@ export function EntryForm() {
       const body = await res.json();
 
       if (!res.ok) {
-        setOutcome({ type: "error", message: body.error ?? "Algo salió mal." });
+        onOutcomeChange({ type: "error", message: body.error ?? "Algo salió mal." });
         setSubmitting(false);
         return;
       }
@@ -55,17 +59,17 @@ export function EntryForm() {
         return;
       }
 
-      setOutcome({ type: body.type });
+      onOutcomeChange({ type: body.type });
       setSubmitting(false);
     } catch {
-      setOutcome({ type: "error", message: "No pudimos conectar. Intenta de nuevo." });
+      onOutcomeChange({ type: "error", message: "No pudimos conectar. Intenta de nuevo." });
       setSubmitting(false);
     }
   }
 
   function reset() {
     setText("");
-    setOutcome(null);
+    onOutcomeChange(null);
   }
 
   if (submitting) {
