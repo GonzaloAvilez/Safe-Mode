@@ -14,13 +14,13 @@ export default function WritePage() {
         <div className="h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(225,230,235,0.05)_0%,rgba(225,230,235,0)_70%)]" />
       </div>
 
-      <ScreenHeader tagline="Sin la presión de quedar bien." />
+      <ScreenHeader tagline="Without the pressure to look good." />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-8 py-24">
         {!outcome && (
           <ScreenPrompt
-            headline="Ahora, ponle palabras."
-            subcopy="No hace falta que sea bonito ni que tenga sentido para nadie más. Solo que sea tuyo."
+            headline="Now, put it into words."
+            subcopy="It doesn't have to be beautiful or make sense to anyone else. Just that it's yours."
           />
         )}
 

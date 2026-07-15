@@ -36,7 +36,7 @@ export function ObserveMeditation({
   return (
     <div className="fixed inset-0 z-30">
       <AmbientGlowBackground />
-      <ScreenHeader tagline="Un momento para respirar" />
+      <ScreenHeader tagline="A moment to breathe." />
 
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-8 px-8 text-center">
         <div
@@ -50,13 +50,13 @@ export function ObserveMeditation({
         />
 
         <div className="max-w-[300px] text-[13px] leading-[1.9] tracking-[.3px] text-white/45">
-          {inhaling ? "Inhala..." : "Exhala..."}
+          {inhaling ? "Breathe in..." : "Breathe out..."}
         </div>
 
         <div className="max-w-[280px] text-[12px] leading-[1.8] tracking-[.3px] text-white/30">
           {readyToResume
-            ? "Tu refugio ya está listo."
-            : "Estamos tardando más de lo normal en conectar. Quédate un momento aquí, o vuelve más tarde."}
+            ? "Your refuge is ready."
+            : "We're taking longer than usual to connect. Stay here a moment, or come back later."}
         </div>
 
         {readyToResume && (
@@ -65,7 +65,7 @@ export function ObserveMeditation({
             onClick={onResume}
             className="rounded-full border border-[rgba(200,160,30,0.4)] px-6 py-2 text-[11px] tracking-[1.5px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.7)] hover:text-white/85"
           >
-            continuar
+            Continue
           </button>
         )}
       </div>

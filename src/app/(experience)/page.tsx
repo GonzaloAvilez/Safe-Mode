@@ -30,7 +30,7 @@ export default async function HomePage() {
       <AmbientGlowBackground />
       <LivingPhrases phrases={phrases} />
 
-      <ScreenHeader tagline="ecosistema de presencias" />
+      <ScreenHeader tagline="Ecosystem of presences." />
 
       <HomeGate />
     </>

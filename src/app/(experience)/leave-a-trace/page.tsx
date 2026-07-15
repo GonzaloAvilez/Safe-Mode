@@ -24,25 +24,25 @@ export default function LeaveATracePage() {
       <>
         <GratitudeCanvas />
 
-        <ScreenHeader tagline="El ciclo cierra." />
+        <ScreenHeader tagline="The cycle closes." />
 
         <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
           <ScreenPrompt
             className="translate-y-[6vh]"
             headline={
               <>
-                Tu presencia ahora
+                Your presence is now
                 <br />
-                también forma parte
+                also part
                 <br />
-                de este ecosistema.
+                of this ecosystem.
               </>
             }
-            subcopy={phase === "skipped" ? "Y no dejar nada también es una forma de estar aquí." : undefined}
+            subcopy={phase === "skipped" ? "And leaving nothing is also a way of being here." : undefined}
           />
         </div>
 
-        <ScreenCta href="/" label="volver al inicio" accentRgb="210,158,32" />
+        <ScreenCta href="/" label="Back to start" accentRgb="210,158,32" />
       </>
     );
   }
@@ -53,12 +53,12 @@ export default function LeaveATracePage() {
         <div className="h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(210,158,32,0.05)_0%,rgba(210,158,32,0)_70%)]" />
       </div>
 
-      <ScreenHeader tagline="Tu presencia también transforma este lugar." />
+      <ScreenHeader tagline="Your presence also transforms this place." />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-8 py-24">
         <ScreenPrompt
-          headline="Deja algo para quien llegue después."
-          subcopy="No tiene que ser profundo. Alguien más lo va a encontrar, así como vos encontraste lo de otro."
+          headline="Leave something for whoever arrives next."
+          subcopy="It doesn't have to be deep. Someone else will find it, just like you found someone else's."
         />
 
         <TraceForm onResolved={setPhase} />

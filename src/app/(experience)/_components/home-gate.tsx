@@ -44,7 +44,7 @@ export function HomeGate() {
   return (
     <>
       {!acknowledged && <RulesGate onAcknowledge={handleAcknowledge} />}
-      <ScreenCta href="/arrive" label="entrar" accentRgb="200,160,30" disabled={!acknowledged} />
+      <ScreenCta href="/arrive" label="Enter" accentRgb="200,160,30" disabled={!acknowledged} />
     </>
   );
 }
