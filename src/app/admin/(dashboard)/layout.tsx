@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-session";
-import { isSitePublic } from "@/lib/settings";
+import { currentSettingsEnvironment, isSitePublic } from "@/lib/settings";
 import { logoutAdmin, setSitePublicAction } from "./actions";
 
 const NAV_LINKS = [
@@ -25,7 +25,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
         </nav>
         <div className="flex items-center gap-4">
           <span className={`text-xs ${sitePublic ? "text-green-400" : "text-red-400"}`}>
-            Sitio {sitePublic ? "público" : "cerrado"}
+            [{currentSettingsEnvironment()}] Sitio {sitePublic ? "público" : "cerrado"}
           </span>
           <form action={setSitePublicAction}>
             <input type="hidden" name="value" value={(!sitePublic).toString()} />
