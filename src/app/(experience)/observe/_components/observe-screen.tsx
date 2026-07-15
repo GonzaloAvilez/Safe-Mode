@@ -101,7 +101,7 @@ export function ObserveScreen() {
     return (
       <>
         <ObserveCanvas phrases={data.phrases} similarities={data.similarities} />
-        <ScreenHeader tagline="Ecosistema de presencias" />
+        <ScreenHeader tagline="Ecosystem of presences" />
       </>
     );
   }

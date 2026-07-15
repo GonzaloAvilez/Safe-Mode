@@ -35,14 +35,14 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
 
       if (!res.ok) {
         const body = await res.json();
-        setError({ message: body.error ?? "Algo salió mal." });
+        setError({ message: body.error ?? "Something went wrong." });
         setSubmitting(false);
         return;
       }
 
       onResolved("submitted");
     } catch {
-      setError({ message: "No pudimos conectar. Intenta de nuevo." });
+      setError({ message: "We couldn't connect. Try again." });
       setSubmitting(false);
     }
   }
@@ -53,7 +53,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
         value={text}
         onChange={(event) => setText(event.target.value)}
         maxLength={MAX_TEXT_LENGTH}
-        placeholder="deja algo, si quieres..."
+        placeholder="leave something, if you want..."
         rows={4}
         className="w-full resize-none rounded-lg border border-white/12 bg-white/[0.02] p-4 text-[14px] leading-[1.8] tracking-[.2px] text-white/85 placeholder:text-white/25 outline-none transition-colors duration-300 focus:border-[rgba(200,160,30,0.4)]"
       />
@@ -68,7 +68,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
           disabled={submitting || text.trim().length === 0}
           className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[11px] tracking-[1.5px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
         >
-          {submitting ? "guardando…" : "dejar huella"}
+          {submitting ? "Saving…" : "Leave a trace"}
         </button>
         <button
           type="button"
@@ -76,7 +76,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
           disabled={submitting}
           className="text-[11px] tracking-[.5px] text-white/25 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/45 disabled:pointer-events-none disabled:opacity-30"
         >
-          prefiero no dejar nada
+          I&rsquo;d rather not leave anything
         </button>
       </div>
     </form>
