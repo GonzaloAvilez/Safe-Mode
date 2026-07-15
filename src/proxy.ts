@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { isSitePublic } from "@/lib/settings";
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
 // cookies() internally, which isn't how Proxy reads cookies (req.cookies instead) — this
@@ -8,6 +9,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 // enough that splitting it into a shared pure function isn't worth the indirection.
 const ADMIN_SESSION_COOKIE_NAME = "sm_admin_session";
 const SESSION_PAYLOAD = "admin";
+
+// Always reachable regardless of the site_public flag — /admin so the flag can be
+// flipped back on, /closed so the redirect target itself doesn't loop, /api/cron so
+// scheduled data-hygiene jobs (crisis-entry anonymization) keep running even while
+// the public site is closed.
+const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron"];
 
 function isValidAdminCookie(value: string | undefined): boolean {
   if (!value) return false;
@@ -22,7 +29,7 @@ function isValidAdminCookie(value: string | undefined): boolean {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasValidSession = isValidAdminCookie(request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value);
 
@@ -37,9 +44,20 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
+  if (ALWAYS_ALLOWED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  if (!(await isSitePublic())) {
+    return NextResponse.redirect(new URL("/closed", request.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: "/admin/:path*",
+  // Everything except static assets — the site_public gate has to cover the public
+  // experience routes and the public API routes (/api/entries, /api/phrases) alike,
+  // not just page navigations.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
