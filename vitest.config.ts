@@ -10,6 +10,20 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Integration tests hit a real local Postgres (supabase start) and only run via
+    // `npm run test:integration` — see vitest.integration.config.ts. Excluded here so
+    // the default `npm run test` (mocked, no Docker needed) never tries to run them
+    // against a stack that isn't up. Repeats Vitest's own defaults (see
+    // https://vitest.dev/config/#exclude) since setting `exclude` at all replaces them
+    // rather than extending them.
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/cypress/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*",
+      "src/test/integration/**",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
