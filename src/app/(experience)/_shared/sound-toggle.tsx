@@ -22,12 +22,17 @@ export function SoundToggle() {
       type="button"
       onClick={toggle}
       aria-pressed={enabled}
-      aria-label={enabled ? "Silenciar sonido" : "Activar sonido"}
-      className="group fixed top-10 right-12 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 transition-colors duration-300 hover:border-white/40"
+      aria-label={enabled ? "Turn sound off" : "Turn sound on"}
+      data-ui-zone="sound-toggle"
+      className={`group fixed top-10 right-12 z-20 flex h-6 w-11 items-center rounded-full border p-0.5 transition-colors duration-300 ${
+        enabled
+          ? "border-[rgba(200,160,30,0.5)] bg-[rgba(200,160,30,0.15)]"
+          : "border-white/20 bg-white/[0.04] hover:border-white/35"
+      }`}
     >
       <span
-        className={`h-2 w-2 rounded-full transition-colors duration-300 ${
-          enabled ? "bg-[rgba(210,158,32,0.85)]" : "bg-white/25 group-hover:bg-white/40"
+        className={`h-4 w-4 rounded-full shadow-sm transition-transform duration-300 ${
+          enabled ? "translate-x-5 bg-[rgba(210,160,32,0.9)]" : "translate-x-0 bg-white/50 group-hover:bg-white/65"
         }`}
       />
     </button>

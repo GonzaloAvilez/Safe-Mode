@@ -254,12 +254,19 @@ export function ObserveCanvas({
     const mouse = { x: -999, y: -999 };
     let buttonZone: Rect = { left: 0, top: 0, right: 0, bottom: 0 };
     let captionZone: Rect = { left: 0, top: 0, right: 0, bottom: 0 };
+    // Lives in the shared (experience) layout, not this component's own tree — a ref
+    // can't reach it, so it's found the same way any other persistent global chrome
+    // would be: a stable data attribute, queried each resize like the other UI zones.
+    let soundToggleZone: Rect | null = null;
 
     function measureUiZones() {
       const b = buttonZoneEl!.getBoundingClientRect();
       const c = captionZoneEl!.getBoundingClientRect();
       buttonZone = { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
       captionZone = { left: c.left, top: c.top, right: c.right, bottom: c.bottom };
+
+      const soundToggleEl = document.querySelector('[data-ui-zone="sound-toggle"]');
+      soundToggleZone = soundToggleEl ? soundToggleEl.getBoundingClientRect() : null;
     }
 
     function resize() {
@@ -456,6 +463,7 @@ export function ObserveCanvas({
         if (p.isCentral) return;
         repelFromZone(p, buttonZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
         repelFromZone(p, captionZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
+        if (soundToggleZone) repelFromZone(p, soundToggleZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
       });
 
       points.forEach((p) => {
