@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { SCENE_BG_HEX } from "../_shared/scene";
 import { startAnimationLoop } from "../_shared/animation-loop";
+import { startDrone, stopDrone, startAmbientNotes, stopAmbientNotes } from "../_shared/handpan-audio";
 
 // The full multicolor range, same family as Observe's corpus — by Gratitude the
 // visitor's own presence has joined it, so the field reads as "everyone", not just
@@ -230,9 +231,18 @@ export function GratitudeCanvas() {
     }
     const { stop } = startAnimationLoop(drawFrame);
 
+    // No-ops silently if sound is off — see handpan-audio.ts. Known v1 gap: if sound
+    // gets turned on while already sitting on this screen, the drone won't start
+    // retroactively until the next visit; acceptable since the toggle is visible from
+    // the first screen onward.
+    startDrone();
+    startAmbientNotes();
+
     return () => {
       window.removeEventListener("resize", handleResize);
       stop();
+      stopDrone();
+      stopAmbientNotes();
     };
   }, []);
 

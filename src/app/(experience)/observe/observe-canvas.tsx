@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { SCENE_BG_HEX } from "../_shared/scene";
 import { startAnimationLoop } from "../_shared/animation-loop";
 import { ScreenCta } from "../_shared/screen-cta";
+import { playRandomNote } from "../_shared/handpan-audio";
 
 type Phrase = {
   id: string;
@@ -62,6 +63,11 @@ const ATTRACTION_MAX_DIST = 260; // cap so far-flung similar pairs don't oversho
 // unsynchronized, so it reads as presences quietly surfacing one at a time, not a strobe.
 const FLASH_CHANCE = 0.15;
 
+// A flash peak that gets a sound at all, and how "peaked" it has to be to count.
+const FLASH_SOUND_THRESHOLD = 0.92;
+const FLASH_SOUND_RESET_THRESHOLD = 0.3;
+const FLASH_SOUND_CHANCE = 0.35;
+
 // Fixed UI chrome (the enter button, the corner caption) sits over the canvas at all
 // viewport sizes, but on narrow/mobile widths it covers proportionally more of the
 // screen — without a keep-out halo, drifting points collide with it visually.
@@ -108,6 +114,7 @@ class Point {
   hovered: boolean;
   flashSpeed: number;
   flashPhase: number;
+  flashSounded: boolean;
 
   constructor(
     x: number,
@@ -132,6 +139,7 @@ class Point {
     this.hovered = false;
     this.flashSpeed = !isCentral && Math.random() < FLASH_CHANCE ? 0.4 + Math.random() * 0.5 : 0;
     this.flashPhase = Math.random() * Math.PI * 2;
+    this.flashSounded = false;
   }
 
   update(width: number, height: number, mouse: { x: number; y: number }) {
@@ -177,6 +185,18 @@ class Point {
     const flash =
       this.flashSpeed > 0 ? Math.max(0, Math.sin(t * this.flashSpeed + this.flashPhase)) ** 6 : 0;
     pulse += flash * 0.5;
+
+    // Fires once per peak, not every frame while the flash is high (the ^6 keeps
+    // that window short but not instantaneous) — and only sounds a fraction of the
+    // peaks, so the ambient texture stays occasional rather than a note per flash.
+    if (this.flashSpeed > 0) {
+      if (flash > FLASH_SOUND_THRESHOLD && !this.flashSounded) {
+        this.flashSounded = true;
+        if (Math.random() < FLASH_SOUND_CHANCE) playRandomNote();
+      } else if (flash < FLASH_SOUND_RESET_THRESHOLD) {
+        this.flashSounded = false;
+      }
+    }
 
     const [r, g, b] = this.color;
     const alpha = this.brightness * pulse * (this.hovered ? 1.4 : 1);
@@ -234,12 +254,19 @@ export function ObserveCanvas({
     const mouse = { x: -999, y: -999 };
     let buttonZone: Rect = { left: 0, top: 0, right: 0, bottom: 0 };
     let captionZone: Rect = { left: 0, top: 0, right: 0, bottom: 0 };
+    // Lives in the shared (experience) layout, not this component's own tree — a ref
+    // can't reach it, so it's found the same way any other persistent global chrome
+    // would be: a stable data attribute, queried each resize like the other UI zones.
+    let soundToggleZone: Rect | null = null;
 
     function measureUiZones() {
       const b = buttonZoneEl!.getBoundingClientRect();
       const c = captionZoneEl!.getBoundingClientRect();
       buttonZone = { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
       captionZone = { left: c.left, top: c.top, right: c.right, bottom: c.bottom };
+
+      const soundToggleEl = document.querySelector('[data-ui-zone="sound-toggle"]');
+      soundToggleZone = soundToggleEl ? soundToggleEl.getBoundingClientRect() : null;
     }
 
     function resize() {
@@ -436,6 +463,7 @@ export function ObserveCanvas({
         if (p.isCentral) return;
         repelFromZone(p, buttonZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
         repelFromZone(p, captionZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
+        if (soundToggleZone) repelFromZone(p, soundToggleZone, UI_EXCLUSION_MARGIN, UI_EXCLUSION_STRENGTH);
       });
 
       points.forEach((p) => {
