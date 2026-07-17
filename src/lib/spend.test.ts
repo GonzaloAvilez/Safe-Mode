@@ -99,6 +99,7 @@ describe("recordEmbeddingSpend", () => {
     expect(rpcMock).toHaveBeenCalledWith("increment_daily_spend", {
       spend_date: expect.stringMatching(TODAY_PATTERN),
       amount_usd: expect.any(Number),
+      tokens: 200,
     });
   });
 

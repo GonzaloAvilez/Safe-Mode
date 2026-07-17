@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-session";
-import { logoutAdmin } from "./actions";
+import { currentSettingsEnvironment, isContributeOpen, isSitePublic } from "@/lib/settings";
+import { logoutAdmin, setContributeOpenAction, setSitePublicAction } from "./actions";
 
 const NAV_LINKS = [
   { href: "/admin/phrases", label: "Phrases" },
@@ -10,6 +11,8 @@ const NAV_LINKS = [
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   await requireAdminSession();
+  const sitePublic = await isSitePublic();
+  const contributeOpen = await isContributeOpen();
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -21,11 +24,31 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
             </Link>
           ))}
         </nav>
-        <form action={logoutAdmin}>
-          <button type="submit" className="text-sm text-white/40 hover:text-white/70">
-            Salir
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <span className={`text-xs ${sitePublic ? "text-green-400" : "text-red-400"}`}>
+            [{currentSettingsEnvironment()}] Sitio {sitePublic ? "público" : "cerrado"}
+          </span>
+          <form action={setSitePublicAction}>
+            <input type="hidden" name="value" value={(!sitePublic).toString()} />
+            <button type="submit" className="text-sm text-white/40 hover:text-white/70">
+              {sitePublic ? "Cerrar sitio" : "Abrir sitio"}
+            </button>
+          </form>
+          <span className={`text-xs ${contributeOpen ? "text-green-400" : "text-red-400"}`}>
+            Contribute {contributeOpen ? "abierto" : "cerrado"}
+          </span>
+          <form action={setContributeOpenAction}>
+            <input type="hidden" name="value" value={(!contributeOpen).toString()} />
+            <button type="submit" className="text-sm text-white/40 hover:text-white/70">
+              {contributeOpen ? "Cerrar contribute" : "Abrir contribute"}
+            </button>
+          </form>
+          <form action={logoutAdmin}>
+            <button type="submit" className="text-sm text-white/40 hover:text-white/70">
+              Salir
+            </button>
+          </form>
+        </div>
       </header>
       <main className="p-6">{children}</main>
     </div>

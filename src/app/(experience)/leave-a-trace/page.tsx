@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ScreenCta } from "../_shared/screen-cta";
 import { ScreenHeader } from "../_shared/screen-header";
+import { ScreenPrompt } from "../_shared/screen-prompt";
 import { GratitudeCanvas } from "../gratitude/gratitude-canvas";
 import { TraceForm } from "./_components/trace-form";
 
@@ -23,26 +24,25 @@ export default function LeaveATracePage() {
       <>
         <GratitudeCanvas />
 
-        <ScreenHeader tagline="El ciclo cierra." />
+        <ScreenHeader tagline="The circle closes." />
 
-        <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center gap-3 px-8 text-center">
-          <div className="translate-y-[6vh]">
-            <div className="text-[15px] leading-[1.9] tracking-[.3px] text-white/78">
-              Tu presencia ahora
-              <br />
-              también forma parte
-              <br />
-              de este ecosistema.
-            </div>
-            {phase === "skipped" && (
-              <div className="mx-auto mt-4 max-w-[280px] text-[12px] leading-[1.8] tracking-[.3px] text-white/40">
-                Y no dejar nada también es una forma de estar aquí.
-              </div>
-            )}
-          </div>
+        <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
+          <ScreenPrompt
+            className="translate-y-[6vh]"
+            headline={
+              <>
+                Your presence is now
+                <br />
+                also part
+                <br />
+                of this ecosystem.
+              </>
+            }
+            subcopy={phase === "skipped" ? "And leaving nothing is also a way of being here." : undefined}
+          />
         </div>
 
-        <ScreenCta href="/arrive" label="volver al inicio" accentRgb="210,158,32" />
+        <ScreenCta href="/" label="Back to start" accentRgb="210,158,32" />
       </>
     );
   }
@@ -53,9 +53,14 @@ export default function LeaveATracePage() {
         <div className="h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(210,158,32,0.05)_0%,rgba(210,158,32,0)_70%)]" />
       </div>
 
-      <ScreenHeader tagline="Tu presencia también transforma este lugar." />
+      <ScreenHeader tagline="Your presence also transforms this place." />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-8 py-24">
+        <ScreenPrompt
+          headline="Leave something for whoever arrives next."
+          subcopy="It doesn't have to be deep. Someone else will find it, just like you found someone else's."
+        />
+
         <TraceForm onResolved={setPhase} />
       </div>
     </>

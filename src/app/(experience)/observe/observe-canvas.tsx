@@ -40,11 +40,11 @@ const TOUCH_HOVER_RADIUS = 28;
 // stays short, concrete, and free of any claim about how the viewer feels right now.
 // One is picked per session (not per hover) so a single visit reads as consistent.
 const LEAD_PHRASES = [
-  "alguien decidió no esconder esto",
-  "esto existía antes de que llegaras",
-  "alguien lo dejó, tal como es",
-  "alguien decidió compartirlo y soltarlo",
-  "alguien decidió compartir esto tal como es",
+  "someone decided not to hide this",
+  "this existed before you got here",
+  "someone left this, just as it is",
+  "someone decided to share it and let go",
+  "someone decided to share this just as it is",
 ];
 
 // Global repulsion (all pairs, falls off with distance) keeps distinct clusters apart —
@@ -504,13 +504,14 @@ export function ObserveCanvas({
         ref={captionZoneRef}
         className="fixed top-24 left-12 z-10 max-w-[220px] text-[13px] leading-[1.8] tracking-[.3px] text-white/22 sm:top-auto sm:bottom-12"
       >
-        Cada luz que ves
+        Every light you see
         <br />
-        es alguien que se atrevió
-        <br />a mostrarse por un instante.
+        is someone who dared
+        <br />
+        to show themselves for a moment.
       </div>
 
-      <ScreenCta ref={buttonZoneRef} href="/remember" label="entra sin hacer nada" accentRgb="200,160,30" />
+      <ScreenCta ref={buttonZoneRef} href="/remember" label="Enter without doing anything" accentRgb="200,160,30" />
 
       <div
         ref={tooltipRef}

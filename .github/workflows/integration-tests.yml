@@ -1,0 +1,38 @@
+name: Integration tests
+
+# Only runs when a PR touches migrations — the common case (UI, copy, feature work that
+# doesn't touch schema) never pays for this. Boots a real local Postgres + PostgREST via
+# the Supabase CLI (Docker is preinstalled on GitHub's ubuntu runners) and runs the
+# actual application code against it, catching the class of bug mocked unit tests
+# structurally can't — e.g. the increment_daily_spend overload ambiguity that broke
+# phrase submission live on preview on 2026-07-15, invisible to every mocked RPC test.
+on:
+  pull_request:
+    branches: [master, preview]
+    paths:
+      - "supabase/migrations/**"
+  push:
+    branches: [master, preview]
+    paths:
+      - "supabase/migrations/**"
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # scripts/run-integration-tests.sh handles start -> migrate (automatic on start)
+      # -> test -> stop, including teardown on failure.
+      - run: npm run test:integration

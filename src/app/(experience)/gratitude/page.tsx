@@ -1,5 +1,6 @@
 import { ScreenCta } from "../_shared/screen-cta";
 import { ScreenHeader } from "../_shared/screen-header";
+import { ScreenPrompt } from "../_shared/screen-prompt";
 import { GratitudeCanvas } from "./gratitude-canvas";
 
 // Static closing screen, no input — reached from Mirror regardless of whether Write
@@ -10,20 +11,17 @@ export default function GratitudePage() {
     <>
       <GratitudeCanvas />
 
-      <ScreenHeader tagline="El ciclo cierra." />
+      <ScreenHeader tagline="The circle closes." />
 
-      <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center gap-3 px-8 text-center">
-        <div className="translate-y-[22vh]">
-          <div className="text-[15px] leading-[1.9] tracking-[.3px] text-white/78">
-            Gracias por permitirte estar aquí.
-          </div>
-          <div className="mx-auto mt-3 max-w-[320px] text-[12px] leading-[1.8] tracking-[.3px] text-white/40">
-            Tu presencia ya es luz para alguien que aún no ha llegado.
-          </div>
-        </div>
+      <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
+        <ScreenPrompt
+          className="translate-y-[22vh]"
+          headline="Thank you for letting yourself be here."
+          subcopy="Your presence is already a light for someone who hasn't arrived yet."
+        />
       </div>
 
-      <ScreenCta href="/leave-a-trace" label="seguir" accentRgb="210,158,32" />
+      <ScreenCta href="/leave-a-trace" label="Continue" accentRgb="210,158,32" />
     </>
   );
 }
