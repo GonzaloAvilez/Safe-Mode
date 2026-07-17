@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
+import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 
 const MAX_TEXT_LENGTH = 120;
 
@@ -15,6 +16,7 @@ export function ContributeForm() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const [count, setCount] = useState(0);
+  const { honeypot, setHoneypot, formRenderedAt } = useHoneypot();
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -25,7 +27,7 @@ export function ContributeForm() {
       const res = await fetch("/api/phrases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, honeypot, formRenderedAt }),
       });
 
       if (!res.ok) {
@@ -47,6 +49,7 @@ export function ContributeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-4">
+      <HoneypotField value={honeypot} onChange={setHoneypot} />
       <textarea
         value={text}
         onChange={(event) => {

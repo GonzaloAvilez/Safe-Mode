@@ -2,7 +2,12 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { EntryOutcome } from "@/lib/entries";
 
-export type RequestOutcome = EntryOutcome["type"] | "phrase_submitted" | "rate_limited" | "rate_limit_unavailable";
+export type RequestOutcome =
+  | EntryOutcome["type"]
+  | "phrase_submitted"
+  | "rate_limited"
+  | "rate_limit_unavailable"
+  | "bot_suspected";
 
 // One-way hash: enough to spot a single IP hammering the endpoint without storing it raw.
 function hashIp(ip: string): string {
