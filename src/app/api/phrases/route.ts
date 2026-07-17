@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { submitUserPhrase, finalizeUserPhraseModeration } from "@/lib/phrases";
 import { isRateLimited } from "@/lib/rate-limit";
+import { isSuspectedBot } from "@/lib/bot-protection";
 import { getRequestIp } from "@/lib/request-ip";
 import { logRequestOutcome } from "@/lib/logging";
 import { getOrCreateSessionId } from "@/lib/session";
@@ -18,6 +19,12 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const text = body.text;
+
+  if (isSuspectedBot({ honeypot: body.honeypot, formRenderedAt: body.formRenderedAt })) {
+    logRequestOutcome(ip, "bot_suspected");
+    // Same shape as the rate-limit response — no reason to tell a bot what caught it.
+    return Response.json({ error: "too many requests" }, { status: 429 });
+  }
 
   if (typeof text !== "string" || text.trim().length === 0 || text.length > MAX_TEXT_LENGTH) {
     return Response.json(

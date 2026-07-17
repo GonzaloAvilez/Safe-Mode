@@ -4,6 +4,7 @@ import { useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import { writeMirrorHandoff } from "../../_shared/mirror-handoff";
+import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { Searching } from "./searching";
 
 const MAX_TEXT_LENGTH = 800;
@@ -23,6 +24,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { honeypot, setHoneypot, formRenderedAt } = useHoneypot();
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -32,7 +34,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       const res = await fetch("/api/entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, honeypot, formRenderedAt }),
       });
 
       const body = await res.json();
@@ -93,6 +95,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-5">
+      <HoneypotField value={honeypot} onChange={setHoneypot} />
       <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
