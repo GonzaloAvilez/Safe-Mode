@@ -54,16 +54,38 @@ describe("POST /api/entries", () => {
   it("returns 400 when text is missing", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
 
-    const response = await POST(postRequest({}));
+    const response = await POST(postRequest({ formRenderedAt: Date.now() - 5000 }));
 
     expect(response.status).toBe(400);
     expect(submitEntryMock).not.toHaveBeenCalled();
   });
 
+  it("returns 429 and never calls submitEntry when the honeypot field is filled", async () => {
+    isRateLimitedMock.mockResolvedValueOnce(false);
+
+    const response = await POST(
+      postRequest({ text: "hola", honeypot: "http://spam.example", formRenderedAt: Date.now() - 5000 })
+    );
+
+    expect(response.status).toBe(429);
+    expect(submitEntryMock).not.toHaveBeenCalled();
+    expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "bot_suspected");
+  });
+
+  it("returns 429 and never calls submitEntry when submitted faster than a human could type", async () => {
+    isRateLimitedMock.mockResolvedValueOnce(false);
+
+    const response = await POST(postRequest({ text: "hola", honeypot: "", formRenderedAt: Date.now() - 100 }));
+
+    expect(response.status).toBe(429);
+    expect(submitEntryMock).not.toHaveBeenCalled();
+    expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "bot_suspected");
+  });
+
   it("returns 400 when text exceeds the max length", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
 
-    const response = await POST(postRequest({ text: "a".repeat(801) }));
+    const response = await POST(postRequest({ text: "a".repeat(801), formRenderedAt: Date.now() - 5000 }));
 
     expect(response.status).toBe(400);
   });
@@ -72,7 +94,7 @@ describe("POST /api/entries", () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
     submitEntryMock.mockResolvedValueOnce({ type: "no_match", entryId: "entry-1" });
 
-    const response = await POST(postRequest({ text: "un dia normal" }));
+    const response = await POST(postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000 }));
     const body = await response.json();
 
     expect(response.status).toBe(200);

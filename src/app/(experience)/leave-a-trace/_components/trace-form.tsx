@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
+import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 
 const MAX_TEXT_LENGTH = 120;
 
@@ -20,6 +21,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<ErrorOutcome>(null);
+  const { honeypot, setHoneypot, formRenderedAt } = useHoneypot();
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -30,7 +32,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
       const res = await fetch("/api/phrases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, honeypot, formRenderedAt }),
       });
 
       if (!res.ok) {
@@ -49,6 +51,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-4">
+      <HoneypotField value={honeypot} onChange={setHoneypot} />
       <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
