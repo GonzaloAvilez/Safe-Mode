@@ -51,6 +51,20 @@ migration yourself (`language` column + updated `match_phrase`), so you finally 
 how migrations work as the schema's source of truth — only touched indirectly so far,
 never walked in full.
 
+**Tasks:**
+- [x] Add a `language` column to `phrases` (new migration), backfill the existing corpus
+      as `'en'` since it's already English
+- [ ] Extend `match_phrase` to accept a `language` parameter and filter results to
+      same-language phrases only
+- [ ] Thread the submitter's language through the entry pipeline (`lib/entries.ts`) and
+      into the `match_phrase` call — hardcoded to `'en'` for now, since the UI itself is
+      English-only today (real detection stays parked, per the roadmap's open question)
+- [ ] Update `scripts/seed-phrases.ts` so newly seeded phrases always carry a language
+      value going forward
+- [ ] Prove it end-to-end: insert one Spanish-tagged test phrase directly in the DB,
+      submit an English entry through the real `/write` flow, confirm it does *not*
+      match the Spanish phrase
+
 ## Section 3 — Human pre-approval gate before publishing
 
 **Source:** `ROADMAP.md`, "Open/deferred," an unresolved scope question: does it apply
