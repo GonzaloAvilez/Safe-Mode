@@ -34,7 +34,7 @@ describe("findClosestPhrase / match_phrase (integration)", () => {
   it("finds the closest phrase for an embedding identical to one already in the corpus", async () => {
     const target = realPhraseFixtures[0];
 
-    const match = await findClosestPhrase(target.embedding);
+    const match = await findClosestPhrase(target.embedding, "en");
 
     expect(match).not.toBeNull();
     expect(match?.text).toBe(target.text);
@@ -47,7 +47,7 @@ describe("findClosestPhrase / match_phrase (integration)", () => {
     await supabaseAdmin.from("phrases").update({ active: false }).in("id", insertedIds);
 
     try {
-      const match = await findClosestPhrase(realPhraseFixtures[0].embedding);
+      const match = await findClosestPhrase(realPhraseFixtures[0].embedding, "en");
       expect(match).toBeNull();
     } finally {
       await supabaseAdmin.from("phrases").update({ active: true }).in("id", insertedIds);

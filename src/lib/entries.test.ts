@@ -156,6 +156,7 @@ describe("submitEntry — proceed route", () => {
       flagged_general: false,
       embedding: embeddingResultFixture.embedding,
     });
+    expect(findClosestPhraseMock).toHaveBeenCalledWith(embeddingResultFixture.embedding, "en");
   });
 
   it("creates a response with the entry id, session id, and the given scaleBefore", async () => {

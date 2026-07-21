@@ -319,15 +319,15 @@ describe("findClosestPhrase", () => {
   it("calls the match_phrase RPC with the given embedding", async () => {
     rpcMock.mockResolvedValueOnce(matchPhraseNoneFoundFixture);
 
-    await findClosestPhrase([0.1, 0.2, 0.3]);
+    await findClosestPhrase([0.1, 0.2, 0.3], "en");
 
-    expect(rpcMock).toHaveBeenCalledWith("match_phrase", { query_embedding: [0.1, 0.2, 0.3] });
+    expect(rpcMock).toHaveBeenCalledWith("match_phrase", { query_embedding: [0.1, 0.2, 0.3], match_language: "en" });
   });
 
   it("returns the closest phrase when a match is found", async () => {
     rpcMock.mockResolvedValueOnce(matchPhraseFoundFixture);
 
-    const result = await findClosestPhrase([0.1, 0.2, 0.3]);
+    const result = await findClosestPhrase([0.1, 0.2, 0.3], "en");
 
     expect(result).toEqual(matchPhraseFoundFixture.data[0]);
   });
@@ -335,7 +335,7 @@ describe("findClosestPhrase", () => {
   it("returns null when the corpus has no active phrases to match", async () => {
     rpcMock.mockResolvedValueOnce(matchPhraseNoneFoundFixture);
 
-    const result = await findClosestPhrase([0.1, 0.2, 0.3]);
+    const result = await findClosestPhrase([0.1, 0.2, 0.3], "en");
 
     expect(result).toBeNull();
   });
@@ -343,6 +343,6 @@ describe("findClosestPhrase", () => {
   it("throws when the RPC call fails", async () => {
     rpcMock.mockResolvedValueOnce(matchPhraseErrorFixture);
 
-    await expect(findClosestPhrase([0.1, 0.2, 0.3])).rejects.toThrow("rpc failed");
+    await expect(findClosestPhrase([0.1, 0.2, 0.3], "en")).rejects.toThrow("rpc failed");
   });
 });
