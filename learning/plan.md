@@ -59,7 +59,7 @@ never walked in full.
 - [x] Thread the submitter's language through the entry pipeline (`lib/entries.ts`) and
       into the `match_phrase` call — hardcoded to `'en'` for now, since the UI itself is
       English-only today (real detection stays parked, per the roadmap's open question)
-- [ ] Update `scripts/seed-phrases.ts` so newly seeded phrases always carry a language
+- [x] Update `scripts/seed-phrases.ts` so newly seeded phrases always carry a language
       value going forward
 - [ ] Prove it end-to-end: insert one Spanish-tagged test phrase directly in the DB,
       submit an English entry through the real `/write` flow, confirm it does *not*
