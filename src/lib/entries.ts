@@ -82,7 +82,9 @@ export async function submitEntry(
 
   await createResponse(entry.id, sessionId, scaleBefore);
 
-  const match = await findClosestPhrase(embedding);
+  // language = "english" by default since this is the only one lang for the MVP, 
+  // there are no seed phrases in another language.
+  const match = await findClosestPhrase(embedding, "en");
 
   return match ? { type: "matched", entryId: entry.id, phrase: match } : { type: "no_match", entryId: entry.id };
 }
