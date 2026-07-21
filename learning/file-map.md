@@ -39,9 +39,9 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
   - `20260720180000_add_phrases_language_column.sql` — **known**, authored and debugged
     directly (Section 2, Task 1) → [[supabase-migrations-workflow]],
     [[postgres-add-column-not-null-default]]
-  - `20260720190000_add_match_phrase_language_filter.sql` — **known**, authored and
-    debugged directly (Section 2, Task 2; uncommitted, ready to commit) →
-    [[postgres-function-signature-change-requires-drop]]
+  - `20260720190000_add_match_phrase_language_filter.sql` — **known**, authored, debugged,
+    and rewritten to the expand-only form (Section 2, Task 2) →
+    [[postgres-function-signature-change-requires-drop]], [[expand-contract-deploy-pattern]]
   - `20260715140000_add_phrases_embedding_hnsw_index.sql` — parked (scaling groundwork, not yet explained)
   - the rest (RLS, crisis isolation, spend tables, settings) — parked
 - `supabase/config.toml` — local Supabase stack config (which services run locally). — parked
@@ -51,12 +51,18 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
 
 - `src/lib/supabase.ts` — the `supabaseAdmin` service-role client → [[rls-service-role-bypass]]. **known, seed status** — explained with the wrong mechanism (see knowledge-graph). Top reclaim priority.
 - `src/lib/entries.ts` — `submitEntry`: the full moderate → embed → match → store
-  orchestration → [[moderation-gate-ordering]], [[crisis-text-isolation]]. known (partial — order and crisis-storage gaps)
+  orchestration → [[moderation-gate-ordering]], [[crisis-text-isolation]]. known (partial —
+  order and crisis-storage gaps still parked). Section 2 Task 3: now threads a hardcoded
+  `"en"` language into its `findClosestPhrase` call. Needed a live correction on the call
+  order itself (initially described `findClosestPhrase` as a separate later step rather
+  than a nested call `submitEntry` waits on mid-execution) — resolved in chat, not yet
+  re-tested on a later day, so not graph evidence.
 - `src/lib/openai.ts` — the only file that calls OpenAI directly (embeddings + moderation) → [[embedding-generation]]. known
 - `src/lib/phrases.ts` — reads/writes the `phrases` corpus, calls `match_phrase` via RPC,
   and the user-submitted-phrase moderation pipeline (`finalizeUserPhraseModeration`,
   `approvePhrase`/`rejectPhrase`) → [[admin-audit-not-gate-model]]. known for the matching
-  call, parked for the moderation/approval half
+  call — `findClosestPhrase` now takes a `language` param, authored directly (Section 2,
+  Task 3) — parked for the moderation/approval half
 - `src/lib/crisis-entries.ts` — isolated crisis storage + anonymization cron logic → [[crisis-text-isolation]], [[crisis-anonymization-cron]]. known
 - `src/lib/spend.ts`, `src/lib/safety/embedding-cost.ts`, `src/lib/safety/spend-cap.ts` —
   the $5/day hard cap → [[daily-spend-cap]]. parked
@@ -136,14 +142,21 @@ its own canvas/animation component + local `_components/`.
 
 ## `src/test/` — test suite
 
-- `integration/entries.integration.test.ts`, `match-phrase.integration.test.ts`,
-  `daily-spend.integration.test.ts` — real-Postgres tests → [[integration-tests-real-postgres]]. parked (this is the current branch's own work — natural first reclaim target)
+- `integration/entries.integration.test.ts`, `daily-spend.integration.test.ts` —
+  real-Postgres tests → [[integration-tests-real-postgres]]. parked
+- `integration/match-phrase.integration.test.ts` — known, both read and edited directly
+  (Section 2, Task 3: added the `"en"` argument its two calls needed) →
+  [[test-coverage-boundary-reasoning]]
 - `fixtures/` — shared mock data (embeddings, moderation responses, Supabase/Upstash
   response shapes) reused across unit tests. parked
 - `mocks/server-only.ts` — test-environment stub for the `server-only` import guard used
   by `src/lib/supabase.ts` and `src/lib/openai.ts`. parked
-- Unit test files live alongside their source (not inventoried individually here) — 18
-  files, 127 tests, all passing as of 2026-07-16.
+- Unit test files live alongside their source (not inventoried individually here) — 20
+  files, 139 tests, all passing as of 2026-07-21. Two authored directly this session:
+  `src/lib/phrases.test.ts` (updated 4 call sites + an RPC-argument assertion) and
+  `src/lib/entries.test.ts` (added the assertion that closed the
+  [[test-coverage-boundary-reasoning]] gap — confirms `submitEntry` actually calls
+  `findClosestPhrase` with `"en"`, not just that it handles the mock's return value).
 
 ## `scripts/`
 

@@ -165,6 +165,51 @@ standing rule: any migration that changes a function's parameter count should dr
 replace the old one outright.
 **depends-on:** [[supabase-migrations-workflow]]
 
+**Refined 2026-07-21:** the drop isn't always immediate — see [[expand-contract-deploy-pattern]].
+Under real production traffic, dropping the old signature in the same migration that adds
+the new one creates its own outage risk, since schema deploys and app-code deploys aren't
+atomic together.
+
+## expand-contract-deploy-pattern
+**Status:** practicing — 2026-07-21
+Ship a backward-compatible "expand" migration first (new function/column alongside the old
+one, safe to merge and deploy anytime because nothing currently deployed breaks), deploy
+the app code that uses the new shape, confirm it's live, *then* ship a separate "contract"
+migration that removes the old shape. Exists because `deploy-migrations.yml` pushes schema
+changes to the real database independently of app-code deploys — a migration that both adds
+a new function signature and drops the old one in the same step means any not-yet-updated
+app code gets a live 500 the instant that migration merges, and under real traffic that's
+not a hypothetical.
+**Evidence:** asked unprompted whether reducing/avoiding this class of 500 was possible
+under high traffic. When told both `match_phrase` signatures could coexist safely (no
+`DEFAULT` on the new parameter), immediately pushed back with the sharper question — doesn't
+keeping both alive reintroduce the same overload ambiguity as the `increment_daily_spend`
+incident, making the risk "even higher" since it would need an immediate revert? Correctly
+anticipated the right failure mode to worry about, even though the specific case turned out
+safe. Rewrote `20260720190000_add_match_phrase_language_filter.sql` to the expand-only form
+(dropped the premature `drop function`, switched to `create or replace`, reasoning correctly
+that `or replace` only touches a function with the exact same signature). Verified together
+against local Postgres, both via `pg_proc` and a real PostgREST HTTP call.
+**depends-on:** [[supabase-migrations-workflow]], [[postgres-function-signature-change-requires-drop]]
+
+## test-coverage-boundary-reasoning
+**Status:** understood — 2026-07-21
+Knowing which layer a given test actually exercises, and which it doesn't — e.g. a unit
+test that mocks a dependency proves what the caller *does with the mock's return value*,
+never what arguments it *calls the mock with*, unless there's an explicit
+`toHaveBeenCalledWith` assertion. Distinct from "does this test pass" — it's reasoning
+about what a green suite does and doesn't actually guarantee.
+**Evidence:** demonstrated twice, unprompted, on different days. 2026-07-20: asked why
+integration tests hadn't caught a schema/app mismatch, then correctly reasoned that
+`match_phrase` not yet being called with a language argument meant there was nothing yet
+for a language-mismatch test to catch. 2026-07-21: before running the suite, asked whether
+`entries.test.ts` needed its own assertion or was "already covered" by the integration
+tests — correctly identified that `entries.test.ts` mocks `findClosestPhrase` entirely, so
+it could only ever verify what `submitEntry` *does with* the mock's return value, never
+that it *calls* the mock with the right language — a real, distinct gap neither the unit
+test in `phrases.test.ts` nor the integration test would have caught.
+**depends-on:** none
+
 ## postgres-add-column-not-null-default
 **Status:** practicing — 2026-07-20
 Adding a column with `NOT NULL` and `DEFAULT` declared together in the *same*

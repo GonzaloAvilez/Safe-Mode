@@ -56,7 +56,7 @@ never walked in full.
       as `'en'` since it's already English
 - [x] Extend `match_phrase` to accept a `language` parameter and filter results to
       same-language phrases only
-- [ ] Thread the submitter's language through the entry pipeline (`lib/entries.ts`) and
+- [x] Thread the submitter's language through the entry pipeline (`lib/entries.ts`) and
       into the `match_phrase` call — hardcoded to `'en'` for now, since the UI itself is
       English-only today (real detection stays parked, per the roadmap's open question)
 - [ ] Update `scripts/seed-phrases.ts` so newly seeded phrases always carry a language
