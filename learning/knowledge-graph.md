@@ -124,13 +124,42 @@ runs before every request, the matcher config, why it's not just page-level logi
 **depends-on:** [[site-visibility-flags]]
 
 ## supabase-migrations-workflow
-**Status:** seed — 2026-07-16
+**Status:** practicing — 2026-07-20
 Schema, RPC functions (`match_phrase`), indexes, and RLS policies are all defined as
 timestamped SQL files in `supabase/migrations/`, applied in order — the source of truth
-for the database, not something configured by hand in Supabase Studio.
-**Evidence:** touched indirectly in Q2 (correctly pointed at "supabase logic" for the
-threshold) but the migration-file mechanism itself hasn't been walked.
+for the database, not something configured by hand in Supabase Studio. A dedicated CI
+workflow (`deploy-migrations.yml`) runs `supabase db push` against the real project
+automatically whenever `supabase/migrations/**` changes land on `master` — which is why
+migrations get their own branch/PR, never bundled with app code (a schema change would
+otherwise ship at the exact same moment as unrelated code).
+**Evidence:** wrote and debugged a real migration
+(`20260720180000_add_phrases_language_column.sql`) end to end against local Postgres:
+predicted correctly that adding a `NOT NULL` column with no default would fail against
+existing rows, saw it fail for real, then iterated through two more broken attempts (a
+syntax error combining `SET NOT NULL DEFAULT` in one clause, then a version that split
+`ADD COLUMN` / `SET DEFAULT` / `SET NOT NULL` into separate steps — which still failed
+because `SET DEFAULT` doesn't retroactively fill existing rows) before landing on the
+correct single-statement form and explaining why it works, unprompted, in the chat.
+Verified the full 15-migration set still applies clean via `supabase db reset`.
 **depends-on:** none
+
+## postgres-add-column-not-null-default
+**Status:** practicing — 2026-07-20
+Adding a column with `NOT NULL` and `DEFAULT` declared together in the *same*
+`ADD COLUMN` statement lets Postgres treat every existing row as if it already had that
+default value, without physically rewriting the table — no separate backfill `UPDATE`
+needed. Splitting it into separate steps (`ADD COLUMN` nullable, then `SET DEFAULT`,
+then `SET NOT NULL`) does not work: `SET DEFAULT` only applies to rows inserted after
+that point, so the later `SET NOT NULL` still fails against the old rows, which are
+still `NULL`.
+**Evidence:** initially assumed the split-into-3-steps version was necessary (matching
+what was demonstrated first). When asked why `NOT NULL DEFAULT` in one step wouldn't
+just work, correctly guessed it should. Confirmed live against local Postgres, then after
+seeing the `SET DEFAULT`-doesn't-backfill failure, explained correctly in the chat: doing
+it together means the change "applies in the same iteration conforming as the column is
+created," unlike separately, since `SET DEFAULT` alone doesn't overwrite the existing
+rows.
+**depends-on:** [[supabase-migrations-workflow]]
 
 ## integration-tests-real-postgres
 **Status:** seed — 2026-07-16
