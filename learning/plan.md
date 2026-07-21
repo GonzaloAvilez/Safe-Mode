@@ -54,7 +54,7 @@ never walked in full.
 **Tasks:**
 - [x] Add a `language` column to `phrases` (new migration), backfill the existing corpus
       as `'en'` since it's already English
-- [ ] Extend `match_phrase` to accept a `language` parameter and filter results to
+- [x] Extend `match_phrase` to accept a `language` parameter and filter results to
       same-language phrases only
 - [ ] Thread the submitter's language through the entry pipeline (`lib/entries.ts`) and
       into the `match_phrase` call — hardcoded to `'en'` for now, since the UI itself is

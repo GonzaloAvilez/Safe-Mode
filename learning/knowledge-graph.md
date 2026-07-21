@@ -140,8 +140,30 @@ syntax error combining `SET NOT NULL DEFAULT` in one clause, then a version that
 `ADD COLUMN` / `SET DEFAULT` / `SET NOT NULL` into separate steps — which still failed
 because `SET DEFAULT` doesn't retroactively fill existing rows) before landing on the
 correct single-statement form and explaining why it works, unprompted, in the chat.
-Verified the full 15-migration set still applies clean via `supabase db reset`.
+Verified the full 15-migration set still applies clean via `supabase db reset`. Task 2
+added a second real migration (`20260720190000_add_match_phrase_language_filter.sql`,
+extending `match_phrase`), verified the full 16-migration set still applies clean.
 **depends-on:** none
+
+## postgres-function-signature-change-requires-drop
+**Status:** practicing — 2026-07-20
+Changing a Postgres function's parameter list via `create or replace` doesn't replace
+the old version — Postgres identifies a function by name *and* argument types, so the
+old and new signatures coexist as separate overloads. If the new parameter has a
+default, the two can become ambiguous (same callable arg count) and PostgREST fails
+every call (`PGRST203`) — this already happened for real on `increment_daily_spend`
+(`20260715160000_fix_increment_daily_spend_overload.sql`). Even *without* a default,
+where no ambiguity error occurs, the old overload staying alive is still a hazard: it
+remains silently callable with its old (now-wrong) behavior. The fix either way is the
+same — `drop function if exists <name>(<old signature>);` before creating the new one.
+**Evidence:** first explanation was imprecise ("Postgres keeps calling the first one
+defined") — corrected after being pointed back at the project's own past-incident
+migration comment, then explained the ambiguity mechanism correctly and asked, sharply,
+what would happen without a default on the new parameter. After being told that case
+doesn't collide but still shouldn't be left in place, generalized it unprompted into a
+standing rule: any migration that changes a function's parameter count should drop and
+replace the old one outright.
+**depends-on:** [[supabase-migrations-workflow]]
 
 ## postgres-add-column-not-null-default
 **Status:** practicing — 2026-07-20

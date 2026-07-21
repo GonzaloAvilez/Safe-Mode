@@ -29,14 +29,19 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
 
 ## `supabase/` — the database
 
-- `supabase/migrations/*.sql` (15 files, 2026-07-07 → 2026-07-20) — the real schema:
+- `supabase/migrations/*.sql` (16 files, 2026-07-07 → 2026-07-20) — the real schema:
   table creation, RLS policies, the `match_phrase` RPC, indexes, spend-tracking RPCs, all
   as ordered, timestamped SQL → [[supabase-migrations-workflow]]. Specific files
   walked directly:
   - `20260711120000_add_match_phrase_similarity_threshold.sql` — known → [[vector-similarity-threshold]]
+  - `20260715160000_fix_increment_daily_spend_overload.sql` — known, re-read directly as
+    the precedent for Task 2 → [[postgres-function-signature-change-requires-drop]]
   - `20260720180000_add_phrases_language_column.sql` — **known**, authored and debugged
     directly (Section 2, Task 1) → [[supabase-migrations-workflow]],
     [[postgres-add-column-not-null-default]]
+  - `20260720190000_add_match_phrase_language_filter.sql` — **known**, authored and
+    debugged directly (Section 2, Task 2; uncommitted, ready to commit) →
+    [[postgres-function-signature-change-requires-drop]]
   - `20260715140000_add_phrases_embedding_hnsw_index.sql` — parked (scaling groundwork, not yet explained)
   - the rest (RLS, crisis isolation, spend tables, settings) — parked
 - `supabase/config.toml` — local Supabase stack config (which services run locally). — parked
