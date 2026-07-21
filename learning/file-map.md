@@ -162,7 +162,12 @@ its own canvas/animation component + local `_components/`.
 
 - `run-integration-tests.sh` — spins up local Supabase/Postgres and runs the integration
   suite → [[integration-tests-real-postgres]]. parked
-- `seed-phrases.ts` — the D7 script that seeded the original 50 phrases with embeddings. parked
+- `seed-phrases.ts` — the D7 script that seeded the original 50 phrases with embeddings,
+  **known** (Section 2, Task 4). Was stale in Spanish on `master` despite the real corpus
+  having been translated to English against the live Supabase project back on 2026-07-15
+  — that translation commit (`7cde6ac`) only ever lived on an orphaned, unmerged branch.
+  Recovered via `git cherry-pick` before adding `language: "en"` to the type and all 50
+  entries plus the `.insert()` call, so future re-seeds tag language correctly.
 
 ## `public/`, `docs/design/` — static assets and design-brief reference material (mockups,
 not code). parked

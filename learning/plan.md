@@ -59,11 +59,19 @@ never walked in full.
 - [x] Thread the submitter's language through the entry pipeline (`lib/entries.ts`) and
       into the `match_phrase` call — hardcoded to `'en'` for now, since the UI itself is
       English-only today (real detection stays parked, per the roadmap's open question)
-- [ ] Update `scripts/seed-phrases.ts` so newly seeded phrases always carry a language
+- [x] Update `scripts/seed-phrases.ts` so newly seeded phrases always carry a language
       value going forward
 - [ ] Prove it end-to-end: insert one Spanish-tagged test phrase directly in the DB,
       submit an English entry through the real `/write` flow, confirm it does *not*
       match the Spanish phrase
+- [ ] Add a real integration test for `submitEntry` itself — mocking only
+      `getEmbedding`/`moderateText` (avoid real OpenAI cost), everything else against real
+      local Postgres — proving the full wired pipeline (not `findClosestPhrase` alone, not
+      `submitEntry` with a mocked match) only matches same-language phrases. Caught
+      2026-07-21, after Task 3 had already merged: neither the unit tests (mocked
+      `findClosestPhrase`) nor the integration tests (call `findClosestPhrase` directly,
+      never through `submitEntry`) exercise the real end-to-end wiring →
+      [[test-coverage-boundary-reasoning]]
 
 ## Section 3 — Human pre-approval gate before publishing
 
