@@ -61,9 +61,16 @@ never walked in full.
       English-only today (real detection stays parked, per the roadmap's open question)
 - [x] Update `scripts/seed-phrases.ts` so newly seeded phrases always carry a language
       value going forward
-- [ ] Prove it end-to-end: insert one Spanish-tagged test phrase directly in the DB,
+- [x] Prove it end-to-end: insert one Spanish-tagged test phrase directly in the DB,
       submit an English entry through the real `/write` flow, confirm it does *not*
-      match the Spanish phrase
+      match the Spanish phrase. Done 2026-07-21 via a real browser (Playwright) driving
+      the actual 9-screen flow against local Supabase — the English submission matched
+      the seeded English phrase, correctly ignoring the seeded Spanish phrase even
+      though it's the literal original-language version of the same sentence (so
+      cosine similarity alone would likely have favored it). Deliberately **not**
+      committed as a permanent test — real OpenAI cost per run, timing-based waits for
+      the ritual transitions (fragile in CI), no fixture cleanup, and redundant with the
+      `submitEntry` integration test below. One-time manual proof only.
 - [ ] Add a real integration test for `submitEntry` itself — mocking only
       `getEmbedding`/`moderateText` (avoid real OpenAI cost), everything else against real
       local Postgres — proving the full wired pipeline (not `findClosestPhrase` alone, not
