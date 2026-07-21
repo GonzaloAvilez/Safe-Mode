@@ -2,16 +2,14 @@
 -- similarity from text-embedding-3-small is measurably weaker than same-language —
 -- matching across languages would surface false positives.
 --
--- The parameter list is changing (1 arg -> 2), so per this project's own precedent
--- (see 20260715160000_fix_increment_daily_spend_overload.sql), `create or replace`
--- alone would leave the old 1-arg version coexisting as a separate overload rather
--- than replacing it. Even though the two signatures wouldn't collide (different arg
--- counts, no default on the new parameter), leaving the old one callable would mean
--- language-blind matching is still silently reachable — so it's dropped explicitly.
+-- Applying  _expand-contract_ pattern instead to drop original function and replacing, 
+-- following this pattern we'll have zero-downtimes because of breaking changes are 
+-- comming since this function is called in several parts of the code. 
+-- Flow: create new function with 2 args -> keep both functions (1 arg, 2 args) -> 
+-- modify code to replace 1 arg func call to 2 arg func call -> drop old 1 arg func
 
-drop function if exists match_phrase(vector(1536));
 
-create function match_phrase(query_embedding vector(1536), match_language text)
+create or replace function match_phrase(query_embedding vector(1536), match_language text)
 returns table (
   id uuid,
   text text,
