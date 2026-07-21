@@ -11,8 +11,8 @@ export type PhraseMatch = {
 };
 
 // Closest active phrase to the given embedding, or null when the corpus has no match (e.g. before D7 seeding).
-export async function findClosestPhrase(embedding: number[]): Promise<PhraseMatch | null> {
-  const { data, error } = await supabaseAdmin.rpc("match_phrase", { query_embedding: embedding });
+export async function findClosestPhrase(embedding: number[], language: string): Promise<PhraseMatch | null> {
+  const { data, error } = await supabaseAdmin.rpc("match_phrase", { query_embedding: embedding, match_language: language });
 
   if (error) throw error;
 
