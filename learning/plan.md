@@ -118,8 +118,15 @@ traceability of which screen a submission came from).
       `20260722120000_add_phrases_origin_column.sql` — nullable `text` column, check
       constraint matching `source`'s style, verified live (`\d phrases`, full 17-migration
       `db reset`, 10/10 integration + 139/139 unit tests still passing).
-- [ ] Thread `origin` from `trace-form.tsx` and `contribute-form.tsx` through
-      `POST /api/phrases` into `submitUserPhrase`, so the column actually gets populated
+- [x] Thread `origin` from `trace-form.tsx` and `contribute-form.tsx` through
+      `POST /api/phrases` into `submitUserPhrase`, so the column actually gets populated.
+      Landed 2026-07-22: new zero-dependency `src/lib/phrase-origin.ts` (safe to import
+      from client components — importing anything that touches `supabase.ts`/`openai.ts`
+      would break the client build via their `server-only` guard), threaded through both
+      forms, the route's validation (matching `text`'s existing pattern) and
+      `submitUserPhrase`'s new `PhraseOrigin`-typed parameter. Fixed the existing
+      `phrases.test.ts` and `route.test.ts` call sites/assertions the signature change
+      broke. 139/139 unit + 10/10 integration passing, `tsc --noEmit` clean.
 - [ ] Turn moderation into a real pre-publish gate: remove the automatic
       `setPhraseActive(id, true)` call inside `finalizeUserPhraseModeration`
       (`src/lib/phrases.ts`). OpenAI's verdict still decides `moderation_status`, but
@@ -136,6 +143,12 @@ traceability of which screen a submission came from).
 - [ ] Prove it end-to-end: submit a phrase via Leave a Trace (or Contribute) locally,
       confirm it does *not* show up as active/matchable until a human clicks "Activar"
       in `/admin/phrases`
+- [ ] Add one small integration test for `origin`, against real Postgres — the `check`
+      constraint (`origin in ('leave_a_trace', 'contribute')`) lives in the database, not
+      in TypeScript, so no mocked test could ever prove it actually rejects an invalid
+      value → `[[test-coverage-boundary-reasoning]]`. Scoped narrow on purpose: one insert
+      with a valid `origin` round-trips correctly, one with an invalid value is rejected
+      by the real constraint — not a new suite.
 
 ## Section 4 — Metrics + tracking for demo day (D27-28)
 

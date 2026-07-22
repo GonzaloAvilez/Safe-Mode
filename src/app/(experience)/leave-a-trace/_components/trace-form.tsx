@@ -2,7 +2,7 @@
 
 import { useState, type SubmitEvent } from "react";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
-
+import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
 const MAX_TEXT_LENGTH = 120;
 
 type ErrorOutcome = { message: string } | null;
@@ -32,7 +32,12 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
       const res = await fetch("/api/phrases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, honeypot, formRenderedAt }),
+        body: JSON.stringify({ 
+          text, 
+          honeypot, 
+          formRenderedAt, 
+          origin: LEAVE_A_TRACE_ORIGIN
+        }),
       });
 
       if (!res.ok) {

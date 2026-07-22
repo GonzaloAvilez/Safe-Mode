@@ -3,6 +3,7 @@ import { getEmbedding, moderateText } from "@/lib/openai";
 import { resolvePhraseModerationStatus, shouldActivatePhrase } from "@/lib/safety/phrase-moderation";
 import { estimateEmbeddingCostUsd } from "@/lib/safety/embedding-cost";
 import { canSpendToday, recordEmbeddingSpend } from "@/lib/spend";
+import { PhraseOrigin } from "@/lib/phrase-origin";
 
 export type PhraseMatch = {
   id: string;
@@ -21,10 +22,10 @@ export async function findClosestPhrase(embedding: number[], language: string): 
 
 // Inserts with the table defaults: moderation_status='pending', active=false.
 // finalizeUserPhraseModeration (below) resolves this automatically moments later.
-export async function submitUserPhrase(text: string): Promise<{ id: string }> {
+export async function submitUserPhrase(text: string, origin: PhraseOrigin): Promise<{ id: string }> {
   const { data, error } = await supabaseAdmin
     .from("phrases")
-    .insert({ text, source: "user" })
+    .insert({ text, origin, source: "user" })
     .select("id")
     .single();
 
