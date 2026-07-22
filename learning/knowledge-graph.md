@@ -210,6 +210,24 @@ that it *calls* the mock with the right language — a real, distinct gap neithe
 test in `phrases.test.ts` nor the integration test would have caught.
 **depends-on:** none
 
+## e2e-test-cost-tradeoffs
+**Status:** introduced — 2026-07-21
+Whether a one-off verification script (browser automation, real API calls) should graduate
+into permanent, committed test-suite code is its own decision, separate from whether the
+script proved what it set out to prove. Real costs to weigh: recurring real API spend if it
+runs in CI, flakiness from timing-based waits standing in for real ready-state signals,
+missing fixture cleanup, and overlap with cheaper tests that already cover the same logic
+path without a browser or real API calls.
+**Evidence:** after a real Playwright script proved Section 2's language segmentation
+end-to-end (English submission matched the English seed phrase, correctly skipped the
+Spanish one), asked unprompted whether it was worth adding to the repo permanently. Agreed
+with the reasoning once walked through it (real OpenAI cost in CI, `waitForTimeout`-based
+waits for the ritual transitions are fragile, no cleanup of seeded rows, redundant with the
+planned `submitEntry` integration test) rather than reflexively committing something that
+had just worked once — the question itself, asked before being told the answer, is the
+evidence; the tradeoff analysis was mine, not yet independently reasoned.
+**depends-on:** [[test-coverage-boundary-reasoning]]
+
 ## postgres-add-column-not-null-default
 **Status:** practicing — 2026-07-20
 Adding a column with `NOT NULL` and `DEFAULT` declared together in the *same*
