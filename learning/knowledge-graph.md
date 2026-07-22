@@ -247,15 +247,83 @@ rows.
 **depends-on:** [[supabase-migrations-workflow]]
 
 ## integration-tests-real-postgres
-**Status:** seed — 2026-07-16
+**Status:** practicing — 2026-07-21
 The current branch's own work: `vitest.integration.config.ts` +
 `scripts/run-integration-tests.sh` run a subset of tests against a real local Postgres
 (via Supabase CLI) rather than mocks, specifically for DB-adjacent logic like
 `match_phrase` and the daily-spend RPCs.
-**Evidence:** not yet probed — this is literally what's on the current git branch
-(`week2/integration-tests-migrations`), a natural first reclaim target since it's the
-freshest code.
+**Evidence:** authored `src/test/integration/submit-entry.integration.test.ts` end to end
+(Section 2, final task) — the real insert/select-id/cleanup pattern, wiring
+`moderateTextMock`/`getEmbeddingMock` while deliberately leaving `findClosestPhrase`
+unmocked, and correctly predicted the full `npm run test:integration` flow (Docker up →
+migrations → mocked-OpenAI-cost-avoidance → real RPC assertions) before running it,
+unprompted, in the chat. Then debugged a real failure this suite surfaced — see
+[[vitest-file-parallelism-shared-db-race]] and [[supabase-start-vs-reset-stale-state]].
 **depends-on:** [[supabase-migrations-workflow]]
+
+## typescript-discriminated-union-narrowing
+**Status:** practicing — 2026-07-21
+A TypeScript union distinguished by a shared field (e.g. `EntryOutcome`'s `type`) only
+lets you access a field that belongs to one specific branch (like `phrase` on the
+`"matched"` branch) after a real runtime check narrows it — `if (outcome.type !==
+"matched") throw ...`. A test assertion like `expect(outcome.type).toBe("matched")` does
+not narrow the type for TypeScript; only an actual `if`/type-guard in the code does.
+**Evidence:** had no prior exposure ("no se typescript"), explained from scratch in chat
+with the `EntryOutcome` union definition as the concrete example. Applied it correctly on
+the very next save — wrote the `if (outcome.type !== "matched") throw new Error(...)`
+guard followed by `outcome.phrase.text`, with no further correction needed.
+**depends-on:** none
+
+## vitest-file-parallelism-shared-db-race
+**Status:** practicing — 2026-07-21
+Vitest runs different test *files* concurrently by default (`fileParallelism: true`).
+Harmless for a fully-mocked unit suite, but this project's integration suite has every
+file write to the same real local Postgres — two files using overlapping fixture data
+(the same frozen embedding from `real-phrase-embeddings.ts`) can collide mid-run: one
+file's row is momentarily visible while another file's test asserts against the same
+data. Setting `fileParallelism: false` in `vitest.integration.config.ts` forces
+integration files to run one at a time, trading linear (not parallel) suite runtime for
+removing the race entirely.
+**Evidence:** first hypothesis was wrong (assumed our own `afterEach` cleanup "forgot" to
+remove the phrase) — correctly abandoned it after being asked whether that could really
+be the cause given `afterEach` runs after every test. Then correctly identified,
+unprompted, that `vitest.integration.config.ts` had no setting forcing sequential file
+execution. Pushed back with a sharp, well-reasoned question about the runtime cost of
+`fileParallelism: false` as the suite grows, then independently designed and ran the
+falsifying experiment (revert the setting, force a clean `db reset`, rerun) that is what
+actually separated this bug from [[supabase-start-vs-reset-stale-state]] — a real, novel
+race reproduced on demonstrably fresh data (a new UUID each time), not stale rows.
+**depends-on:** [[integration-tests-real-postgres]]
+
+## supabase-start-vs-reset-stale-state
+**Status:** practicing — 2026-07-21
+`npx supabase start` reuses an existing local Docker volume if one is already present,
+rather than recreating the database and reapplying every migration fresh — despite
+`run-integration-tests.sh`'s own comment claiming migrations apply "automatic on start."
+Only `npx supabase db reset` forces a genuinely clean rebuild. GitHub Actions runners
+start with no pre-existing volume, so this is believed to be a local-only footgun, not
+necessarily a CI bug — deliberately left unpatched in the script pending real CI
+evidence.
+**Evidence:** originally surfaced and explained in an earlier session
+(2026-07-21, migration-editing work). Recalled correctly, unprompted, across a session
+boundary today when a second, unrelated symptom appeared (an identical row UUID
+persisting across independent `supabase start` cycles) — correctly connected it back to
+the "local DB is running an older/cached state" mechanism without being told the
+answer, and correctly named the CI-vs-local distinction from memory.
+**depends-on:** none
+
+## flaky-test-concept
+**Status:** introduced — 2026-07-21
+A test whose outcome depends on a non-deterministic factor (timing, execution order,
+concurrent access to shared state) rather than solely on the correctness of the code
+under test — the same code and data can pass or fail across separate runs depending on
+whether the race actually gets hit.
+**Evidence:** named the concept themselves, unprompted, immediately after watching the
+file-parallelism race reproduce three times in a row ("esto se convierte en un test
+inestable?"). Needed one clarifying nuance (that it manifested as consistently failing
+here, not alternating, purely because the suite is small/fast enough that the race
+window is almost always hit) rather than a from-scratch explanation.
+**depends-on:** [[vitest-file-parallelism-shared-db-race]]
 
 ## Missing/absent practices
 None load-bearing found missing — git history is deep and disciplined (141 commits,

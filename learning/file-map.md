@@ -11,8 +11,12 @@ explained — an honest gap, not a failure, with a note on when it comes due).
   `scripts/run-integration-tests.sh`). — parked
 - `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs`, `tsconfig.json`,
   `components.json` (shadcn) — framework/tooling config, untouched today. — parked
-- `vitest.config.ts` / `vitest.integration.config.ts` — split test configs: one for the
-  127 fast unit tests, one for the slower real-Postgres suite → [[integration-tests-real-postgres]] — parked
+- `vitest.config.ts` — the fast fully-mocked unit-test config, untouched today. — parked
+- `vitest.integration.config.ts` — the real-Postgres suite's config →
+  [[integration-tests-real-postgres]]. **known**, edited directly today: added, removed,
+  then re-added `fileParallelism: false` after designing an experiment (fresh `db reset` +
+  default `true`) that proved it was a real fix, not a guess →
+  [[vitest-file-parallelism-shared-db-race]]
 - `vercel.json` — deploy config. — parked
 - `.env.local` / `.env.example` — real vs. template environment variables (Supabase,
   OpenAI, Upstash, admin session secret keys). — parked
@@ -147,6 +151,15 @@ its own canvas/animation component + local `_components/`.
 - `integration/match-phrase.integration.test.ts` — known, both read and edited directly
   (Section 2, Task 3: added the `"en"` argument its two calls needed) →
   [[test-coverage-boundary-reasoning]]
+- `integration/submit-entry.integration.test.ts` — **known**, authored directly (Section 2,
+  final task): real insert of an English + Spanish phrase sharing one embedding, mocking
+  only `moderateText`/`getEmbedding` (never `findClosestPhrase`, on purpose — that's the
+  whole point of the test), calling the real `submitEntry` end to end and asserting it
+  matches the English phrase only → [[integration-tests-real-postgres]],
+  [[typescript-discriminated-union-narrowing]], [[test-coverage-boundary-reasoning]].
+  Debugging this test's first real run surfaced two independent bugs, both real, neither
+  in this file → [[vitest-file-parallelism-shared-db-race]],
+  [[supabase-start-vs-reset-stale-state]]
 - `fixtures/` — shared mock data (embeddings, moderation responses, Supabase/Upstash
   response shapes) reused across unit tests. parked
 - `mocks/server-only.ts` — test-environment stub for the `server-only` import guard used
