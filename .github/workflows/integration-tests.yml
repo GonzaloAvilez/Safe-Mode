@@ -10,11 +10,17 @@ on:
   pull_request:
     branches: [master, preview]
     paths:
+      - src/test/integration/**
       - "supabase/migrations/**"
+      - "src/lib/entries.ts"
+      - "src/lib/phrases.ts"
   push:
     branches: [master, preview]
     paths:
+      - "src/test/integration/**"
       - "supabase/migrations/**"
+      - "src/lib/entries.ts"
+      - "src/lib/phrases.ts"
 
 jobs:
   integration-test:
