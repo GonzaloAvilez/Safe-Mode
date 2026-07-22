@@ -64,14 +64,20 @@ never walked in full.
 - [ ] Prove it end-to-end: insert one Spanish-tagged test phrase directly in the DB,
       submit an English entry through the real `/write` flow, confirm it does *not*
       match the Spanish phrase
-- [ ] Add a real integration test for `submitEntry` itself — mocking only
+- [x] Add a real integration test for `submitEntry` itself — mocking only
       `getEmbedding`/`moderateText` (avoid real OpenAI cost), everything else against real
       local Postgres — proving the full wired pipeline (not `findClosestPhrase` alone, not
       `submitEntry` with a mocked match) only matches same-language phrases. Caught
       2026-07-21, after Task 3 had already merged: neither the unit tests (mocked
       `findClosestPhrase`) nor the integration tests (call `findClosestPhrase` directly,
       never through `submitEntry`) exercise the real end-to-end wiring →
-      [[test-coverage-boundary-reasoning]]
+      [[test-coverage-boundary-reasoning]]. Landed 2026-07-21 in
+      `src/test/integration/submit-entry.integration.test.ts` — 4/4 integration files,
+      10/10 tests pass on a clean local DB. Along the way, debugging the first real run
+      surfaced and fixed a genuine `fileParallelism` race across integration test files
+      (`vitest.integration.config.ts` now sets it `false`) — separate from, but initially
+      confused with, the already-known stale-local-volume issue →
+      [[vitest-file-parallelism-shared-db-race]], [[supabase-start-vs-reset-stale-state]]
 
 ## Section 3 — Human pre-approval gate before publishing
 
