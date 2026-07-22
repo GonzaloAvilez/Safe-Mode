@@ -47,6 +47,9 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
     and rewritten to the expand-only form (Section 2, Task 2) →
     [[postgres-function-signature-change-requires-drop]], [[expand-contract-deploy-pattern]]
   - `20260715140000_add_phrases_embedding_hnsw_index.sql` — parked (scaling groundwork, not yet explained)
+  - `20260722120000_add_phrases_origin_column.sql` — **known**, authored directly
+    (Section 3, Task 1): nullable `origin` column + check constraint matching `source`'s
+    pattern → [[supabase-migrations-workflow]], [[postgres-add-column-not-null-default]]
   - the rest (RLS, crisis isolation, spend tables, settings) — parked
 - `supabase/config.toml` — local Supabase stack config (which services run locally). — parked
 - `supabase/.branches/`, `supabase/.temp/`, `supabase/snippets/` — `generated`/local CLI state

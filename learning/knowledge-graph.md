@@ -124,7 +124,7 @@ runs before every request, the matcher config, why it's not just page-level logi
 **depends-on:** [[site-visibility-flags]]
 
 ## supabase-migrations-workflow
-**Status:** practicing — 2026-07-20
+**Status:** understood — 2026-07-22
 Schema, RPC functions (`match_phrase`), indexes, and RLS policies are all defined as
 timestamped SQL files in `supabase/migrations/`, applied in order — the source of truth
 for the database, not something configured by hand in Supabase Studio. A dedicated CI
@@ -143,6 +143,17 @@ correct single-statement form and explaining why it works, unprompted, in the ch
 Verified the full 15-migration set still applies clean via `supabase db reset`. Task 2
 added a second real migration (`20260720190000_add_match_phrase_language_filter.sql`,
 extending `match_phrase`), verified the full 16-migration set still applies clean.
+**Upgraded to understood 2026-07-22**, two days after first introduced — a real gap
+between introduction and this evidence, not same-day performance. Section 3 Task 1
+(`20260722120000_add_phrases_origin_column.sql`) written almost independently: correctly
+reasoned unprompted that `origin` should be nullable (not `NOT NULL DEFAULT` like
+`language`) because seed phrases have no valid value to backfill with, matched the
+existing `source` column's `check (... in (...))` style without being shown it directly
+(just pointed at the file), and correctly predicted that all 50 existing rows would come
+back `null` after the reset — including the non-obvious extra point, unprompted, that
+already-submitted real phrases would also permanently lose their origin, not just seed
+data. One real syntax slip along the way, self-corrected — see
+[[postgres-add-column-not-null-default]].
 **depends-on:** none
 
 ## postgres-function-signature-change-requires-drop
@@ -244,6 +255,13 @@ seeing the `SET DEFAULT`-doesn't-backfill failure, explained correctly in the ch
 it together means the change "applies in the same iteration conforming as the column is
 created," unlike separately, since `SET DEFAULT` alone doesn't overwrite the existing
 rows.
+**Extended 2026-07-22:** the nullable case, not just the `NOT NULL DEFAULT` case. First
+wrote `add column origin text nullable check(...)` — `nullable` isn't a real Postgres
+keyword (omitting `NOT NULL` already means nullable; there's nothing to say). Asked to
+predict what `supabase db reset` would do with that line before running it, correctly
+reasoned Postgres wouldn't recognize the word, and fixed it to the real (if redundant)
+explicit keyword, `NULL`. Confirmed live: schema applied clean, `\d phrases` showed no
+`not null` marker.
 **depends-on:** [[supabase-migrations-workflow]]
 
 ## integration-tests-real-postgres
