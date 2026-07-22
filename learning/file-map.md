@@ -69,7 +69,13 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
   and the user-submitted-phrase moderation pipeline (`finalizeUserPhraseModeration`,
   `approvePhrase`/`rejectPhrase`) → [[admin-audit-not-gate-model]]. known for the matching
   call — `findClosestPhrase` now takes a `language` param, authored directly (Section 2,
-  Task 3) — parked for the moderation/approval half
+  Task 3). Section 3 Task 2: `submitUserPhrase` now takes a `PhraseOrigin` and actually
+  writes it to the insert (first draft silently dropped it — caught and fixed) →
+  [[rls-service-role-bypass]] — still parked for the moderation/approval half
+- `src/lib/phrase-origin.ts` — **known**, authored directly (Section 3, Task 2): the two
+  `origin` literals + `PhraseOrigin` type + `PHRASE_ORIGINS` validation array, deliberately
+  zero-dependency so client forms can import it without pulling in `server-only`-guarded
+  code → [[rls-service-role-bypass]]
 - `src/lib/crisis-entries.ts` — isolated crisis storage + anonymization cron logic → [[crisis-text-isolation]], [[crisis-anonymization-cron]]. known
 - `src/lib/spend.ts`, `src/lib/safety/embedding-cost.ts`, `src/lib/safety/spend-cap.ts` —
   the $5/day hard cap → [[daily-spend-cap]]. parked
@@ -101,7 +107,12 @@ two visibility flags before any route renders → [[site-visibility-flags]],
   matching flow probed in Q1. known (partial, see [[moderation-gate-ordering]])
 - `src/app/api/entries/[id]/resonate/route.ts` — Mirror's "this resonated with me" toggle. parked
 - `src/app/api/observe/route.ts` — precomputes Observe's pairwise similarity matrix → [[observe-pairwise-similarity]]. parked
-- `src/app/api/phrases/route.ts` — shared submit endpoint for Leave a Trace and Contribute. parked
+- `src/app/api/phrases/route.ts` — shared submit endpoint for Leave a Trace and
+  Contribute. **known** (Section 3, Task 2): validates `origin` the same way it already
+  validated `text`, then a type assertion (`origin as PhraseOrigin`) past the check —
+  TypeScript can't narrow through a generic `.includes()` call the way it narrows
+  `typeof`/discriminated-union checks → [[typescript-narrowing-recognized-patterns]].
+  `route.test.ts` (its unit test, previously un-inventoried here) updated to match.
 - `src/app/api/cron/anonymize-crisis-entries/route.ts` — the scheduled job behind [[crisis-anonymization-cron]]. parked (the job's existence and purpose is known from Q3; the route file itself wasn't opened together)
 
 ## `src/app/(experience)/` — the 9-screen public flow
@@ -126,9 +137,15 @@ its own canvas/animation component + local `_components/`.
   list in `project.md` (follow-up adjustment pass, scope TBD)
 - `gratitude/` — screen 7, static closing message. parked — also frozen (follow-up pass, scope TBD)
 - `leave-a-trace/` (`page.tsx`, `_components/trace-form.tsx`) — screen 8, optional phrase
-  contribution, calls `POST /api/phrases`. parked
+  contribution, calls `POST /api/phrases`. `trace-form.tsx` **known** (Section 3, Task 2):
+  sends `origin: LEAVE_A_TRACE_ORIGIN`. First attempt used object shorthand `{ ...,
+  origin }`, which silently picked up the browser's own global `origin` (the page's URL)
+  instead → [[browser-global-identifier-shadowing]]. Rest of the file (`page.tsx`) parked.
 - `contribute/` (`page.tsx`, `_components/contribute-form.tsx`) — standalone seeding page
-  outside the numbered flow, gated by its own `contribute_open` flag → [[site-visibility-flags]]. parked
+  outside the numbered flow, gated by its own `contribute_open` flag →
+  [[site-visibility-flags]]. `contribute-form.tsx` **known** (Section 3, Task 2): same
+  pattern as `trace-form.tsx`, `origin: CONTRIBUTE_ORIGIN`, written correctly on the
+  first attempt this time. Rest of the file (`page.tsx`) parked.
 - `_shared/` — `screen-prompt.tsx`, `screen-header.tsx`, `screen-cta.tsx`,
   `ambient-glow-background.tsx`, `scene.ts`, `animation-loop.ts`, `mirror-handoff.ts` —
   shared typography/animation/canvas utilities reused across screens. parked

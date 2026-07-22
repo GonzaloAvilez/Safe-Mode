@@ -54,7 +54,7 @@ belongs to [[crisis-text-isolation]] instead, but the cron/retention mechanism i
 **depends-on:** [[crisis-text-isolation]]
 
 ## rls-service-role-bypass
-**Status:** seed — 2026-07-16
+**Status:** introduced — 2026-07-22
 Every table denies all access by default (RLS). The app's own reads/writes go through a
 single privileged `service_role` key (`src/lib/supabase.ts`'s `supabaseAdmin`), which
 bypasses RLS entirely — and an enforced `import "server-only"` guard stops that key from
@@ -62,6 +62,14 @@ ever reaching client-side code.
 **Evidence:** Q6 answer was generic ("a kind of authentication... preventing injections")
 — didn't name the service-role key, the RLS-bypass mechanism, or the server-only guard.
 This is the mechanism underneath everything else probed today — high-value reclaim target.
+**Partial progress 2026-07-22:** engaged correctly with the `server-only` guard half of
+this concept (not yet the RLS/service-role-key half). Proposed, unprompted, sharing an
+`origin` constant across the two client forms and the server-side route/lib code —
+before being told about the `server-only` constraint — then, once told a client
+component importing `phrases.ts` would break the build (since it transitively imports
+`supabase.ts`'s `import "server-only"`), correctly reasoned the fix was a new file with
+zero dependencies, safe for both sides. The RLS/service-role-key half is still unconfirmed
+— still the higher-value reclaim target.
 **depends-on:** none
 
 ## site-visibility-flags
@@ -342,6 +350,43 @@ inestable?"). Needed one clarifying nuance (that it manifested as consistently f
 here, not alternating, purely because the suite is small/fast enough that the race
 window is almost always hit) rather than a from-scratch explanation.
 **depends-on:** [[vitest-file-parallelism-shared-db-race]]
+
+## browser-global-identifier-shadowing
+**Status:** practicing — 2026-07-22
+An unqualified identifier that's never declared locally still resolves — JavaScript
+walks up the scope chain to the global object. `origin` is a real browser global
+(`window.origin`, the page's own URL origin), so `{ text, origin, ... }` (object
+shorthand) silently picks up the page's URL instead of throwing a `ReferenceError` or
+being `undefined` — no compiler or type error either, since `origin` is a legitimately
+typed global in `lib.dom.d.ts`. Declaring a same-named local variable/const shadows the
+global from that point on, which fixes the bug but is confusing style — better to avoid
+the shared name entirely (`origin: LEAVE_A_TRACE_ORIGIN` explicit key, not shorthand).
+**Evidence:** predicted `undefined` when asked what `{ ..., origin }` would actually
+send, given `origin` was never declared — wrong prediction, corrected by checking
+`origin` directly in the browser devtools console themselves and reporting back what it
+actually returned ("el host del sitio"). First fix attempt (`const origin =
+LEAVE_A_TRACE_ORIGIN`) technically worked via shadowing without being told to do that,
+then simplified to the clearer explicit-key form once the readability tradeoff was
+pointed out.
+**depends-on:** none
+
+## typescript-narrowing-recognized-patterns
+**Status:** introduced — 2026-07-22
+TypeScript's control-flow analysis only narrows a variable's type after specific
+recognized checks — `typeof`, `instanceof`, equality against a literal, or a
+user-defined type predicate (`x is Foo`). A generic runtime check like
+`someArray.includes(x)` on a widened `string[]` isn't one of those patterns — the
+compiler can't "see inside" an arbitrary function call, so `x` stays typed as `string`
+even immediately after a validation check that, at runtime, guarantees a narrower type.
+The practical fix once you've already validated by hand: an explicit type assertion
+(`x as PhraseOrigin`) — honest, not a lie to the compiler, because the validation above
+it already proved the narrower type at runtime.
+**Evidence:** asked to predict why TypeScript still complained about `origin` on
+`submitUserPhrase(text, origin)` two lines after a runtime `.includes()` check already
+validated it — connecting it to the discriminated-union narrowing seen the week before.
+Responded "revisa" rather than reasoning through it, so this was explained, not derived —
+seed-level exposure, not yet demonstrated understanding.
+**depends-on:** [[typescript-discriminated-union-narrowing]]
 
 ## Missing/absent practices
 None load-bearing found missing — git history is deep and disciplined (141 commits,
