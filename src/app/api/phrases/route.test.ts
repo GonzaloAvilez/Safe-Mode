@@ -1,3 +1,4 @@
+import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -105,12 +106,12 @@ describe("POST /api/phrases", () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
     submitUserPhraseMock.mockResolvedValueOnce({ id: "phrase-1" });
 
-    const response = await POST(postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000 }));
+    const response = await POST(postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000, origin: LEAVE_A_TRACE_ORIGIN }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true });
-    expect(submitUserPhraseMock).toHaveBeenCalledWith("un dia normal");
+    expect(submitUserPhraseMock).toHaveBeenCalledWith("un dia normal", "leave_a_trace");
     expect(afterMock).toHaveBeenCalledWith(expect.any(Function));
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "phrase_submitted");
   });

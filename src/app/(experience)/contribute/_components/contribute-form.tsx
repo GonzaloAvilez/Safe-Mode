@@ -2,6 +2,7 @@
 
 import { useState, type SubmitEvent } from "react";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
+import { CONTRIBUTE_ORIGIN } from "@/lib/phrase-origin";
 
 const MAX_TEXT_LENGTH = 120;
 
@@ -27,7 +28,12 @@ export function ContributeForm() {
       const res = await fetch("/api/phrases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, honeypot, formRenderedAt }),
+        body: JSON.stringify({ 
+          text, 
+          honeypot, 
+          formRenderedAt,
+          origin: CONTRIBUTE_ORIGIN,
+         }),
       });
 
       if (!res.ok) {

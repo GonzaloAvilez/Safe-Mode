@@ -17,6 +17,7 @@ import {
   updateErrorFixture,
   updateSuccessFixture,
 } from "@/test/fixtures/supabase-responses";
+import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
 
 const {
   fromMock,
@@ -98,17 +99,17 @@ describe("submitUserPhrase", () => {
     setUpInsertChain();
     singleMock.mockResolvedValueOnce(insertPhraseSuccessFixture);
 
-    await submitUserPhrase("una frase anonima");
+    await submitUserPhrase("una frase anonima", LEAVE_A_TRACE_ORIGIN);
 
     expect(fromMock).toHaveBeenCalledWith("phrases");
-    expect(insertMock).toHaveBeenCalledWith({ text: "una frase anonima", source: "user" });
+    expect(insertMock).toHaveBeenCalledWith({ text: "una frase anonima", source: "user", origin: "leave_a_trace" });
   });
 
   it("returns the id of the inserted phrase", async () => {
     setUpInsertChain();
     singleMock.mockResolvedValueOnce(insertPhraseSuccessFixture);
 
-    const result = await submitUserPhrase("una frase anonima");
+    const result = await submitUserPhrase("una frase anonima", LEAVE_A_TRACE_ORIGIN);
 
     expect(result).toEqual({ id: insertPhraseSuccessFixture.data.id });
   });
@@ -117,7 +118,7 @@ describe("submitUserPhrase", () => {
     setUpInsertChain();
     singleMock.mockResolvedValueOnce(insertPhraseErrorFixture);
 
-    await expect(submitUserPhrase("una frase anonima")).rejects.toThrow("insert failed");
+    await expect(submitUserPhrase("una frase anonima", LEAVE_A_TRACE_ORIGIN)).rejects.toThrow("insert failed");
   });
 });
 

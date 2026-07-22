@@ -5,6 +5,7 @@ import { isSuspectedBot } from "@/lib/bot-protection";
 import { getRequestIp } from "@/lib/request-ip";
 import { logRequestOutcome } from "@/lib/logging";
 import { getOrCreateSessionId } from "@/lib/session";
+import { PHRASE_ORIGINS, PhraseOrigin } from "@/lib/phrase-origin";
 
 const MAX_TEXT_LENGTH = 120;
 
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const text = body.text;
+  const origin = body.origin;
 
   if (isSuspectedBot({ honeypot: body.honeypot, formRenderedAt: body.formRenderedAt })) {
     logRequestOutcome(ip, "bot_suspected");
@@ -33,7 +35,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const { id } = await submitUserPhrase(text);
+  if (typeof origin !== "string" || origin.trim().length === 0 || !PHRASE_ORIGINS.includes(origin) ) {
+    return Response.json(
+      { error: `origin doesn't have the correct value` },
+      { status: 400 }
+    );
+  }
+
+  const { id } = await submitUserPhrase(text, origin as PhraseOrigin);
 
   // Moderation (and the embedding it gates, see phrases.ts) runs after the response
   // goes out — the person leaving a trace never waits on it.
