@@ -105,6 +105,38 @@ user-submitted phrases.
 **Decision to resolve at the start of this section:** the scope (Leave a Trace only, or
 Contribute too).
 
+**Resolved 2026-07-22:** both. `POST /api/phrases` is already the single shared endpoint for
+Leave a Trace and Contribute — today neither sends anything that distinguishes which screen
+submitted the phrase, so gating both costs zero extra plumbing. Also decided to add an
+`origin` column to `phrases` anyway (not required for the gate itself, just product
+traceability of which screen a submission came from).
+
+**Tasks:**
+- [x] Add an `origin` column to `phrases` (new migration) — records which screen a
+      user-submitted phrase came from (`'leave_a_trace'` | `'contribute'`), `null` for
+      seed phrases → `[[supabase-migrations-workflow]]`. Landed 2026-07-22 in
+      `20260722120000_add_phrases_origin_column.sql` — nullable `text` column, check
+      constraint matching `source`'s style, verified live (`\d phrases`, full 17-migration
+      `db reset`, 10/10 integration + 139/139 unit tests still passing).
+- [ ] Thread `origin` from `trace-form.tsx` and `contribute-form.tsx` through
+      `POST /api/phrases` into `submitUserPhrase`, so the column actually gets populated
+- [ ] Turn moderation into a real pre-publish gate: remove the automatic
+      `setPhraseActive(id, true)` call inside `finalizeUserPhraseModeration`
+      (`src/lib/phrases.ts`). OpenAI's verdict still decides `moderation_status`, but
+      going live now always requires an explicit human action from `/admin/phrases` —
+      confirmed the existing "Activar"/"Aprobar" buttons in `actions.ts`/`page.tsx`
+      already handle the "approved but not active" state, so no admin UI logic changes
+      → `[[admin-audit-not-gate-model]]`
+- [ ] Update `/admin/phrases`' description copy — it currently says "El corpus crece
+      solo... sin esperar a nadie... herramienta de auditoría," which becomes inaccurate
+      once the gate is live
+- [ ] Update the existing unit tests that assume auto-activation
+      (`finalizeUserPhraseModeration`'s coverage in `phrases.test.ts`) so the suite
+      reflects the new intended behavior
+- [ ] Prove it end-to-end: submit a phrase via Leave a Trace (or Contribute) locally,
+      confirm it does *not* show up as active/matchable until a human clicks "Activar"
+      in `/admin/phrases`
+
 ## Section 4 — Metrics + tracking for demo day (D27-28)
 
 **Source:** `ROADMAP.md` Week 4, D27-28 — "flow completion rate, before/after scale,
