@@ -41,13 +41,6 @@ describe("submitEntry (integration, real match_phrase wiring)", () => {
   it("matches the same-language phrase, not an identical-embedding phrase in another language", async () => {
     const sharedEmbedding = realPhraseFixtures[0].embedding;
 
-    
-    // TODO(you): insert two phrases via supabaseAdmin.from("phrases").insert([...]):
-    // - the English one: text = realPhraseFixtures[0].text, embedding = sharedEmbedding,
-    //   language = "en", source = "seed", active = true, moderation_status = "approved"
-    // - a Spanish one: any text, same `embedding: sharedEmbedding`, language = "es",
-    //   same other fields
-    // .select("id") and save both ids into insertedPhraseIds for cleanup.
     const { data, error } = await supabaseAdmin.from("phrases").insert([
         {
         text: realPhraseFixtures[0].text,
@@ -71,17 +64,8 @@ describe("submitEntry (integration, real match_phrase wiring)", () => {
     if (error) throw error;
     insertedPhraseIds = data.map((row) => row.id)
 
-    // TODO(you): set up the two mocks for this test —
-    // moderateTextMock should resolve to benignModerationCheckFixture,
-    // getEmbeddingMock should resolve to { embedding: sharedEmbedding, totalTokens: 8 }
-
     moderateTextMock.mockResolvedValue(benignModerationCheckFixture);
     getEmbeddingMock.mockResolvedValue({ embedding: sharedEmbedding, totalTokens: 8})
-    
-    // TODO(you): call submitEntry("some english text", randomUUID()), save the
-    // returned entryId into insertedEntryIds, and assert the outcome:
-    // - outcome.type should be "matched"
-    // - outcome.phrase.text should be realPhraseFixtures[0].text (the English one)
 
     const outcome   = await submitEntry("Sometimes I burned out with AI", randomUUID());
     insertedEntryIds.push(outcome.entryId);
