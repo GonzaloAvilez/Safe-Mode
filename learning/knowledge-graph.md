@@ -245,6 +245,14 @@ tests — correctly identified that `entries.test.ts` mocks `findClosestPhrase` 
 it could only ever verify what `submitEntry` *does with* the mock's return value, never
 that it *calls* the mock with the right language — a real, distinct gap neither the unit
 test in `phrases.test.ts` nor the integration test would have caught.
+**2026-07-23:** correctly articulated, unprompted, why `phrases.origin`'s `check`
+constraint needed its own new integration file rather than folding into
+`match-phrase.integration.test.ts` — "estamos cubriendo un tema que no se ha cubierto
+antes" — a real Postgres constraint no mocked test can prove, distinct from
+`match_phrase`'s similarity concern even though both are "just database." Briefly
+wavered toward a weaker criterion ("touches DB, not business logic") before
+self-correcting back to the project's actual file-per-concern convention once asked to
+compare against it directly.
 **depends-on:** none
 
 ## e2e-test-cost-tradeoffs
@@ -303,6 +311,15 @@ unmocked, and correctly predicted the full `npm run test:integration` flow (Dock
 migrations → mocked-OpenAI-cost-avoidance → real RPC assertions) before running it,
 unprompted, in the chat. Then debugged a real failure this suite surfaced — see
 [[vitest-file-parallelism-shared-db-race]] and [[supabase-start-vs-reset-stale-state]].
+**Extended 2026-07-23, Section 3 Task 7:** authored a new integration file
+(`phrases-origin.integration.test.ts`) for the real `check` constraint on
+`phrases.origin` — a case a mocked test structurally cannot prove. Two real bugs along
+the way, both self-corrected without being handed the fix: confused `source` (only
+`'seed'`/`'user'`) with `origin`, putting `"contribute"` in the wrong column; then,
+after fixing the `.select()` to also request `origin`, dropped `.single()`, and
+correctly diagnosed the resulting `undefined` from the real Vitest failure output —
+"la query me estaba devolviendo... una lista de objetos, en lugar de una sola
+instancia" — unprompted, reading the actual error rather than guessing.
 **depends-on:** [[supabase-migrations-workflow]]
 
 ## typescript-discriminated-union-narrowing

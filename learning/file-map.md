@@ -189,6 +189,14 @@ its own canvas/animation component + local `_components/`.
   Debugging this test's first real run surfaced two independent bugs, both real, neither
   in this file → [[vitest-file-parallelism-shared-db-race]],
   [[supabase-start-vs-reset-stale-state]]
+- `integration/phrases-origin.integration.test.ts` — **known**, authored directly
+  (Section 3, final task): two narrow real-Postgres cases proving `phrases.origin`'s
+  `check` constraint — a valid value round-trips, an invalid one is rejected by the
+  database itself, not by TypeScript → [[integration-tests-real-postgres]],
+  [[test-coverage-boundary-reasoning]]. Two real, self-corrected bugs along the way:
+  `"contribute"` written into `source` (only `'seed'`/`'user'`) instead of `origin`, and
+  a dropped `.single()` that made `response` an array instead of the row itself —
+  diagnosed from the real Vitest failure output, not told the answer.
 - `fixtures/` — shared mock data (embeddings, moderation responses, Supabase/Upstash
   response shapes) reused across unit tests. parked
 - `mocks/server-only.ts` — test-environment stub for the `server-only` import guard used

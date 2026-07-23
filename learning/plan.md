@@ -156,12 +156,20 @@ traceability of which screen a submission came from).
 - [ ] Prove it end-to-end: submit a phrase via Leave a Trace (or Contribute) locally,
       confirm it does *not* show up as active/matchable until a human clicks "Activar"
       in `/admin/phrases`
-- [ ] Add one small integration test for `origin`, against real Postgres — the `check`
+- [x] Add one small integration test for `origin`, against real Postgres — the `check`
       constraint (`origin in ('leave_a_trace', 'contribute')`) lives in the database, not
       in TypeScript, so no mocked test could ever prove it actually rejects an invalid
       value → `[[test-coverage-boundary-reasoning]]`. Scoped narrow on purpose: one insert
       with a valid `origin` round-trips correctly, one with an invalid value is rejected
-      by the real constraint — not a new suite.
+      by the real constraint — not a new suite. Landed 2026-07-23 in
+      `src/test/integration/phrases-origin.integration.test.ts` — 5/5 integration files,
+      12/12 tests, 137/137 unit, `tsc --noEmit` clean.
+
+**Section 3 complete as of 2026-07-23.** All 7 tasks done: `origin` column and threading,
+the moderation gate itself, updated admin copy, updated unit test coverage, a live
+end-to-end proof against the real Supabase project, and this schema-level integration
+test. A submitted phrase now genuinely stays pending until a human clicks "Activar" in
+`/admin/phrases` — no code path left that auto-publishes.
 
 ## Section 4 — Metrics + tracking for demo day (D27-28)
 
