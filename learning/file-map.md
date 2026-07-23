@@ -158,7 +158,12 @@ its own canvas/animation component + local `_components/`.
 ## `src/app/admin/` — internal dashboard (Spanish-language, not public)
 
 - `(dashboard)/page.tsx`, `layout.tsx` — dashboard shell. parked
-- `(dashboard)/phrases/page.tsx` + `actions.ts` — phrase moderation audit UI → [[admin-audit-not-gate-model]]. parked
+- `(dashboard)/phrases/page.tsx` — the phrase pre-approval queue UI → [[admin-audit-not-gate-model]].
+  **known** (Section 3, Task 4): updated the page's own description copy to match the new
+  gate model ("herramienta de aprobación... antes de que forme parte del corpus," not
+  "auditoría"). `actions.ts` (the four form actions it renders) — parked, not walked
+  directly, though its `activatePhraseAction`/`approvePhraseAction` were referenced when
+  confirming Task 3 needed no admin-UI changes.
 - `(dashboard)/flagged/page.tsx` — crisis/flagged entries review. parked
 - `(dashboard)/spend/page.tsx` — daily spend vs. $5 cap dashboard. parked
 - `admin/login/` (`page.tsx`, `login-form.tsx`, `actions.ts`) — password-gated login,

@@ -59,9 +59,9 @@ export default async function AdminPhrasesPage() {
       <div>
         <h1 className="text-lg font-medium">Phrases de usuario (Leave a Trace)</h1>
         <p className="mt-1 text-sm text-white/40">
-          {phrases.length} frase{phrases.length === 1 ? "" : "s"} enviada{phrases.length === 1 ? "" : "s"}. El corpus
-          crece solo — OpenAI aprueba o rechaza cada frase al enviarse, sin esperar a nadie. Esto es una herramienta
-          de auditoría: puedes revisar, aprobar, rechazar, activar o desactivar cualquier frase después.
+          {phrases.length} frase{phrases.length === 1 ? "" : "s"} enviada{phrases.length === 1 ? "" : "s"}.
+          Esto es una herramienta de aprobación: puedes revisar, aprobar, rechazar, activar o desactivar cualquier frase antes 
+          de que forme parte del corpus de Refugio.
         </p>
       </div>
 
