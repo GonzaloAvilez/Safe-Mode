@@ -136,9 +136,13 @@ traceability of which screen a submission came from).
       → `[[admin-audit-not-gate-model]]`. Landed 2026-07-22. Also updated the function's
       own comment, which was actively wrong after the change ("no human gate before
       publish," "reuses setPhraseActive," "grows organically" — all three false now).
-- [ ] Update `/admin/phrases`' description copy — it currently says "El corpus crece
+- [x] Update `/admin/phrases`' description copy — it currently says "El corpus crece
       solo... sin esperar a nadie... herramienta de auditoría," which becomes inaccurate
-      once the gate is live
+      once the gate is live. Landed 2026-07-22 — now reads "herramienta de aprobación...
+      antes de que forme parte del corpus." First draft kept "herramienta de auditoría"
+      while also adding "antes de que forme parte del corpus" in the same sentence — a
+      real self-contradiction (audit implies after-the-fact, the new sentence said
+      before) caught on a second pass → `[[admin-audit-not-gate-model]]`
 - [x] Update the existing unit tests that assume auto-activation
       (`finalizeUserPhraseModeration`'s coverage in `phrases.test.ts`) so the suite
       reflects the new intended behavior. Landed 2026-07-22, done as part of Task 3 since

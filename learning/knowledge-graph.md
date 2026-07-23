@@ -131,6 +131,13 @@ function's own comment stopped being true ("no human gate before publish"), and 
 through two more passes to fix a stale leftover reference to `setPhraseActive` and the
 now-false "grows organically" framing — each one caught by asking a pointed question,
 not handed the answer.
+**Same-day extension, Task 4:** applied the concept again outside code, to
+`/admin/phrases`'s own UI copy — correctly proposed replacing "herramienta de auditoría"
+with framing centered on "antes de que forme parte del corpus" on the first attempt at
+the underlying idea, though the first draft left the old "auditoría" label sitting next
+to the new "before" language, an internal contradiction (audit = after-the-fact) caught
+on the second pass once asked to think about it the same way as the code comment fix
+earlier today.
 **depends-on:** [[moderation-gate-ordering]]
 
 ## next-proxy-middleware
