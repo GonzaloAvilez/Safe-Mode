@@ -127,19 +127,28 @@ traceability of which screen a submission came from).
       `submitUserPhrase`'s new `PhraseOrigin`-typed parameter. Fixed the existing
       `phrases.test.ts` and `route.test.ts` call sites/assertions the signature change
       broke. 139/139 unit + 10/10 integration passing, `tsc --noEmit` clean.
-- [ ] Turn moderation into a real pre-publish gate: remove the automatic
+- [x] Turn moderation into a real pre-publish gate: remove the automatic
       `setPhraseActive(id, true)` call inside `finalizeUserPhraseModeration`
       (`src/lib/phrases.ts`). OpenAI's verdict still decides `moderation_status`, but
       going live now always requires an explicit human action from `/admin/phrases` —
       confirmed the existing "Activar"/"Aprobar" buttons in `actions.ts`/`page.tsx`
       already handle the "approved but not active" state, so no admin UI logic changes
-      → `[[admin-audit-not-gate-model]]`
+      → `[[admin-audit-not-gate-model]]`. Landed 2026-07-22. Also updated the function's
+      own comment, which was actively wrong after the change ("no human gate before
+      publish," "reuses setPhraseActive," "grows organically" — all three false now).
 - [ ] Update `/admin/phrases`' description copy — it currently says "El corpus crece
       solo... sin esperar a nadie... herramienta de auditoría," which becomes inaccurate
       once the gate is live
-- [ ] Update the existing unit tests that assume auto-activation
+- [x] Update the existing unit tests that assume auto-activation
       (`finalizeUserPhraseModeration`'s coverage in `phrases.test.ts`) so the suite
-      reflects the new intended behavior
+      reflects the new intended behavior. Landed 2026-07-22, done as part of Task 3 since
+      the code change broke the suite immediately (9 failures, most in untouched
+      functions — a real `vi.clearAllMocks()` queue-leakage gotcha, not a coincidence) →
+      [[vitest-mock-queue-leakage]]. Deleted the now-impossible-to-hit embedding test
+      (redundant with `setPhraseActive`'s own coverage) and the spend-cap test, rewrote
+      the "approves" test to assert the new non-activation behavior explicitly
+      (`.not.toHaveBeenCalledWith`), not just the absence of an old assertion. 137/137
+      unit + 10/10 integration passing, `tsc --noEmit` clean.
 - [ ] Prove it end-to-end: submit a phrase via Leave a Trace (or Contribute) locally,
       confirm it does *not* show up as active/matchable until a human clicks "Activar"
       in `/admin/phrases`

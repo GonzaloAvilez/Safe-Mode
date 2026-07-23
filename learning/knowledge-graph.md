@@ -114,12 +114,23 @@ explained.
 **depends-on:** [[moderation-gate-ordering]]
 
 ## admin-audit-not-gate-model
-**Status:** seed — 2026-07-16
-User-submitted phrases activate automatically the moment OpenAI's moderation verdict
-comes back clean — no human approves before publish. `/admin/phrases` is an
-after-the-fact audit/override layer, not a pre-publish gate. (Explicitly flagged in
-ROADMAP.md as an open question — connects to the parking-lot item on human pre-approval.)
-**Evidence:** not yet probed.
+**Status:** practicing — 2026-07-22
+User-submitted phrases used to activate automatically the moment OpenAI's moderation
+verdict came back clean — no human approved before publish; `/admin/phrases` was an
+after-the-fact audit/override layer, not a pre-publish gate. **Turned into a real gate
+2026-07-22** (Section 3, Task 3): `finalizeUserPhraseModeration` no longer calls
+`setPhraseActive`. It still writes the AI's verdict to `moderation_status`, but nothing
+goes live until a human explicitly clicks "Activar"/"Aprobar" in `/admin/phrases` — the
+existing UI already supported that state (verified Task 1), so this was a pure removal,
+no new admin logic.
+**Evidence:** correctly identified, unprompted, both the line to remove
+(`setPhraseActive(id, true)`) and — when asked to think further — that the surrounding
+`if (!shouldActivatePhrase(status)) return;`/`try`/`catch` became entirely dead code
+once that call was gone, not just that one line. Also correctly named which part of the
+function's own comment stopped being true ("no human gate before publish"), and iterated
+through two more passes to fix a stale leftover reference to `setPhraseActive` and the
+now-false "grows organically" framing — each one caught by asking a pointed question,
+not handed the answer.
 **depends-on:** [[moderation-gate-ordering]]
 
 ## next-proxy-middleware
@@ -387,6 +398,27 @@ validated it — connecting it to the discriminated-union narrowing seen the wee
 Responded "revisa" rather than reasoning through it, so this was explained, not derived —
 seed-level exposure, not yet demonstrated understanding.
 **depends-on:** [[typescript-discriminated-union-narrowing]]
+
+## vitest-mock-queue-leakage
+**Status:** introduced — 2026-07-22
+`vi.clearAllMocks()` (run in this file's `afterEach`) clears each mock's *call history*
+(`mock.calls`, `mock.results`) but does **not** clear queued one-time return values set
+via `mockResolvedValueOnce`/`mockImplementationOnce` — those stay queued until something
+actually consumes them. When `finalizeUserPhraseModeration` stopped making a second
+Supabase call (the removed activation step), tests that queued a *second*
+`eqMock.mockResolvedValueOnce(...)` for that now-nonexistent call left it sitting
+unconsumed — and it got silently consumed by the *next* test's first real call instead,
+making unrelated tests (`approvePhrase`, `rejectPhrase`, `setPhraseActive` — functions
+nobody touched) fail with confusing mismatches. `vi.resetAllMocks()` would additionally
+clear queued implementations; `clearAllMocks()` does not.
+**Evidence:** this was explained, not derived — after Task 3's code change broke 9
+tests, most in functions untouched by the change, walked through the mock-queue
+mechanism together. The learner correctly executed the resulting fixes across multiple
+tests once the specific leftover queue was pointed out each time (deleting an obsolete
+test independently identified as redundant with existing `setPhraseActive` coverage —
+real initiative — but the underlying *why nine unrelated tests broke* mechanism itself
+was told, not discovered).
+**depends-on:** none
 
 ## Missing/absent practices
 None load-bearing found missing — git history is deep and disciplined (141 commits,

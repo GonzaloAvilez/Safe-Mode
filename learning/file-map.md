@@ -71,7 +71,11 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
   call — `findClosestPhrase` now takes a `language` param, authored directly (Section 2,
   Task 3). Section 3 Task 2: `submitUserPhrase` now takes a `PhraseOrigin` and actually
   writes it to the insert (first draft silently dropped it — caught and fixed) →
-  [[rls-service-role-bypass]] — still parked for the moderation/approval half
+  [[rls-service-role-bypass]]. Section 3 Task 3: `finalizeUserPhraseModeration` no longer
+  calls `setPhraseActive` — moderation still resolves `moderation_status`, but nothing
+  goes live without an explicit human action → [[admin-audit-not-gate-model]]. Now known
+  in full — `approvePhrase`/`rejectPhrase`/`setPhraseActive` were already known from
+  Task 1's admin-UI verification, and Task 3 walked the last unexplained function.
 - `src/lib/phrase-origin.ts` — **known**, authored directly (Section 3, Task 2): the two
   `origin` literals + `PhraseOrigin` type + `PHRASE_ORIGINS` validation array, deliberately
   zero-dependency so client forms can import it without pulling in `server-only`-guarded
@@ -185,11 +189,14 @@ its own canvas/animation component + local `_components/`.
 - `mocks/server-only.ts` — test-environment stub for the `server-only` import guard used
   by `src/lib/supabase.ts` and `src/lib/openai.ts`. parked
 - Unit test files live alongside their source (not inventoried individually here) — 20
-  files, 139 tests, all passing as of 2026-07-21. Two authored directly this session:
-  `src/lib/phrases.test.ts` (updated 4 call sites + an RPC-argument assertion) and
-  `src/lib/entries.test.ts` (added the assertion that closed the
-  [[test-coverage-boundary-reasoning]] gap — confirms `submitEntry` actually calls
-  `findClosestPhrase` with `"en"`, not just that it handles the mock's return value).
+  files, 137 tests, all passing as of 2026-07-22. `src/lib/entries.test.ts` (added the
+  assertion that closed the [[test-coverage-boundary-reasoning]] gap — confirms
+  `submitEntry` actually calls `findClosestPhrase` with `"en"`). `src/lib/phrases.test.ts`
+  and `src/app/api/phrases/route.test.ts` — **known**, both walked and edited directly
+  across Section 3 Tasks 2 and 3: fixed the call-site breakage from `submitUserPhrase`'s
+  new `origin` parameter, then deleted/rewrote the `finalizeUserPhraseModeration` tests
+  that assumed auto-activation, surfacing a real `vi.clearAllMocks()` gotcha along the way
+  → [[vitest-mock-queue-leakage]].
 
 ## `scripts/`
 
