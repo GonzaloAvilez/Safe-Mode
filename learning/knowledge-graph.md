@@ -15,13 +15,20 @@ but placed it *before* the moderation check in the sequence — see [[moderation
 **depends-on:** none
 
 ## vector-similarity-threshold
-**Status:** understood — 2026-07-16
+**Status:** understood — last-reviewed 2026-07-23
 The 0.5 cosine-similarity floor in the `match_phrase` Postgres function — without it, the
 nearest phrase is always returned even when it's noise (empirically: nonsense text once
 matched a real phrase at similarity 0.077).
 **Evidence:** correctly located it as "a definition using pgvector, then is living in
 supabase logic" — not in the tests, not in app code, in the SQL function itself. Free
 recall, unprompted after one nudge.
+**Reviewed 2026-07-23 (7 days later):** passed — correctly recalled it as an empirically
+calibrated threshold controlling whether any match is returned at all. Also raised, on
+their own, a real open question the review didn't ask for: the 0.5 cutoff was calibrated
+against the corpus's original Spanish embeddings — nobody has re-validated it against the
+now-English corpus (post Section 2's language migration), and cosine-similarity
+distributions aren't guaranteed to match across languages. Worth a future backlog item,
+not solved today.
 **depends-on:** [[embedding-generation]]
 
 ## moderation-gate-ordering
@@ -114,7 +121,7 @@ explained.
 **depends-on:** [[moderation-gate-ordering]]
 
 ## admin-audit-not-gate-model
-**Status:** practicing — 2026-07-22
+**Status:** understood — 2026-07-23
 User-submitted phrases used to activate automatically the moment OpenAI's moderation
 verdict came back clean — no human approved before publish; `/admin/phrases` was an
 after-the-fact audit/override layer, not a pre-publish gate. **Turned into a real gate
@@ -138,6 +145,14 @@ the underlying idea, though the first draft left the old "auditoría" label sitt
 to the new "before" language, an internal contradiction (audit = after-the-fact) caught
 on the second pass once asked to think about it the same way as the code comment fix
 earlier today.
+**Upgraded to understood 2026-07-23**, a day after first introduced — real end-to-end
+proof (Task 6), not same-day performance. Re-read `setPhraseActive` independently and
+correctly predicted, unprompted and in precise detail, exactly what would happen on
+clicking "Activar": it checks for an existing embedding, calls the real `getEmbedding`
+against OpenAI if missing, only then flips `active`. Verified live against the real
+Supabase project (test data cleaned up after): a Contribute submission came back
+`moderation_status: "approved"`, `active: false`, `embedding: null` — then, after
+clicking "Activar," `active: true` with a real populated embedding vector.
 **depends-on:** [[moderation-gate-ordering]]
 
 ## next-proxy-middleware
@@ -442,6 +457,25 @@ tests once the specific leftover queue was pointed out each time (deleting an ob
 test independently identified as redundant with existing `setPhraseActive` coverage —
 real initiative — but the underlying *why nine unrelated tests broke* mechanism itself
 was told, not discovered).
+**depends-on:** none
+
+## local-dev-shared-supabase-env
+**Status:** introduced — 2026-07-23
+`npm run dev`, run plainly with no environment override, reads `.env.local`'s
+`NEXT_PUBLIC_SUPABASE_URL` — which points at the real, shared Supabase project (same one
+`preview`/`master` use), not a local database. Only `scripts/run-integration-tests.sh`
+overrides this to point at the local Docker Postgres from `supabase start`. So testing a
+feature manually via `npm run dev` writes real rows to the shared project, same as the
+D12 crisis-flow manual verification did — a known, established practice (clean up test
+rows after), not a new discovery, just re-surfaced today by an actual local `db reset`
++ dev-server test writing to the wrong place.
+**Evidence:** this was caught and explained by the assistant, not derived independently —
+was told plainly what happened and why. What is real evidence: the follow-up judgment
+call was sound — agreed to continue since the site is closed to the public (`site_public`
+off, low real risk), gave explicit confirmation right before the cleanup delete rather
+than assuming it was already authorized, and proposed the correct long-term fix (make
+local dev actually point at local Postgres by default) as a new backlog item rather than
+trying to solve it mid-task.
 **depends-on:** none
 
 ## Missing/absent practices
