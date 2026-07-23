@@ -153,9 +153,18 @@ traceability of which screen a submission came from).
       the "approves" test to assert the new non-activation behavior explicitly
       (`.not.toHaveBeenCalledWith`), not just the absence of an old assertion. 137/137
       unit + 10/10 integration passing, `tsc --noEmit` clean.
-- [ ] Prove it end-to-end: submit a phrase via Leave a Trace (or Contribute) locally,
+- [x] Prove it end-to-end: submit a phrase via Leave a Trace (or Contribute) locally,
       confirm it does *not* show up as active/matchable until a human clicks "Activar"
-      in `/admin/phrases`
+      in `/admin/phrases`. Done 2026-07-23 via the real browser, `/contribute` →
+      `/admin/phrases` → "Activar" → verified live against Supabase's REST API each
+      step. Confirmed: submitted phrase came back `moderation_status: "approved"`,
+      `active: false`, `embedding: null`; after clicking "Activar," `active: true` with
+      a real computed embedding → `[[admin-audit-not-gate-model]]`. Along the way, found
+      `npm run dev` (no override) writes to the real shared Supabase project, not local
+      Postgres — test row cleaned up with explicit confirmation, same practice as the
+      D12 crisis-flow manual test → `[[local-dev-shared-supabase-env]]`. New backlog item
+      requested: make local dev actually point at local Postgres by default (see
+      ROADMAP.md, Open/deferred).
 - [ ] Add one small integration test for `origin`, against real Postgres — the `check`
       constraint (`origin in ('leave_a_trace', 'contribute')`) lives in the database, not
       in TypeScript, so no mocked test could ever prove it actually rejects an invalid
