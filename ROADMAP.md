@@ -84,6 +84,7 @@ English is now the UI's working language, matching the workshop's shared languag
 
 ## Open / deferred
 
+- [ ] **`npm run dev` should point at local Postgres by default** — raised 2026-07-23. Plain `npm run dev` reads `.env.local`'s `NEXT_PUBLIC_SUPABASE_URL`, which points at the real shared Supabase project (same one `preview`/`master` use) — only `scripts/run-integration-tests.sh` overrides this to the local Docker instance from `supabase start`. Surfaced when manually testing the phrase pre-approval gate wrote a real (test) row to the shared project instead of local. Low real risk today (site closed to the public), but worth a proper fix — e.g. a `.env.local.development` override or a documented local-only env file — so manual feature testing doesn't touch shared data by default.
 - [x] **CI test suite** — gates PRs on `lint`/`typecheck`/`test`/`build`, for both `master` and `preview` independently (`.github/workflows/ci.yml`).
 - [x] **`wants_reply` UI** — resolved via Mirror's "this resonated with me" toggle (see D16 above on whether it's the *right* control for what this item originally meant). The `scale_before`/`scale_after` half is still tracked under D15 — that part remains unbuilt.
 - [~] **Spend-cap-reached UX** — partially resolved: Write's outcome states include this copy ("We've used up today's space, come back tomorrow"), never explicitly tested end-to-end.
