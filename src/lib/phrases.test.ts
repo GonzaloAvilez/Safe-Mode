@@ -64,7 +64,7 @@ vi.mock("@/lib/spend", () => ({
   canSpendToday: canSpendTodayMock,
   recordEmbeddingSpend: recordEmbeddingSpendMock,
 }));
-
+ 
 const {
   submitUserPhrase,
   finalizeUserPhraseModeration,
@@ -127,53 +127,23 @@ describe("finalizeUserPhraseModeration", () => {
     setUpFetchChain();
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
     eqMock.mockResolvedValueOnce(updateSuccessFixture);
-    fetchSingleMock.mockResolvedValueOnce(selectPhraseAlreadyEmbeddedFixture);
-    eqMock.mockResolvedValueOnce(updateSuccessFixture);
 
     await finalizeUserPhraseModeration("phrase-1", "una frase anonima");
 
     expect(moderateTextMock).toHaveBeenCalledWith("una frase anonima");
   });
 
-  it("approves and activates the phrase organically when moderation does not flag it", async () => {
+  it("approves the phrase when moderation does not flag it", async () => {
     setUpFetchChain();
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
     eqMock.mockResolvedValueOnce(updateSuccessFixture); // moderation_status update
-    fetchSingleMock.mockResolvedValueOnce(selectPhraseAlreadyEmbeddedFixture);
-    eqMock.mockResolvedValueOnce(updateSuccessFixture); // active update
 
     await finalizeUserPhraseModeration("phrase-1", "una frase anonima");
 
     expect(fromMock).toHaveBeenCalledWith("phrases");
     expect(updateMock).toHaveBeenCalledWith({ moderation_status: "approved" });
-    expect(updateMock).toHaveBeenCalledWith({ active: true });
+    expect(updateMock).not.toHaveBeenCalledWith({ active: true });
     expect(eqMock).toHaveBeenCalledWith("id", "phrase-1");
-  });
-
-  it("computes an embedding as part of the automatic approval when one doesn't exist yet", async () => {
-    setUpFetchChain();
-    moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
-    eqMock.mockResolvedValueOnce(updateSuccessFixture);
-    fetchSingleMock.mockResolvedValueOnce(selectPhraseNeedsEmbeddingFixture);
-    canSpendTodayMock.mockResolvedValueOnce(true);
-    getEmbeddingMock.mockResolvedValueOnce(embeddingResultFixture);
-    eqMock.mockResolvedValueOnce(updateSuccessFixture);
-
-    await finalizeUserPhraseModeration("phrase-1", "una frase anonima");
-
-    expect(recordEmbeddingSpendMock).toHaveBeenCalledWith(embeddingResultFixture.totalTokens);
-    expect(updateMock).toHaveBeenCalledWith({ active: true, embedding: embeddingResultFixture.embedding });
-  });
-
-  it("approves but leaves the phrase inactive, without throwing, when the daily spend cap is reached", async () => {
-    setUpFetchChain();
-    moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
-    eqMock.mockResolvedValueOnce(updateSuccessFixture);
-    fetchSingleMock.mockResolvedValueOnce(selectPhraseNeedsEmbeddingFixture);
-    canSpendTodayMock.mockResolvedValueOnce(false);
-
-    await expect(finalizeUserPhraseModeration("phrase-1", "una frase anonima")).resolves.toBeUndefined();
-    expect(getEmbeddingMock).not.toHaveBeenCalled();
   });
 
   it("rejects the phrase, without attempting to activate, when moderation flags it", async () => {

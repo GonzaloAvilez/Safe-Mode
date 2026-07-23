@@ -35,26 +35,15 @@ export async function submitUserPhrase(text: string, origin: PhraseOrigin): Prom
 }
 
 // Intended to be scheduled with Next's after() so it runs post-response, without making
-// the person who left a trace wait on the moderation call. The corpus grows organically —
-// OpenAI's verdict alone decides approved vs. rejected, no human gate before publish (a
-// human can still audit and override anything after the fact via /admin/phrases). Reuses
-// setPhraseActive for the activation half so the embedding/spend-cap logic only lives in
-// one place, shared with the admin "Aprobar"/"Activar" actions below.
+// the person who left a trace wait on the moderation call.
+// OpenAI's verdict alone decides approved vs. rejected. A human will audit and activate 
+// the phrases as manual audit via /admin/phrases.
 export async function finalizeUserPhraseModeration(id: string, text: string): Promise<void> {
   const moderation = await moderateText(text);
   const status = resolvePhraseModerationStatus(moderation);
 
   const { error } = await supabaseAdmin.from("phrases").update({ moderation_status: status }).eq("id", id);
   if (error) throw error;
-
-  if (!shouldActivatePhrase(status)) return;
-
-  try {
-    await setPhraseActive(id, true);
-  } catch {
-    // Approved, not yet active — e.g. the daily spend cap was hit at this exact moment.
-    // An admin can retry via "Activar" in /admin/phrases once it resets.
-  }
 }
 
 // Ensures the phrase has a real embedding before activating it — this is the invariant
