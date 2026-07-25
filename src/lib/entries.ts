@@ -39,9 +39,6 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
   return { id: data.id };
 }
 
-// TODO(you): write updateEntryOutcome(id: string, outcome: EntryOutcome["type"]): Promise<void>
-// Backfills the outcome for entries whose match/no_match verdict wasn't known at insert
-// time — calcá el patrón de insertEntry: supabaseAdmin.from("entries").update({...}).eq(...).
 
 export async function updateEntryOutcome(id: string, outcome: EntryOutcome["type"]): Promise<void> {
   const { error} = await supabaseAdmin.from("entries").update({ outcome: outcome}).eq("id", id);
