@@ -24,8 +24,8 @@ describe("phrases.origin check constraint (integration)", () => {
       source: "user",
       active: false,
       origin: LEAVE_A_TRACE_ORIGIN,
-      moderation_status: "approved",
-    }).select("id, origin").single();
+        moderation_status: "approved",
+      }).select("id, origin").single();
 
     if (responseError) throw responseError;
     insertedIds.push(response.id);
@@ -33,7 +33,7 @@ describe("phrases.origin check constraint (integration)", () => {
   });
 
   it("rejects an invalid origin value", async () => {
-    const { data: response, error: responseError } = await supabaseAdmin.from("phrases").insert({
+    const { error: responseError } = await supabaseAdmin.from("phrases").insert({
       text: realPhraseFixtures[1].text,
       embedding: realPhraseFixtures[1].embedding,
       source: "user",
