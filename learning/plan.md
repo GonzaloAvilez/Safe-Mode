@@ -193,6 +193,33 @@ guesses.
 `/admin/(dashboard)/spend`) is the closest precedent for "compute and display real usage
 numbers"; walk it before extending it with the new metrics.
 
+**Resolved 2026-07-25:** neither metric has any persisted data today — `submitEntry`'s
+outcome (`matched`/`no_match`/`crisis`/`general_flagged`/`cap_reached`) only ever reaches
+`console.log`, and there's no funnel/pageview tracking of any kind for completion rate.
+At the real scale of this MVP (~10 test users), a percentage from n=10 is noise — direct
+interviews (already planned for D18-19) give better signal than a dashboard for product
+decisions. **Descoped:** completion rate stays manual (count it from the interviews),
+not worth building funnel-tracking infrastructure for 10 people. **In scope:** match
+rate, since the outcome data is already computed and just needs to be persisted —
+cheap, following the exact `daily_spend` precedent (write on the real event, don't
+recompute at read time).
+
+**Tasks:**
+- [x] Add an `outcome` column to `entries` (new migration) — the 5 `EntryOutcome` values
+      (`crisis`, `general_flagged`, `cap_reached`, `no_match`, `matched`), nullable since
+      `insertEntry` runs *before* the match/no-match verdict is known for the "proceed"
+      path. Landed 2026-07-25 in `20260725120000_add_entries_outcome_column.sql` —
+      correctly reasoned through *why* nullable at both the historical-data and the
+      code-order level before writing it, no repeat of the `nullable`-vs-`NULL` slip →
+      `[[postgres-add-column-not-null-default]]`. 18-migration `db reset` clean, 5/5
+      integration + 137/137 unit passing, lint clean.
+- [ ] Thread the real outcome into `submitEntry`: write it directly at insert time for
+      the three routes known immediately (`crisis`/`general_flagged`/`cap_reached`);
+      `UPDATE` the row after `findClosestPhrase` resolves for `matched`/`no_match`
+- [ ] Add a small `/admin` view showing the real breakdown (`group by outcome, count(*)`)
+      — extend the spend dashboard or a new page, matching the existing pattern
+- [ ] Prove it end-to-end with real data, same rigor as Section 3's proof
+
 ## Section 5 — Soft launch + real users (D26, D18-19, D20-21)
 
 **Source:** `ROADMAP.md` Week 3-4 — "mechanically ready whenever timing resolves" — flip

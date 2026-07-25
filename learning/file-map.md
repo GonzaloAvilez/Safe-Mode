@@ -50,6 +50,10 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
   - `20260722120000_add_phrases_origin_column.sql` — **known**, authored directly
     (Section 3, Task 1): nullable `origin` column + check constraint matching `source`'s
     pattern → [[supabase-migrations-workflow]], [[postgres-add-column-not-null-default]]
+  - `20260725120000_add_entries_outcome_column.sql` — **known**, authored directly
+    (Section 4, Task 1): nullable `outcome` column on `entries`, matching the 5
+    `EntryOutcome` values, check constraint in `source`/`origin`'s style →
+    [[supabase-migrations-workflow]], [[postgres-add-column-not-null-default]]
   - the rest (RLS, crisis isolation, spend tables, settings) — parked
 - `supabase/config.toml` — local Supabase stack config (which services run locally). — parked
 - `supabase/.branches/`, `supabase/.temp/`, `supabase/snippets/` — `generated`/local CLI state
