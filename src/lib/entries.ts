@@ -13,6 +13,7 @@ type InsertEntryParams = {
   flaggedCrisis: boolean;
   flaggedGeneral: boolean;
   embedding: number[] | null;
+  outcome: EntryOutcome["type"] | null;
 };
 
 async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
@@ -24,6 +25,7 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
       flagged_crisis: params.flaggedCrisis,
       flagged_general: params.flaggedGeneral,
       embedding: params.embedding,
+      outcome: params.outcome,
     })
     .select("id")
     .single();
@@ -36,6 +38,16 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
 
   return { id: data.id };
 }
+
+// TODO(you): write updateEntryOutcome(id: string, outcome: EntryOutcome["type"]): Promise<void>
+// Backfills the outcome for entries whose match/no_match verdict wasn't known at insert
+// time — calcá el patrón de insertEntry: supabaseAdmin.from("entries").update({...}).eq(...).
+
+export async function updateEntryOutcome(id: string, outcome: EntryOutcome["type"]): Promise<void> {
+  const { error} = await supabaseAdmin.from("entries").update({ outcome: outcome}).eq("id", id);
+  if (error) throw error;
+}
+  
 
 export type EntryOutcome =
   | { type: "crisis"; entryId: string }
@@ -66,6 +78,7 @@ export async function submitEntry(
       flaggedCrisis: flags.flaggedCrisis,
       flaggedGeneral: flags.flaggedGeneral,
       embedding: null,
+      outcome: route,
     });
     return { type: route, entryId: entry.id };
   }
@@ -77,6 +90,7 @@ export async function submitEntry(
     text,
     flaggedCrisis: false,
     flaggedGeneral: false,
+    outcome: null,
     embedding,
   });
 
@@ -85,6 +99,9 @@ export async function submitEntry(
   // language = "english" by default since this is the only one lang for the MVP, 
   // there are no seed phrases in another language.
   const match = await findClosestPhrase(embedding, "en");
+  
+  const outcome = match ? "matched" : "no_match";
+  await updateEntryOutcome(entry.id, outcome)
 
   return match ? { type: "matched", entryId: entry.id, phrase: match } : { type: "no_match", entryId: entry.id };
 }

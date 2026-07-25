@@ -13,6 +13,8 @@ const TEST_SESSION_ID = "session-1";
 const {
   fromMock,
   insertMock,
+  updateMock,
+  eqMock,
   selectMock,
   singleMock,
   moderateTextMock,
@@ -25,6 +27,8 @@ const {
 } = vi.hoisted(() => ({
   fromMock: vi.fn(),
   insertMock: vi.fn(),
+  updateMock: vi.fn(),
+  eqMock: vi.fn(),
   selectMock: vi.fn(),
   singleMock: vi.fn(),
   moderateTextMock: vi.fn(),
@@ -65,10 +69,12 @@ vi.mock("@/lib/crisis-entries", () => ({
 const { submitEntry } = await import("@/lib/entries");
 
 function setUpInsertChain() {
-  fromMock.mockReturnValue({ insert: insertMock });
+  fromMock.mockReturnValue({ insert: insertMock, update: updateMock });
   insertMock.mockReturnValue({ select: selectMock });
   selectMock.mockReturnValue({ single: singleMock });
   singleMock.mockResolvedValue(insertEntrySuccessFixture);
+  updateMock.mockReturnValue({ eq: eqMock });
+  eqMock.mockReturnValue({ error: null});
 }
 
 afterEach(() => {
@@ -88,6 +94,7 @@ describe("submitEntry — crisis route", () => {
       flagged_crisis: true,
       flagged_general: false,
       embedding: null,
+      outcome: "crisis",
     });
     expect(insertCrisisContentMock).toHaveBeenCalledWith(
       insertEntrySuccessFixture.data.id,
@@ -119,6 +126,7 @@ describe("submitEntry — general_flagged route", () => {
       flagged_crisis: false,
       flagged_general: true,
       embedding: null,
+      outcome: "general_flagged",
     });
     expect(getEmbeddingMock).not.toHaveBeenCalled();
   });
@@ -155,6 +163,7 @@ describe("submitEntry — proceed route", () => {
       flagged_crisis: false,
       flagged_general: false,
       embedding: embeddingResultFixture.embedding,
+      outcome: null,
     });
     expect(findClosestPhraseMock).toHaveBeenCalledWith(embeddingResultFixture.embedding, "en");
   });
