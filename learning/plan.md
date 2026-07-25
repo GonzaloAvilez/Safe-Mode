@@ -213,9 +213,16 @@ recompute at read time).
       code-order level before writing it, no repeat of the `nullable`-vs-`NULL` slip →
       `[[postgres-add-column-not-null-default]]`. 18-migration `db reset` clean, 5/5
       integration + 137/137 unit passing, lint clean.
-- [ ] Thread the real outcome into `submitEntry`: write it directly at insert time for
+- [x] Thread the real outcome into `submitEntry`: write it directly at insert time for
       the three routes known immediately (`crisis`/`general_flagged`/`cap_reached`);
-      `UPDATE` the row after `findClosestPhrase` resolves for `matched`/`no_match`
+      `UPDATE` the row after `findClosestPhrase` resolves for `matched`/`no_match`.
+      Landed 2026-07-25. Real bug caught along the way: the first draft of
+      `updateEntryOutcome` had no `.eq()` filter and put `id` inside the update payload
+      instead of using it to filter — would have overwritten every row in `entries`
+      → `[[sql-update-without-where-is-dangerous]]`. `entries.test.ts` needed a new
+      `update`/`eq` mock chain (never had one before) plus updated `insertMock`
+      assertions. 137/137 unit + 12/12 integration passing, lint and `tsc --noEmit`
+      clean.
 - [ ] Add a small `/admin` view showing the real breakdown (`group by outcome, count(*)`)
       — extend the spend dashboard or a new page, matching the existing pattern
 - [ ] Prove it end-to-end with real data, same rigor as Section 3's proof
