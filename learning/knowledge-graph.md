@@ -311,6 +311,13 @@ predict what `supabase db reset` would do with that line before running it, corr
 reasoned Postgres wouldn't recognize the word, and fixed it to the real (if redundant)
 explicit keyword, `NULL`. Confirmed live: schema applied clean, `\d phrases` showed no
 `not null` marker.
+**2026-07-25:** applied the `NULL` keyword correctly and immediately for `entries.outcome`,
+no repeat of the `nullable` mistake. More significantly, reasoned through *why* it needed
+to be nullable at two distinct levels once prompted: first landed on the historical-data
+angle alone (can't safely backfill old rows), then — asked to think about *new* rows too —
+correctly traced through `submitEntry`'s actual code order and named the real
+architectural reason: `insertEntry` runs before `findClosestPhrase` on the "proceed" path,
+so even brand-new rows don't have a `matched`/`no_match` verdict available at insert time.
 **depends-on:** [[supabase-migrations-workflow]]
 
 ## integration-tests-real-postgres
