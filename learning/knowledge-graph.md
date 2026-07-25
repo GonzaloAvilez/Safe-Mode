@@ -485,6 +485,25 @@ local dev actually point at local Postgres by default) as a new backlog item rat
 trying to solve it mid-task.
 **depends-on:** none
 
+## sql-update-without-where-is-dangerous
+**Status:** practicing — 2026-07-25
+A `.update({...})` call with no `.eq(...)` (or other filter) doesn't update "the current
+row" by default — Postgres/PostgREST has no concept of "current row" outside a filter.
+It updates *every* row the query would otherwise match, which for an unfiltered call on
+`entries` means the whole table. Worse, if the update payload also includes the primary
+key (`id`) instead of using it purely as the filter, every row would be set to the same
+`id` value, which the primary-key uniqueness constraint would reject on the second row —
+a real, safety-relevant bug class, not a style nitpick, especially in a codebase that
+writes to a shared production database.
+**Evidence:** first draft of `updateEntryOutcome` had exactly this bug —
+`.update({ id: id, outcome: outcome })` with no `.eq()` at all. Didn't self-diagnose when
+asked "¿contra qué filas se va a aplicar ese update?" — needed the mechanism explained in
+full before fixing it. Once explained, correctly applied the fix (added `.eq("id", id)`,
+moved `id` out of the update payload) on the first attempt. The diagnosis itself was
+told, not derived — worth a real review next time this pattern comes up, to see if it's
+internalized independently.
+**depends-on:** none
+
 ## Missing/absent practices
 None load-bearing found missing — git history is deep and disciplined (141 commits,
 branch-per-concern), CI gates lint/typecheck/test/build on both `master` and `preview`,
