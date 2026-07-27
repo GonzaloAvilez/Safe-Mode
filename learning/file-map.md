@@ -145,9 +145,17 @@ its own canvas/animation component + local `_components/`.
   calls `POST /api/entries`. parked (form mechanics not walked; its *purpose* during
   submission was, via `searching.tsx` below)
   - `write/_components/searching.tsx` — the ritualized loading state. **known** → [[ritualized-loading-ux]]
-- `mirror/` (`page.tsx`, `mirror-canvas.tsx`, `_components/quote-reveal.tsx`) — screen 6,
-  shows the matched phrase or a dimmed no-match state. parked — also on the "frozen"
-  list in `project.md` (follow-up adjustment pass, scope TBD)
+- `mirror/` — screen 6, shows the matched phrase or a dimmed no-match state.
+  `page.tsx` — **known** (Section 7): reads a `sessionStorage` handoff Write stashed before
+  navigating (`readMirrorHandoff`, no handoff bounces back to `/write`), renders the
+  matched quote or a no-match message, and a reversible "this resonated with me" toggle
+  that POSTs to `/api/entries/:id/resonate`. Fixed the same design-principle violation as
+  Gratitude: the matched-branch tagline and subcopy presumed the visitor's own emotional
+  state → [[never-presume-visitor-emotional-state]]. `mirror-canvas.tsx` — **known**: two
+  pulsing canvas nodes (violet "other," gold "self") joined by a curve; on `no_match` the
+  other node stays barely lit rather than disappearing. `_components/quote-reveal.tsx` —
+  **known**: types the matched phrase out one character at a time rather than showing it
+  instantly.
 - `gratitude/page.tsx` — screen 7, transition message between Mirror and Leave a Trace,
   same copy regardless of match/no_match. **known** (Section 7): fixed a real bug —
   claimed closure ("The circle closes.") and previewed Leave a Trace's own theme before

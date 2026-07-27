@@ -303,4 +303,20 @@ it. Fixed: tagline → "Something is different now." (evidence/fact-based, not a
 about the visitor's state), subcopy removed entirely, stale code comment corrected.
 Deliberately did **not** touch Mirror or do a broader copy pass — narrow, verified fix
 only. Landed in `week7/gratitude-copy-fix`: `tsc`/lint/tests clean, verified live in the
-browser. Mirror's own follow-up (reclaim task below) is still fully open.
+browser.
+
+**Mirror's half resolved 2026-07-27, same session.** First walked the three parked Mirror
+files (reclaim task) in chat before scoping anything. Applying the same principle,
+correctly identified — with light guidance, not from scratch — that `page.tsx`'s matched-
+branch subcopy (`"You're not the first person who felt this."`) is a near-verbatim replay
+of the brief's own already-rejected example (`"you're not the only one who feels this"`).
+Then reviewed the rest of the screen's copy line by line and correctly separated the two
+real violations (the tagline and subcopy, both matched-branch only) from four lines that
+already respect the principle (no_match tagline/subcopy, the no-match body line, the
+resonate-button label) — confirmed the reasoning rather than deriving it independently.
+Fixed: tagline `"Someone felt this too."` → `"Someone was already here."` (mirrors the
+no_match tagline's tense/structure); subcopy `"You're not the first person who felt
+this."` → `"Their words were already here, waiting."` (mirrors the no_match subcopy's
+"waiting" theme, told from the other person's side). Landed in `week4/mirror-copy-fix`:
+`tsc`/lint clean. **Section 7 complete as of 2026-07-27** — both screens' follow-ups
+scoped and shipped.

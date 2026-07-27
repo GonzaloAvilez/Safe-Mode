@@ -540,6 +540,18 @@ fine — the subcopy ("your presence is already a light for someone who hasn't a
 yet") previewed Leave a Trace's own reveal before that screen got to make it: "no me
 gusta el subcopy, parece ser más cuerpo de leave a trace, analizalo." Correct catch,
 independent of being told.
+**Same-day extension, Mirror screen:** after a guided tour of the previously-parked
+`mirror/page.tsx`, asked to evaluate line 81 (`"You're not the first person who felt
+this."`) against the principle unprompted (not told which line to look at) and correctly
+judged it presumes the visitor's state ("creo que hasta cierto punto presume un poco, y
+no deberíamos hacerlo") — the line turned out to be a near-verbatim replay of the brief's
+own already-rejected example. When asked to review the rest of the screen's copy (tagline,
+no-match lines, button label) line by line, needed the analysis done for them ("dame
+ideas... estoy un poco bloqueado") but confirmed the reasoning was sound once presented,
+correctly distinguishing the two real violations from the four lines that already respect
+the principle. Partial independent application (found the first, most important instance
+unprompted) plus confirmed reasoning on the rest — not full independent derivation the
+second time.
 **depends-on:** none
 
 ## Missing/absent practices
