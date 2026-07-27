@@ -207,7 +207,7 @@ data. One real syntax slip along the way, self-corrected — see
 **depends-on:** none
 
 ## postgres-function-signature-change-requires-drop
-**Status:** practicing — 2026-07-20
+**Status:** practicing — last-reviewed 2026-07-27
 Changing a Postgres function's parameter list via `create or replace` doesn't replace
 the old version — Postgres identifies a function by name *and* argument types, so the
 old and new signatures coexist as separate overloads. If the new parameter has a
@@ -230,6 +230,12 @@ replace the old one outright.
 Under real production traffic, dropping the old signature in the same migration that adds
 the new one creates its own outage risk, since schema deploys and app-code deploys aren't
 atomic together.
+
+**Reviewed 2026-07-27 (7 days later):** passed — correctly explained the mechanism
+unprompted (function identity is name + argument types, not name alone; defaults create
+ambiguity). Also asked, on their own initiative, whether the old overload had actually
+been cleaned up — didn't assume either way, asked to verify against the real migration
+file before moving on.
 
 ## expand-contract-deploy-pattern
 **Status:** practicing — 2026-07-21
@@ -511,6 +517,10 @@ full before fixing it. Once explained, correctly applied the fix (added `.eq("id
 moved `id` out of the update payload) on the first attempt. The diagnosis itself was
 told, not derived — worth a real review next time this pattern comes up, to see if it's
 internalized independently.
+**Confirmed working 2026-07-27:** end-to-end proof against the real Supabase project
+showed the fixed `updateEntryOutcome` correctly targeting only the intended row —
+submitted three real entries through `/write` (crisis, matched, no_match), and each
+row's `outcome` landed correctly without disturbing any other row.
 **depends-on:** none
 
 ## Missing/absent practices
