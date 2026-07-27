@@ -229,7 +229,17 @@ recompute at read time).
       ("son conceptos diferentes... no deberíamos mezclar temas"). Verified live in the
       real browser: shows total entries + match rate, currently 0% since no entries have
       gone through the new outcome-writing code yet.
-- [ ] Prove it end-to-end with real data, same rigor as Section 3's proof
+- [x] Prove it end-to-end with real data, same rigor as Section 3's proof. Done
+      2026-07-27: submitted a crisis entry and two proceed-path entries (one matched,
+      one no_match) through the real `/write` UI, verified live against the real
+      Supabase project — `outcome` correctly landed as `"crisis"`, `"matched"`, and
+      `"no_match"` respectively, matching each row's `flagged_crisis`/embedding state.
+      `/admin/metrics` reflected the real 100% (only one matched/no_match-eligible entry
+      existed at the time). Test rows left for the user to clean up by hand.
+
+**Section 4 complete as of 2026-07-27.** Deliberately descoped from its original
+"completion rate + match rate" deliverable to just match rate (see the 2026-07-25 note
+above) — `/admin/metrics` now shows real numbers, not console.log or guesses.
 
 ## Section 5 — Soft launch + real users (D26, D18-19, D20-21)
 
