@@ -260,10 +260,16 @@ site is closed). Close those gaps for real before touching the flag that matters
 the reclaim task.
 
 **Tasks:**
-- [ ] Close the two `[[site-visibility-flags]]` reclaim-task gaps for real — re-derive,
+- [x] Close the two `[[site-visibility-flags]]` reclaim-task gaps for real — re-derive,
       unprompted, that `/api/phrases` backs both Contribute and Leave a Trace's submit, and
       correct the backwards reasoning on `/api/cron`'s exemption (it's not "safe to leave
-      open," it's what keeps `[[crisis-anonymization-cron]]` running while the site is closed)
+      open," it's what keeps `[[crisis-anonymization-cron]]` running while the site is closed).
+      Landed 2026-07-27: both gaps re-derived correctly and unprompted, in the real code
+      (`proxy.ts`), not from memory. Side quest along the way: reviewed `responses.ts` and
+      confirmed `wants_reply` is write-only (no admin/dashboard reads it anywhere) — decided
+      to keep the write path and Mirror's toggle (near-zero cost, real UX value for the
+      visitor) but not build a dashboard, same reasoning as the D27-28 completion-rate
+      descope. Logged in `ROADMAP.md`'s D16 note.
 - [ ] Decide go/no-go on flipping `site_public:production` today, with a real reason either
       way; if go, flip it
 - [ ] If flipped: a real manual verification pass as an anonymous visitor against production,
