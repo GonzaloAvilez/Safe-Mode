@@ -521,6 +521,12 @@ internalized independently.
 showed the fixed `updateEntryOutcome` correctly targeting only the intended row —
 submitted three real entries through `/write` (crisis, matched, no_match), and each
 row's `outcome` landed correctly without disturbing any other row.
+**Applied to a new file, same day:** asked to evaluate `responses.ts`'s `setWantsReply`
+update against this same concept, initially misremembered which past bug the question
+referred to (confused it with `browser-global-identifier-shadowing`'s `origin` constants)
+but, once redirected to the right example, correctly judged the update safe because of the
+`.eq("entry_id", entryId)` filter — the right verdict, reasoning supplied after a nudge
+rather than recalled unprompted.
 **depends-on:** none
 
 ## never-presume-visitor-emotional-state

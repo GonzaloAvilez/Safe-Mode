@@ -259,6 +259,18 @@ site is closed). Close those gaps for real before touching the flag that matters
 "built" is small (the flag flip, a manual verification pass); the real substance is in
 the reclaim task.
 
+**Tasks:**
+- [ ] Close the two `[[site-visibility-flags]]` reclaim-task gaps for real — re-derive,
+      unprompted, that `/api/phrases` backs both Contribute and Leave a Trace's submit, and
+      correct the backwards reasoning on `/api/cron`'s exemption (it's not "safe to leave
+      open," it's what keeps `[[crisis-anonymization-cron]]` running while the site is closed)
+- [ ] Decide go/no-go on flipping `site_public:production` today, with a real reason either
+      way; if go, flip it
+- [ ] If flipped: a real manual verification pass as an anonymous visitor against production,
+      confirming the full flow is actually reachable
+- [ ] Decide how feedback from the first real visitors will actually get captured (a form,
+      an email, a note-taking habit) — a channel, before visitors arrive, not after
+
 ## Section 6 — Revisit D15, in a gentler shape
 
 **Source:** project memory, paused 2026-07-17 over tension with the rest of the flow — no

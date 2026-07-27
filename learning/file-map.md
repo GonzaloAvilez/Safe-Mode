@@ -103,8 +103,13 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
   discussed; this file's own read/write logic wasn't)
 - `src/lib/admin-session.ts` — the admin login cookie, sibling to Proxy's own duplicated
   check (see `proxy.ts` below). parked
-- `src/lib/responses.ts` — writes to the `responses` table (`wants_reply`,
-  `scale_before`/`after`). parked
+- `src/lib/responses.ts` — writes to the `responses` table. **known** (Section 5 side
+  quest): `createResponse` writes `scale_before` — always `null` in production, no UI ever
+  sends a real value; `setWantsReply` backs Mirror's toggle and correctly filters with
+  `.eq("entry_id", entryId)`, no repeat of the `updateEntryOutcome` bug →
+  [[sql-update-without-where-is-dangerous]]. Confirmed via grep: `wants_reply` is
+  write-only, nothing reads it anywhere in the codebase (see ROADMAP.md D16 note,
+  2026-07-27).
 - `src/lib/logging.ts`, `src/lib/utils.ts` — request-outcome logging, misc helpers. parked
 
 ## `src/proxy.ts` — request-level gate
@@ -118,7 +123,9 @@ two visibility flags before any route renders → [[site-visibility-flags]],
 
 - `src/app/api/entries/route.ts` — `POST /api/entries`, the entry point for the whole
   matching flow probed in Q1. known (partial, see [[moderation-gate-ordering]])
-- `src/app/api/entries/[id]/resonate/route.ts` — Mirror's "this resonated with me" toggle. parked
+- `src/app/api/entries/[id]/resonate/route.ts` — Mirror's "this resonated with me" toggle.
+  **known** (Section 5 side quest): validates `body.value` is a boolean, then calls
+  `setWantsReply`. → [[sql-update-without-where-is-dangerous]]
 - `src/app/api/observe/route.ts` — precomputes Observe's pairwise similarity matrix → [[observe-pairwise-similarity]]. parked
 - `src/app/api/phrases/route.ts` — shared submit endpoint for Leave a Trace and
   Contribute. **known** (Section 3, Task 2): validates `origin` the same way it already
