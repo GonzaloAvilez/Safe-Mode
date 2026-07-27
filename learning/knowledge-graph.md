@@ -523,6 +523,25 @@ submitted three real entries through `/write` (crisis, matched, no_match), and e
 row's `outcome` landed correctly without disturbing any other row.
 **depends-on:** none
 
+## never-presume-visitor-emotional-state
+**Status:** practicing — 2026-07-27
+The actual design principle behind Refugio/Safe-Mode's screens (from the real design
+brief, `project_refugio_design_brief` — not a summary or a guess): *"never have the app
+claim or presume the visitor's own emotional state (that's persuasion, not permission) —
+only show evidence of someone else's authenticity, unaddressed, and let the visitor draw
+their own conclusion privately."* Established precedent: `"you're not the only one who
+feels this"` (presumes the visitor's state) was rejected in favor of `"someone decided
+not to hide this"` (stays on the other person's side, evidence not persuasion).
+**Evidence:** an external agent's analysis of `gratitude/page.tsx`'s "The circle closes."
+tagline was independently verified against the real source material (not taken on
+faith), which surfaced the actual principle in full. Applied it correctly, unprompted,
+to catch a *second*, subtler instance in the same screen that the assistant had judged
+fine — the subcopy ("your presence is already a light for someone who hasn't arrived
+yet") previewed Leave a Trace's own reveal before that screen got to make it: "no me
+gusta el subcopy, parece ser más cuerpo de leave a trace, analizalo." Correct catch,
+independent of being told.
+**depends-on:** none
+
 ## Missing/absent practices
 None load-bearing found missing — git history is deep and disciplined (141 commits,
 branch-per-concern), CI gates lint/typecheck/test/build on both `master` and `preview`,

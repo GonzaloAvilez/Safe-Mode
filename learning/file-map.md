@@ -148,12 +148,19 @@ its own canvas/animation component + local `_components/`.
 - `mirror/` (`page.tsx`, `mirror-canvas.tsx`, `_components/quote-reveal.tsx`) — screen 6,
   shows the matched phrase or a dimmed no-match state. parked — also on the "frozen"
   list in `project.md` (follow-up adjustment pass, scope TBD)
-- `gratitude/` — screen 7, static closing message. parked — also frozen (follow-up pass, scope TBD)
+- `gratitude/page.tsx` — screen 7, transition message between Mirror and Leave a Trace,
+  same copy regardless of match/no_match. **known** (Section 7): fixed a real bug —
+  claimed closure ("The circle closes.") and previewed Leave a Trace's own theme before
+  either had actually happened → [[never-presume-visitor-emotional-state]]. `gratitude-canvas.tsx` — parked.
 - `leave-a-trace/` (`page.tsx`, `_components/trace-form.tsx`) — screen 8, optional phrase
   contribution, calls `POST /api/phrases`. `trace-form.tsx` **known** (Section 3, Task 2):
   sends `origin: LEAVE_A_TRACE_ORIGIN`. First attempt used object shorthand `{ ...,
   origin }`, which silently picked up the browser's own global `origin` (the page's URL)
-  instead → [[browser-global-identifier-shadowing]]. Rest of the file (`page.tsx`) parked.
+  instead → [[browser-global-identifier-shadowing]]. `page.tsx` — **known** (Section 7,
+  read directly): has its own two-phase render — the writing form, then (after submit or
+  skip) a real closing state reusing `GratitudeCanvas` with the genuine "The circle
+  closes." moment, correctly timed after the actual ecosystem-completing act. This is
+  what Gratitude's own copy was wrongly duplicating ahead of time.
 - `contribute/` (`page.tsx`, `_components/contribute-form.tsx`) — standalone seeding page
   outside the numbered flow, gated by its own `contribute_open` flag →
   [[site-visibility-flags]]. `contribute-form.tsx` **known** (Section 3, Task 2): same
