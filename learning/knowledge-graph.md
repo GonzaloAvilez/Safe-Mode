@@ -92,13 +92,22 @@ backwards (called it non-dangerous to gate; it's actually what keeps
 **depends-on:** [[rls-service-role-bypass]]
 
 ## ritualized-loading-ux
-**Status:** understood — 2026-07-16
+**Status:** practicing — 2026-07-25
 The `Searching` screen (and Observe's arrival transition, same pattern) exists to turn
 OpenAI's response latency into something that feels intentional rather than like a stalled
 UI — "la latencia técnica se vuelve ritual" per the code's own comment.
 **Evidence:** Q4 free recall matched the code's intent precisely, unprompted: "the
 justification is the time waiting a response from OpenAI... show something to the user
 tha don't feel like low latency."
+**Downgraded 2026-07-25, review after 9 days away — evidence corrected same session:**
+the review question itself named both `Searching` and "the arrival transition to
+Observe" in one breath, inviting exactly the screen-mix-up that followed (answered about
+Observe's O(n²) pairwise-similarity fetch when asked about `Searching`) — that specific
+confusion is on the question, not a real gap, and was called out, unprompted, the moment
+it was noticed. What *is* real, independent of the bad question: reframed the cause as
+generic "response construction time" rather than the specific, load-bearing point — that
+the delay is real third-party (OpenAI) latency outside the app's control, which is
+exactly why it needs to be ritualized rather than optimized away. Refreshed in chat.
 **depends-on:** none
 
 ## observe-pairwise-similarity

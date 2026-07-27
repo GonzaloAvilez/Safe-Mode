@@ -223,8 +223,12 @@ recompute at read time).
       `update`/`eq` mock chain (never had one before) plus updated `insertMock`
       assertions. 137/137 unit + 12/12 integration passing, lint and `tsc --noEmit`
       clean.
-- [ ] Add a small `/admin` view showing the real breakdown (`group by outcome, count(*)`)
-      — extend the spend dashboard or a new page, matching the existing pattern
+- [x] Add a small `/admin` view showing the real breakdown (`group by outcome, count(*)`)
+      — extend the spend dashboard or a new page, matching the existing pattern. Landed
+      2026-07-26 as a new `/admin/metrics` page — deliberately separate from Spend
+      ("son conceptos diferentes... no deberíamos mezclar temas"). Verified live in the
+      real browser: shows total entries + match rate, currently 0% since no entries have
+      gone through the new outcome-writing code yet.
 - [ ] Prove it end-to-end with real data, same rigor as Section 3's proof
 
 ## Section 5 — Soft launch + real users (D26, D18-19, D20-21)
