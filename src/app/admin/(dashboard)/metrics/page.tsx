@@ -9,22 +9,12 @@ export default async function AdminMetricsPage() {
 
   const rows = data ?? [];
 
-  // TODO(you): build `counts`, a record mapping each outcome value to how many
-  // rows have it. Rows where outcome is still null (proceed path, not backfilled
-  // yet) should count under the key "pending". Loop over `rows` and increment
-  // counts[key] for each one — same idea as counting votes.
-
   const counts: OutcomeCounts = {};
   for (const row of rows) {
     const key = row.outcome ?? "pending";
     counts[key] = (counts[key] ?? 0) + 1;
 
   }
-
-  // TODO(you): compute matchRate — the percentage of entries that actually reached
-  // a match verdict (matched or no_match) that were "matched". Guard against
-  // dividing by zero when there's no data yet. Something like:
-  // matched / (matched + no_match) * 100, or 0 if that denominator is 0.
 
   const matched = counts["matched"] ?? 0;
   const noMatch = counts["no_match"] ?? 0;
