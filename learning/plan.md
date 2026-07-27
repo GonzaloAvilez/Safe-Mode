@@ -289,3 +289,18 @@ entirely parked, never walked in Phase 2.
 
 **Note:** this section can't be sequenced in detail until the scoping conversation
 happens — it's the only section that starts without a defined code deliverable.
+
+**Scoping conversation held 2026-07-27 — Gratitude's half resolved.** Re-grounded in the
+actual source material (`project_refugio_design_brief` memory, the real Toy Story 5
+thesis — not a guessed summary): *"never have the app claim or presume the visitor's own
+emotional state... only show evidence... let the visitor draw their own conclusion."*
+Diagnosis: `gratitude/page.tsx`'s tagline ("The circle closes.") violated this directly —
+`leave-a-trace/page.tsx` already has its *own* correct closing state (same tagline,
+correctly timed, after the real ecosystem-completing act). Gratitude was duplicating and
+pre-empting it. The subcopy had the same problem one layer deeper — it previewed Leave a
+Trace's own "you're now a light for someone else" theme before that screen got to reveal
+it. Fixed: tagline → "Something is different now." (evidence/fact-based, not a claim
+about the visitor's state), subcopy removed entirely, stale code comment corrected.
+Deliberately did **not** touch Mirror or do a broader copy pass — narrow, verified fix
+only. Landed in `week7/gratitude-copy-fix`: `tsc`/lint/tests clean, verified live in the
+browser. Mirror's own follow-up (reclaim task below) is still fully open.
