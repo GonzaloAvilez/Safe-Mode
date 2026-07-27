@@ -166,7 +166,16 @@ its own canvas/animation component + local `_components/`.
 
 ## `src/app/admin/` — internal dashboard (Spanish-language, not public)
 
-- `(dashboard)/page.tsx`, `layout.tsx` — dashboard shell. parked
+- `(dashboard)/page.tsx` — dashboard shell. parked. `layout.tsx` — **known**: added the
+  `/admin/metrics` nav link (Section 4, Task 3), authored directly.
+- `(dashboard)/metrics/page.tsx` — **known**, authored directly (Section 4, Task 3): reads
+  `entries.outcome`, counts by value in JS (nulls bucket under `"pending"`), computes
+  match rate as `matched / (matched + no_match)`. Deliberately simple — a plain
+  `.select()` + JS reduce, not an RPC like `daily_spend`, since the row count is tiny at
+  MVP scale. Session was low-focus by this point; the counting/match-rate logic was
+  dictated near-verbatim rather than derived independently — real authorship (typed,
+  debugged a real `matchRated`/`matchRate` naming slip), but not strong evidence of
+  independent problem-solving the way earlier tasks today were.
 - `(dashboard)/phrases/page.tsx` — the phrase pre-approval queue UI → [[admin-audit-not-gate-model]].
   **known** (Section 3, Task 4): updated the page's own description copy to match the new
   gate model ("herramienta de aprobación... antes de que forme parte del corpus," not
