@@ -80,16 +80,49 @@ zero dependencies, safe for both sides. The RLS/service-role-key half is still u
 **depends-on:** none
 
 ## site-visibility-flags
-**Status:** introduced — 2026-07-16
+**Status:** understood — 2026-07-27
 Two independent feature flags (`site_public`, `contribute_open`) in a generic `settings`
-table, read in `proxy.ts` to gate routes — scoped per environment after an early version
-shared one row across preview/prod/dev.
+table, read in `proxy.ts` to gate routes — scoped per environment (`key:VERCEL_ENV`) after
+an early version shared one row across preview/prod/dev. `isSitePublic` fails open
+(defaults `true` if no row exists); `isContributeOpen` fails closed (defaults `false`) —
+deliberately different, since one is the product's default-on state and the other is a
+temporary seeding surface.
 **Evidence:** Q5 — correctly explained the two-flag split and why `/admin` and
 `/api/phrases` stay reachable for `/contribute` seeding. Missed that `/api/phrases` also
 backs Leave a Trace's own submit (not just Contribute), and got `/api/cron`'s exemption
 backwards (called it non-dangerous to gate; it's actually what keeps
 [[crisis-anonymization-cron]] running while the site is closed).
+**Gaps closed 2026-07-27 (Section 5, Task 1):** both re-derived correctly and unprompted,
+directly from `proxy.ts`, not from memory.
+**Extended same day, Task 2:** independently reasoned through the fail-open consequence
+after reading `isSitePublic`'s default — predicted, correctly, that the real
+`site_public:production` row would exist with `value: false` (not simply be absent),
+reasoning the site was deliberately closed rather than accidentally-open-by-default.
+Verified directly against the real Supabase `settings` table before flipping anything.
+Then reasoned through a real go/no-go decision with concrete criteria (bot/rate-limit
+protection already shipped, URL not yet distributed, a feedback channel available to catch
+issues) rather than a reflexive "why not," and flipped it through the actual `/admin` UI
+control (`setSitePublicAction`), not a direct database write.
+**Upgraded to understood 2026-07-27** — real, correct, unprompted reasoning about both
+the mechanism (fail-open default, environment scoping) and its product consequences,
+demonstrated across two separate tasks the same day, not a single lucky answer.
 **depends-on:** [[rls-service-role-bypass]]
+
+## experience-immersion-over-instrumentation
+**Status:** practicing — 2026-07-27
+Refugio's design brief (`[[never-presume-visitor-emotional-state]]`) isn't only a copy-level
+rule — it also rules out meta-UI that signals to the visitor "you are being observed or
+evaluated" during the ritual, even well-intentioned instrumentation like an in-app feedback
+button. Anything that breaks the fourth wall this way changes what people are willing to
+write, contaminating the exact authenticity the flow depends on.
+**Evidence:** when offered a Supabase-backed in-flow feedback form (the "boring, consistent
+with the rest of the stack" choice), pushed back unprompted: *"desde el principio comienza a
+decirle al usuario, oh, estamos evaluando, así que ten cuidado con lo que respondes."*
+Independently extended a principle previously only seen applied to screen copy
+([[never-presume-visitor-emotional-state]]) to a feature-level product decision, without
+being pointed at the connection. Landed on 1:1 personal conversations, entirely outside the
+app, as the actual feedback channel instead.
+**depends-on:** [[never-presume-visitor-emotional-state]]
 
 ## ritualized-loading-ux
 **Status:** practicing — 2026-07-25

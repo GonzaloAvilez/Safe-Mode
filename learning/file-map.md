@@ -209,7 +209,18 @@ its own canvas/animation component + local `_components/`.
 - `admin/login/` (`page.tsx`, `login-form.tsx`, `actions.ts`) — password-gated login,
   works with `proxy.ts`'s cookie check. parked
 
-## `src/app/closed/page.tsx`, `src/app/layout.tsx` — top-level shell/redirect target. parked
+## `src/app/closed/page.tsx` — top-level redirect target when `site_public` is off. parked
+
+## `src/app/layout.tsx` — root shell + site `metadata`
+**known** (Section 5 side quest, 2026-07-27): `metadata.title`/`metadata.description` were
+still create-next-app's literal scaffolding defaults right up to soft launch — replaced
+directly in the file (one self-caught syntax slip: a missing comma between object
+properties, fixed unprompted after being asked to predict the failure).
+
+## `src/app/icon.png` — real favicon, Next.js file-convention (**known**, 2026-07-27)
+Replaces `src/app/favicon.ico` (deleted — Next's default logo, and having both risked two
+competing `<link rel="icon">` tags). 256×256, supplied by the user, verified square before
+use. On `fix/site-metadata-favicon` (branched off `master`, PR not yet opened).
 
 ## `src/components/ui/button.tsx` — shadcn-generated base component. parked
 
