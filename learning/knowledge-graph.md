@@ -593,6 +593,24 @@ unprompted) plus confirmed reasoning on the rest — not full independent deriva
 second time.
 **depends-on:** none
 
+## observe-tooltip-completeness
+**Status:** practicing — 2026-07-28
+Observe's hover tooltip runs every phrase through `truncate(text, TOOLTIP_MAX_LENGTH)`
+(`observe-canvas.tsx`) before showing it. The constant was raised from 60 to 150 (seed
+phrases run up to ~94 chars, user submissions cap at 120) because the old value cut most
+real phrases off mid-thought with "…" — working directly against Observe's purpose: the
+screen exists to show someone else's words complete and unaddressed, so the visitor can
+draw their own conclusion. A truncated phrase is a distorted one, not just a shorter one.
+**Evidence:** this fix predates learning-doc tracking (made and merged as PR #119 during
+an earlier, abandoned attempt at using the altitude skill) — no original evidence exists.
+Closed the gap 2026-07-28: read `truncate()` and its call site cold, then explained
+unprompted, in own words, both the mechanical effect (phrases were getting cut off) and
+why it mattered specifically for Observe ("complete phrases is a must to show what other
+people think... at the end, they are watching someone else['s] reality") — connects to
+the same evidence-not-distortion spirit as [[never-presume-visitor-emotional-state]],
+independently drawn, not pointed at.
+**depends-on:** none
+
 ## Missing/absent practices
 None load-bearing found missing — git history is deep and disciplined (141 commits,
 branch-per-concern), CI gates lint/typecheck/test/build on both `master` and `preview`,

@@ -144,9 +144,14 @@ its own canvas/animation component + local `_components/`.
 - `page.tsx` + `_components/home-gate.tsx`, `rules-gate.tsx`, `living-phrases.tsx` — Home
   (screen 0), mandatory rules-disclosure modal. parked
 - `arrive/` — screen 1, arrival ritual canvas. parked
-- `observe/` (`page.tsx`, `observe-canvas.tsx`, `_components/observe-screen.tsx`,
+- `observe/` (`page.tsx`, `_components/observe-screen.tsx`,
   `observe-meditation.tsx`, `observe-transition.tsx`) — screen 2, presence ecosystem,
   fetches `/api/observe` client-side → [[observe-pairwise-similarity]]. parked
+  - `observe-canvas.tsx` — mostly parked (the canvas physics/animation loop hasn't been
+    walked), but the tooltip-truncation piece is **known**: `truncate()` + its call site
+    in the hover-reveal timer → [[observe-tooltip-completeness]]. Real fix (`TOOLTIP_MAX_LENGTH`
+    60 → 150, PR #119) predates learning-doc tracking — made during an earlier, abandoned
+    altitude-skill attempt; walked and closed 2026-07-28.
 - `remember/` — screen 3, breathing pause. parked
 - `write/` (`page.tsx`, `_components/entry-form.tsx`) — screen 4, the input form that
   calls `POST /api/entries`. parked (form mechanics not walked; its *purpose* during
