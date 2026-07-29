@@ -126,7 +126,13 @@ two visibility flags before any route renders → [[site-visibility-flags]],
 - `src/app/api/entries/[id]/resonate/route.ts` — Mirror's "this resonated with me" toggle.
   **known** (Section 5 side quest): validates `body.value` is a boolean, then calls
   `setWantsReply`. → [[sql-update-without-where-is-dangerous]]
-- `src/app/api/observe/route.ts` — precomputes Observe's pairwise similarity matrix → [[observe-pairwise-similarity]]. parked
+- `src/app/api/observe/route.ts` — precomputes Observe's pairwise similarity matrix →
+  [[observe-pairwise-similarity]]. parked (route logic itself not yet walked), but its
+  missing test coverage — the one real exception to every other route's colocated
+  `route.test.ts` — was correctly spotted unprompted 2026-07-28. `route.test.ts` now
+  exists, authored directly by the assistant and reviewed live (6 tests: query error,
+  null-embedding filtering, array/string embedding parsing, symmetric zero-diagonal
+  matrix, embeddings never reaching the client, exact query shape).
 - `src/app/api/phrases/route.ts` — shared submit endpoint for Leave a Trace and
   Contribute. **known** (Section 3, Task 2): validates `origin` the same way it already
   validated `text`, then a type assertion (`origin as PhraseOrigin`) past the check —

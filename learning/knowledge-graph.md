@@ -144,13 +144,18 @@ exactly why it needs to be ritualized rather than optimized away. Refreshed in c
 **depends-on:** none
 
 ## observe-pairwise-similarity
-**Status:** seed — 2026-07-16
+**Status:** introduced — 2026-07-28
 `/api/observe` precomputes a full pairwise cosine-similarity matrix, server-side, across
 all active phrases — a separate O(n²) computation from `match_phrase`'s single nearest-
 neighbor query, used to drive Observe's canvas visualization rather than matching.
-**Evidence:** not yet probed directly; named because it's adjacent to the pipeline asked
-about in Q1 and is a real second matching-adjacent code path someone could confuse with
-`match_phrase`.
+**Evidence:** correctly, unprompted, spotted that this route was the one real exception to
+the project's own colocated-test convention (`route.test.ts` next to every other
+`src/app/api/*/route.ts`) — asked to review the whole repo's test organization for
+"antipatrones," accepted that colocation itself is fine (verified against the actual
+Next.js docs together), then independently found the real, specific gap instead of a
+generic one. Didn't yet explain the route's own logic (embedding parsing, the
+null-embedding defensive filter, the symmetric-matrix computation) — that part was
+walked and tested together, not derived by them.
 **depends-on:** [[embedding-generation]], [[vector-similarity-threshold]]
 
 ## daily-spend-cap
