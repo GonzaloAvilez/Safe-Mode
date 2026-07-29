@@ -454,7 +454,29 @@ you open a PR" without first understanding what actually runs.
       the real dev server, reproduced the exact predicted 500) → [[nextjs-dev-lazy-module-execution]].
       Wrote the `OPENAI_API_KEY` caveat in the file themselves (fill-in), lightly polished for
       grammar afterward, meaning preserved.
-- [ ] Write `CONTRIBUTING.md`: local setup, running unit vs. integration tests, the
+- [x] Write `CONTRIBUTING.md`: local setup, running unit vs. integration tests, the
       branch-per-concern/PR convention, and what CI actually checks before a PR can merge.
-- [ ] Verify by reading it back as a first-time contributor would — does it cover everything
-      needed to pick up issue #124 without asking the project owner anything first?
+      Landed 2026-07-29: wrote the whole "Branch & PR workflow" section as a real fill-in (the
+      hint offered was to reason from `deploy-migrations.yml`'s mechanism, not just recite the
+      rule). First draft correctly captured the *why* (CI pushes migrations straight to
+      production on merge to `master`) but also invented a specific branch-naming convention
+      (`migration/080665...`) that doesn't exist in real history. Asked, unprompted, to verify
+      it with a real `git log` query before accepting it — ran it, found no such branches,
+      and self-corrected to a plain naming *suggestion* rather than a claimed observed
+      convention. First time this session the verify-before-asserting standard was
+      self-applied to their own writing, unprompted, rather than caught by the assistant.
+- [x] Verify by reading it back as a first-time contributor would — does it cover everything
+      needed to pick up issue #124 without asking the project owner anything first? Landed
+      2026-07-29: this step did its job — caught a real, load-bearing gap unprompted.
+      Contributions are meant to flow through a fork (the original ask that opened this whole
+      section literally said "para que se pueda hacer fork"), but the drafted "Branch & PR
+      workflow" section said "push your branch and open a PR," silently assuming direct push
+      access to this repo. Added a "Fork first" section (fork on GitHub, clone the fork, PR
+      from there against this repo's `master`) and corrected the closing instruction to match.
+      Confirmed no further gaps after the fix.
+
+**Section 9 complete as of 2026-07-29.** `README.md` has a real Setup section (verified live
+against an actual crash, not just described) and `CONTRIBUTING.md` exists, covering fork-based
+setup, branch/PR/commit conventions, what CI checks, and how to pick up a `good first issue` —
+someone who's never seen this repo (Phill) can now get running and open a PR without asking
+first.

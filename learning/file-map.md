@@ -31,6 +31,15 @@ explained — an honest gap, not a failure, with a note on when it comes due).
   the `OPENAI_API_KEY`-required-even-locally caveat (authored directly, in their own words,
   then lightly polished) → [[nextjs-dev-lazy-module-execution]], and how to run unit vs.
   integration tests.
+- `CONTRIBUTING.md` — **known**, authored directly 2026-07-29 (Section 9, Task 3-4): fork-based
+  contribution flow, one-branch-per-concern (and the mechanical, not stylistic, reason
+  migrations are the hard exception — traced to `deploy-migrations.yml`), commit-message style
+  (verified against real `git log` history, not invented), pre-PR checks, what CI checks, how
+  to pick up a `good first issue`. First draft invented a `migration/080665...` branch-naming
+  convention that isn't real — caught and self-corrected via a real `git log` query, unprompted.
+  Verification pass (Task 4) caught a real, separate gap: the drafted PR instructions silently
+  assumed direct push access instead of the intended fork workflow — fixed with a new
+  "Fork first" section.
 - `next-env.d.ts`, `tsconfig.tsbuildinfo` — `generated`
 
 ## `.github/workflows/` — CI/CD
