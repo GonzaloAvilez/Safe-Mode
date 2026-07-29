@@ -318,6 +318,34 @@ consistent with the rest of the flow's visual language.
 **Reclaim task:** `src/lib/responses.ts` (parked) — the `scale_before`/`scale_after`
 columns already exist in the schema; nothing writes to them yet.
 
+**Resolution conversation held 2026-07-29.** Walked `responses.ts` together (reclaim task) —
+confirmed live: `scale_before` is written but always `null` (no caller sends a real value),
+`scale_after` is referenced nowhere in the app, and `wants_reply` (Mirror's "resonó conmigo"
+toggle) is written but never read anywhere. Correctly distinguished, unprompted, match rate
+from an emotional-impact signal ("no es medible eso aún... lo que sí es medible es cuántos
+hicieron match... comprobando que los flujos trabajan correctamente" — pipeline health, not
+felt improvement). Independently proposed surfacing `wants_reply` as a closer proxy, then,
+when asked whether a resonance rate tells the same "before/after change" story D15 wanted,
+correctly separated the two: "muestra... que el usuario sintió real un match... pero no
+refleja aún si se siente mejor que cuando entró" — connection is not the same claim as
+improvement.
+
+Applied the same "wait for real evidence before building" reasoning already used to descope
+completion rate in Section 4 — but to *this* new decision, not a repeat of the old one: when
+asked whether the D18-19 interviews already cover the gap the way they were assumed to,
+answered honestly that only 1 of 5 real interviews has happened so far, which changed the
+calculus. Given the tool-panel choice was declined in favor of a plain-chat answer, decided
+directly: **pause the D15 build decision itself** — not just the code — until more real
+interviews/feedback accumulate (currently: 1 interview + 2 pieces of asynchronous feedback).
+Neither outcome (a) nor (b) from this section's original framing was chosen; a third,
+legitimate outcome — defer the decision, not just the implementation — matching the project's
+established evidence-over-assumption posture. → [[evidence-based-deferral]]
+
+**Section 6 paused as of 2026-07-29, deliberately, not abandoned.** No code changed. Revisit
+once more real interviews/feedback land — re-ask the same two questions (does a proxy already
+cover the story? do the interviews now give it directly?) with real data instead of one data
+point.
+
 ## Section 7 — Scope and ship the Mirror/Gratitude follow-up
 
 **Source:** `project.md`, "Frozen" — both screens flagged for a follow-up adjustment,
