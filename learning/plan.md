@@ -417,3 +417,37 @@ file-map gap this surfaced, instead of building something that already exists.
 
 **Section 8 complete as of 2026-07-29.** No new app code — pure documentation/map
 reconciliation, prompted by picking a backlog item that turned out to already be done.
+
+## Section 9 — Contributor onboarding (CONTRIBUTING.md + README setup)
+
+**Source:** real GitHub issues, not the roadmap — #113 ("add readme.md to share repository...
+required to support individual contributions") and #124 (a "good first issue" already
+self-assigned to a real external contributor, Phill: sound-effect button label + a font-size
+adjustment setting — the latter echoes the first real visitor's own accessibility feedback,
+2026-07-27). Phill wants to contribute now; the project has no `CONTRIBUTING.md` and
+`README.md`'s "Setup" section is a literal "_Coming soon._" stub.
+
+**Visible deliverable:** a real `CONTRIBUTING.md` plus a filled-in README "Setup" section —
+someone who has never seen this repo (Phill) could clone it, get it running locally, run the
+tests, and understand the branch/PR convention, without asking a single question first.
+
+**Reclaim task:** `.github/workflows/*.yml` (`ci.yml`, `integration-tests.yml`,
+`deploy-migrations.yml`) — entirely unmapped/unwalked until now, despite being referenced
+conceptually (`supabase-migrations-workflow`). Can't accurately document "what happens when
+you open a PR" without first understanding what actually runs.
+
+**Tasks:**
+- [x] Walk the three CI/CD workflow files together — what triggers each one, why
+      `integration-tests.yml` is path-filtered instead of always running, why
+      `deploy-migrations.yml` only fires on `master` pushes, and the one non-obvious CI step
+      (`npx next typegen`) that would otherwise make a fresh checkout fail `tsc` for a reason
+      that isn't really a type error. Landed 2026-07-29: correctly, unprompted, worked out
+      that a hypothetical PR touching only issue #124's font-size/label change would trigger
+      `ci.yml` alone — neither of the other two, not even after an eventual merge to `master`
+      → [[ci-cd-workflow-triggers]].
+- [ ] Fill in README.md's real "Setup" section (clone → `npm install` → `npm run dev`) — now
+      genuinely simple thanks to Section 8's local-Postgres-by-default work.
+- [ ] Write `CONTRIBUTING.md`: local setup, running unit vs. integration tests, the
+      branch-per-concern/PR convention, and what CI actually checks before a PR can merge.
+- [ ] Verify by reading it back as a first-time contributor would — does it cover everything
+      needed to pick up issue #124 without asking the project owner anything first?
