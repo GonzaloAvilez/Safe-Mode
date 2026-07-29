@@ -23,4 +23,31 @@ actually shipped.
 
 ## Setup
 
-_Coming soon._
+Requires Node 24+ and Docker (for the local Supabase/Postgres stack).
+
+```bash
+git clone <repo-url>
+cd Safe-Mode
+npm install
+cp .env.example .env.local
+```
+
+The project uses OpenAI for embeddings, so `OPENAI_API_KEY` needs a real value in `.env.local`
+even for local development. `npm run dev` will start fine without it, but the moment you hit a
+screen that calls `/api/entries` or `/api/phrases`, those routes construct the OpenAI client and
+you'll get a 500.
+
+```bash
+npm run dev
+```
+
+`npm run dev` boots a local Supabase/Postgres stack automatically (`scripts/dev-local-setup.sh`)
+— it never touches the real shared project. Use `npm run dev:cloud` instead if you need to point
+at the real database.
+
+### Tests
+
+```bash
+npm test                 # fast unit tests, fully mocked
+npm run test:integration # real local Postgres, via scripts/run-integration-tests.sh
+```

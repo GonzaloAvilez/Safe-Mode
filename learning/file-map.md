@@ -19,12 +19,18 @@ explained — an honest gap, not a failure, with a note on when it comes due).
   [[vitest-file-parallelism-shared-db-race]]
 - `vercel.json` — deploy config. — parked
 - `.env.local` / `.env.example` — real vs. template environment variables (Supabase,
-  OpenAI, Upstash, admin session secret keys). — parked
+  OpenAI, Upstash, admin session secret keys). **known** (partial): confirmed live
+  2026-07-29 that `OPENAI_API_KEY` specifically must be a real value even for local dev,
+  not just for `dev:cloud` → [[nextjs-dev-lazy-module-execution]]
 - `AGENTS.md` / `CLAUDE.md` — instructions for AI coding agents working in this repo, not
   app code. — parked
 - `ROADMAP.md` — the actual source of truth for what's built vs. planned; used to write
   `learning/project.md`. — parked (reference doc, not code to reclaim)
-- `README.md` — points to ROADMAP.md for status. — parked
+- `README.md` — points to ROADMAP.md for status. **known** (Section 9, Task 2): real "Setup"
+  section written 2026-07-29, replacing the "_Coming soon._" stub — clone/install/env steps,
+  the `OPENAI_API_KEY`-required-even-locally caveat (authored directly, in their own words,
+  then lightly polished) → [[nextjs-dev-lazy-module-execution]], and how to run unit vs.
+  integration tests.
 - `next-env.d.ts`, `tsconfig.tsbuildinfo` — `generated`
 
 ## `.github/workflows/` — CI/CD
