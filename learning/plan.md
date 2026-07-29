@@ -391,3 +391,29 @@ this."` → `"Their words were already here, waiting."` (mirrors the no_match su
 "waiting" theme, told from the other person's side). Landed in `week4/mirror-copy-fix`:
 `tsc`/lint clean. **Section 7 complete as of 2026-07-27** — both screens' follow-ups
 scoped and shipped.
+
+## Section 8 — ROADMAP/file-map reconciliation (unplanned)
+
+**Source:** 2026-07-29, `/next-lesson` orientation. Section 6 was paused and no Section 8
+existed yet, so `ROADMAP.md`'s "Open/deferred" list was offered as real candidates for a new
+section. Picked candidate 1 (`npm run dev` should default to local Postgres) — but checking
+the actual code first (not just the checklist) found it was **already built**, merged via PR
+#115, just never checked off. Bot-protection's `[ ]` item was found stale the same way earlier
+in this same session. Redirected the lesson itself: reconcile the stale docs and the one real
+file-map gap this surfaced, instead of building something that already exists.
+
+**Tasks:**
+- [x] Fix both stale `ROADMAP.md` checkboxes (`npm run dev` local-Postgres default,
+      bot/abuse protection) — both real, built, just never marked done.
+- [x] Walk `scripts/dev-local-setup.sh` (previously entirely unmapped) — `predev` hook,
+      local Supabase boot, the manual `GRANT` step, and the `.env.development.local`
+      precedence trick that makes plain `npm run dev` safe by default. Added to
+      `learning/file-map.md` as known.
+- [x] Introduced `[[supabase-autogrant-deprecation]]` as a real knowledge-graph concept
+      (previously only project memory, never formally taught/checked). Free-recall check
+      surfaced a real, specific inaccuracy — an invented "past security breach" cause not
+      supported by the documented source — corrected directly rather than accepted at face
+      value, per this project's own recurring "verify before asserting" standard.
+
+**Section 8 complete as of 2026-07-29.** No new app code — pure documentation/map
+reconciliation, prompted by picking a backlog item that turned out to already be done.

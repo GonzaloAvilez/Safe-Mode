@@ -207,7 +207,7 @@ runs before every request, the matcher config, why it's not just page-level logi
 **depends-on:** [[site-visibility-flags]]
 
 ## supabase-migrations-workflow
-**Status:** understood — 2026-07-22
+**Status:** practicing — downgraded 2026-07-29 (review)
 Schema, RPC functions (`match_phrase`), indexes, and RLS policies are all defined as
 timestamped SQL files in `supabase/migrations/`, applied in order — the source of truth
 for the database, not something configured by hand in Supabase Studio. A dedicated CI
@@ -237,6 +237,14 @@ back `null` after the reset — including the non-obvious extra point, unprompte
 already-submitted real phrases would also permanently lose their origin, not just seed
 data. One real syntax slip along the way, self-corrected — see
 [[postgres-add-column-not-null-default]].
+**Reviewed 2026-07-29 (7 days later) — struggled:** asked why migrations always get their
+own branch/PR. Answer captured real but generic reasoning (isolate risk, avoid breaking an
+existing flow, tests catch problems) but missed the specific, load-bearing mechanism: that
+`deploy-migrations.yml` pushes any `supabase/migrations/**` change straight to the real
+production database the instant it merges to `master`, with no pause to coordinate with
+app-code deploys — that's the actual reason bundling is dangerous here, not migrations
+being risky in the abstract. Downgraded from `understood` to `practicing`; refreshed in
+chat, not yet re-tested.
 **depends-on:** none
 
 ## postgres-function-signature-change-requires-drop
@@ -610,6 +618,27 @@ people think... at the end, they are watching someone else['s] reality") — con
 the same evidence-not-distortion spirit as [[never-presume-visitor-emotional-state]],
 independently drawn, not pointed at.
 **depends-on:** none
+
+## supabase-autogrant-deprecation
+**Status:** introduced — 2026-07-29
+Hosted Supabase projects (like this project's real one) still auto-`GRANT`
+`SELECT/INSERT/UPDATE/DELETE` to `anon`/`authenticated`/`service_role` on every
+`CREATE TABLE` — legacy behavior, mandatory to remove for all projects (new tables)
+starting 2026-10-30. A fresh local Supabase CLI database already behaves the new way (no
+auto-grant), which is why both `run-integration-tests.sh` and `dev-local-setup.sh` run an
+explicit manual `GRANT` after `supabase start` — without it, local Postgres would reject
+even a schema-correct query with `permission denied for table ...`.
+**Evidence:** asked why the manual `GRANT` step in `dev-local-setup.sh` matters given the
+2026-10-30 deadline already known from project memory. Correctly recalled the deadline,
+that it's security-motivated, that it's a gradual/transitional rollout, and that this is
+why it must be done by hand locally. Real gap: asserted, unprompted and with real
+specificity ("después de que anteriormente ya sufrieron infiltraciones en su sistema"),
+that the change was triggered by a specific past security breach — not supported by
+anything in the documented source (Supabase's own changelog, saved in project memory,
+frames it as no-longer-auto-exposing-tables-to-the-Data/GraphQL-API-by-default, not a
+breach response). Not corrected by them; flagged directly rather than accepted at face
+value.
+**depends-on:** [[supabase-migrations-workflow]]
 
 ## evidence-based-deferral
 **Status:** practicing — 2026-07-29
