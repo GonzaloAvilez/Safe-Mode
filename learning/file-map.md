@@ -54,6 +54,15 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
     (Section 4, Task 1): nullable `outcome` column on `entries`, matching the 5
     `EntryOutcome` values, check constraint in `source`/`origin`'s style →
     [[supabase-migrations-workflow]], [[postgres-add-column-not-null-default]]
+  - `20260728120000_recalibrate_match_phrase_threshold.sql` — parked (the 0.5→0.4
+    recalibration; the percentile analysis behind it was walked in chat 2026-07-28, see
+    `project_match_phrase_threshold_calibration` in project memory, but the migration
+    file itself and the SQL wasn't)
+  - `20260728220000_drop_match_phrase_old_overload.sql` — parked (the contract-step
+    cleanup for the dead 1-arg overload → [[postgres-function-signature-change-requires-drop]];
+    written directly by the assistant 2026-07-28 after the user recalled the outstanding
+    gap and it was verified live against production, but not walked with the user line
+    by line the way earlier migrations were)
   - the rest (RLS, crisis isolation, spend tables, settings) — parked
 - `supabase/config.toml` — local Supabase stack config (which services run locally). — parked
 - `supabase/.branches/`, `supabase/.temp/`, `supabase/snippets/` — `generated`/local CLI state
