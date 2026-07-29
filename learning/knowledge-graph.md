@@ -5,6 +5,27 @@ Statuses: `seed` (named, not yet explained) → `introduced` (explained once, ga
 Set only from what I demonstrate in conversation — never from self-report or from files
 Claude read on its own.
 
+## nextjs-dev-lazy-module-execution
+**Status:** practicing — 2026-07-29
+`next build` eagerly executes module-level code (like `const openai = new OpenAI(...)` in
+`src/lib/openai.ts`) for every route while collecting page data — confirmed by `ci.yml`'s own
+comment. `next dev` is different: it compiles and executes each route's modules lazily, only
+the first time that specific route is actually requested — not at `npm run dev` startup.
+Construction (`new OpenAI(...)`) throws immediately if `OPENAI_API_KEY` is unset (verified
+directly in the installed SDK source, `node_modules/openai/client.js`), which is distinct from
+invocation (actually calling the API) — the crash happens at module-load time, not at the
+moment an embedding is requested.
+**Evidence:** first asked a precise clarifying question distinguishing construction from
+invocation, and asking whether the claim was about `next build` or `next dev`/route-entry —
+correctly identified this was the exact ambiguity worth resolving before answering. Then
+predicted, unprompted and precisely: the app boots fine, but fails specifically when a route
+importing `openai.ts` is hit (named `/api/entries` and `/api/phrases` directly), attributing it
+correctly to lazy module execution in dev mode. Verified live: backed up `.env.local`, blanked
+`OPENAI_API_KEY`, ran the real dev server, and `POST /api/entries` produced exactly the
+predicted 500 with `at new OpenAI (...) at module evaluation (...)` in the stack trace —
+prediction confirmed against real behavior, not just the SDK source reading.
+**depends-on:** none
+
 ## ci-cd-workflow-triggers
 **Status:** practicing — 2026-07-29
 Three separate GitHub Actions workflows, each with a different trigger shape: `ci.yml` runs

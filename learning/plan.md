@@ -445,8 +445,15 @@ you open a PR" without first understanding what actually runs.
       that a hypothetical PR touching only issue #124's font-size/label change would trigger
       `ci.yml` alone — neither of the other two, not even after an eventual merge to `master`
       → [[ci-cd-workflow-triggers]].
-- [ ] Fill in README.md's real "Setup" section (clone → `npm install` → `npm run dev`) — now
-      genuinely simple thanks to Section 8's local-Postgres-by-default work.
+- [x] Fill in README.md's real "Setup" section (clone → `npm install` → `npm run dev`) — now
+      genuinely simple thanks to Section 8's local-Postgres-by-default work. Landed
+      2026-07-29: before writing it, correctly predicted (precise clarifying question first,
+      distinguishing `next build` vs. `next dev` and construction vs. invocation) that
+      `npm run dev` boots fine without `OPENAI_API_KEY` but crashes the moment `/api/entries`
+      or `/api/phrases` is hit — verified live (backed up `.env.local`, blanked the key, ran
+      the real dev server, reproduced the exact predicted 500) → [[nextjs-dev-lazy-module-execution]].
+      Wrote the `OPENAI_API_KEY` caveat in the file themselves (fill-in), lightly polished for
+      grammar afterward, meaning preserved.
 - [ ] Write `CONTRIBUTING.md`: local setup, running unit vs. integration tests, the
       branch-per-concern/PR convention, and what CI actually checks before a PR can merge.
 - [ ] Verify by reading it back as a first-time contributor would — does it cover everything
