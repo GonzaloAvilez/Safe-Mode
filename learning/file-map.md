@@ -275,6 +275,16 @@ use. On `fix/site-metadata-favicon` (branched off `master`, PR not yet opened).
 
 - `run-integration-tests.sh` — spins up local Supabase/Postgres and runs the integration
   suite → [[integration-tests-real-postgres]]. parked
+- `dev-local-setup.sh` — **known**, walked directly 2026-07-29 (Section 8): runs as `npm run
+  dev`'s `predev` hook, boots the local Supabase/Docker stack, manually `GRANT`s table/sequence
+  privileges to `anon`/`authenticated`/`service_role` (local CLI databases don't get the
+  legacy auto-grant hosted Supabase still has →
+  [[project_supabase_autogrant_deprecation]] in project memory), then writes a gitignored
+  `.env.development.local` pointing at `http://127.0.0.1:54321` — Next.js loads this with
+  higher precedence than `.env.local`, so plain `npm run dev` can't touch the shared cloud
+  project by accident. `npm run dev:cloud` deletes it and skips `predev` to opt back into
+  real-cloud dev. Already built via PR #115, ROADMAP.md's checklist item was just never
+  checked off until today.
 - `seed-phrases.ts` — the D7 script that seeded the original 50 phrases with embeddings,
   **known** (Section 2, Task 4). Was stale in Spanish on `master` despite the real corpus
   having been translated to English against the live Supabase project back on 2026-07-15
