@@ -611,6 +611,23 @@ the same evidence-not-distortion spirit as [[never-presume-visitor-emotional-sta
 independently drawn, not pointed at.
 **depends-on:** none
 
+## evidence-based-deferral
+**Status:** practicing — 2026-07-29
+Don't build (or even decide) for a hypothetical need — wait for real signal to exist first,
+then decide with data instead of assumption. First applied in Section 4 (completion-rate
+tracking descoped because ~10 interviews would give better signal than a percentage from
+10 people), but not named as its own recurring pattern until today.
+**Evidence:** in Section 6's D15 resolution conversation, correctly distinguished match rate
+(pipeline health) from an emotional-impact signal unprompted, then — when asked whether the
+D18-19 interviews already covered the resulting gap the way Section 4 assumed they would for
+completion rate — answered honestly that only 1 of 5 planned interviews had actually happened,
+which changed the answer. Independently chose (declining a multiple-choice prompt in favor of
+a plain-chat answer) to pause the *decision itself*, not just the build, until more real
+interviews/feedback exist — correctly recognizing this as the same underlying principle as
+Section 4's descope, applied to a new, non-identical situation rather than pattern-matched
+reflexively.
+**depends-on:** none
+
 ## Missing/absent practices
 None load-bearing found missing — git history is deep and disciplined (141 commits,
 branch-per-concern), CI gates lint/typecheck/test/build on both `master` and `preview`,
