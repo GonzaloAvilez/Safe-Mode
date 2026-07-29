@@ -27,6 +27,21 @@ explained — an honest gap, not a failure, with a note on when it comes due).
 - `README.md` — points to ROADMAP.md for status. — parked
 - `next-env.d.ts`, `tsconfig.tsbuildinfo` — `generated`
 
+## `.github/workflows/` — CI/CD
+- `ci.yml` — **known**, walked directly 2026-07-29 (Section 9 reclaim task): runs
+  unconditionally on every PR/push to `master`/`preview` — `npm ci`, `next typegen` (a fresh
+  checkout has no generated route types yet, unlike local `next dev`/`build`), lint, `tsc`,
+  `test:coverage` (informational only, no enforced threshold), `build` →
+  [[ci-cd-workflow-triggers]]
+- `integration-tests.yml` — **known**, same session: path-filtered to
+  `supabase/migrations/**`, `entries.ts`, `phrases.ts`, and the integration test files
+  themselves — real Postgres via Docker is expensive, so unrelated PRs never pay for it →
+  [[ci-cd-workflow-triggers]]
+- `deploy-migrations.yml` — **known**, same session: only fires on `push` to `master` (never
+  on a PR), only when `supabase/migrations/**` changes — the actual mechanism behind
+  [[supabase-migrations-workflow]]'s "migrations get their own branch/PR" rule →
+  [[ci-cd-workflow-triggers]]
+
 ## `node_modules/`, `.next/` — `generated`
 Installed dependencies and build output. Never hand-edited, always rebuildable via
 `npm install` / `npm run build`.

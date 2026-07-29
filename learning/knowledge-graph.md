@@ -5,6 +5,25 @@ Statuses: `seed` (named, not yet explained) → `introduced` (explained once, ga
 Set only from what I demonstrate in conversation — never from self-report or from files
 Claude read on its own.
 
+## ci-cd-workflow-triggers
+**Status:** practicing — 2026-07-29
+Three separate GitHub Actions workflows, each with a different trigger shape: `ci.yml` runs
+unconditionally on every PR/push to `master`/`preview` (lint, `tsc`, unit tests, build) — no
+path filter, always pays the cost. `integration-tests.yml` and `deploy-migrations.yml` are
+both path-filtered (migrations, `entries.ts`, `phrases.ts` for the first; only
+`supabase/migrations/**` for the second) so unrelated PRs (UI, copy) never pay for spinning
+up real Postgres or touching production schema. `deploy-migrations.yml` additionally only
+fires on `push` to `master`, never on `pull_request` — it's the one that actually pushes to
+the real database.
+**Evidence:** asked, given a hypothetical PR that only changes a button label and adds a
+font-size setting (issue #124, real, not hypothetical for long), which of the three
+workflows would run. Correctly identified, unprompted and in one pass, that only `ci.yml`
+runs unconditionally, and that neither `integration-tests.yml` nor `deploy-migrations.yml`
+would ever fire — not just for the PR, but reasoned correctly that the eventual merge to
+`master` wouldn't trigger the migrations deploy either, since the change never touches
+`supabase/migrations/**`.
+**depends-on:** [[supabase-migrations-workflow]]
+
 ## embedding-generation
 **Status:** introduced — 2026-07-16
 Turning a piece of text into a vector via OpenAI (`text-embedding-3-small`), so it can be
