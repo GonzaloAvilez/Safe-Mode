@@ -480,3 +480,27 @@ against an actual crash, not just described) and `CONTRIBUTING.md` exists, cover
 setup, branch/PR/commit conventions, what CI checks, and how to pick up a `good first issue` —
 someone who's never seen this repo (Phill) can now get running and open a PR without asking
 first.
+
+**Follow-up fix, 2026-07-30 — the first real contribution immediately tested the guide.** Phill
+opened PR #130 (`feature/ui-polish`, issue #124's sound-toggle label). Reviewed and tested it
+live: checked out the PR branch, ran it against local Postgres, verified the real change
+(`sound-toggle.tsx`) worked exactly as intended via the actual served HTML. But the PR also
+carried a ~400-line `package-lock.json` diff (dependency churn, not a real change) and, on
+inspection, the branch was based on a `master` commit from well before Section 9 — old enough
+that `CONTRIBUTING.md` itself didn't exist on it yet, discovered concretely when `gh pr
+checkout 130` left the repo without the file. Diagnosed correctly, unprompted: "el fork está
+desactualizado." Added a "Keep your fork in sync" subsection to `CONTRIBUTING.md` (add
+`upstream` remote, sync before starting work and before opening a PR), grounded in this real
+incident rather than generic advice.
+
+**Same session, a real mistake and its correction — worth recording honestly.** While seeding
+6 real phrases into local Postgres for testing (from `src/test/fixtures/real-phrase-embeddings.ts`,
+avoiding real OpenAI cost — the user's own idea, correctly reasoning the corpus already exists in
+prod), the assistant's script used `--env-file=.env.local` — the file with real production
+credentials, not `.env.development.local` (the local one). This inserted 6 duplicate rows into
+the real production `phrases` table. Caught immediately by checking the actual URL after the
+fact, disclosed plainly, and deleted by exact ID only after explicit confirmation. Re-ran
+correctly against `.env.development.local`, verifying the target URL *before* the write this
+time. Logged in project memory (`project_supabase_shared_env.md`) as a distinct, still-live risk
+separate from Section 8's `npm run dev` fix — one-off scripts don't get Next's env-file
+precedence for free.

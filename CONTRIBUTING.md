@@ -14,6 +14,29 @@ External contributions go through a fork, not a branch pushed directly to this r
 repository on GitHub, then clone **your fork** (not this one) when following the Setup steps
 above. Push branches to your fork, and open the PR from there against this repo's `master`.
 
+### Keep your fork in sync
+
+Add this repo as a second remote once, right after cloning your fork:
+
+```bash
+git remote add upstream https://github.com/GonzaloAvilez/Safe-Mode.git
+```
+
+Then, **before starting any new branch**, and again **before opening a PR** if your branch has
+sat around for a while, pull the latest `master` in:
+
+```bash
+git checkout master
+git fetch upstream
+git merge upstream/master
+git push origin master
+```
+
+This isn't just tidiness. A stale fork causes two concrete, real problems: your `package-lock.json`
+diff fills up with unrelated dependency churn instead of just your actual change (this happened
+on a real PR), and you can be working against files or docs that no longer exist on `master` —
+including, ironically, an outdated copy of this very file.
+
 ## Branch & PR workflow
 
 This project follows a one-branch-per-concern rule, so it's easy to give feedback when
