@@ -11,13 +11,20 @@ type DailySpendRow = {
 const RECENT_DAYS = 14;
 
 export default async function AdminSpendPage() {
-  const { data, error } = await supabaseAdmin
-    .from("daily_spend")
-    .select("date, total_usd, call_count, total_tokens")
-    .order("date", { ascending: false })
-    .limit(RECENT_DAYS);
+  const [{ data, error }, { data: allData, error: allError }] = await Promise.all([
+    supabaseAdmin
+      .from("daily_spend")
+      .select("date, total_usd, call_count, total_tokens")
+      .order("date", { ascending: false })
+      .limit(RECENT_DAYS),
+    // No limit — this is the full history, since the table is tiny at MVP scale (one row
+    // per day since D7), same reasoning /admin/metrics uses for a plain select + JS reduce
+    // instead of a Postgres-side aggregate.
+    supabaseAdmin.from("daily_spend").select("total_usd, call_count, total_tokens"),
+  ]);
 
   if (error) throw error;
+  if (allError) throw allError;
 
   const rows = (data ?? []) as DailySpendRow[];
   const today = new Date().toISOString().slice(0, 10);
@@ -26,6 +33,15 @@ export default async function AdminSpendPage() {
   const todayCalls = todayRow?.call_count ?? 0;
   const todayTokens = todayRow?.total_tokens ?? 0;
   const pctOfCap = Math.min(100, (todaySpend / DAILY_SPEND_CAP_USD) * 100);
+
+  const totalSpend = (allData ?? []).reduce(
+    (acc, row) => ({
+      usd: acc.usd + row.total_usd,
+      calls: acc.calls + row.call_count,
+      tokens: acc.tokens + row.total_tokens,
+    }),
+    { usd: 0, calls: 0, tokens: 0 }
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -60,6 +76,24 @@ export default async function AdminSpendPage() {
           />
         </div>
         <p className="mt-2 text-[11px] text-white/35">{pctOfCap.toFixed(4)}% del tope de hoy ({today}).</p>
+      </div>
+
+      <div className="max-w-md rounded-lg border border-white/10 p-5">
+        <h2 className="text-sm font-medium text-white/70">Gasto total histórico</h2>
+        <div className="mt-3 flex items-baseline gap-6">
+          <div>
+            <div className="text-2xl font-medium">{totalSpend.calls}</div>
+            <div className="text-[11px] text-white/35">llamadas totales</div>
+          </div>
+          <div>
+            <div className="text-2xl font-medium">{totalSpend.tokens.toLocaleString()}</div>
+            <div className="text-[11px] text-white/35">tokens totales</div>
+          </div>
+          <div>
+            <div className="text-2xl font-medium">${totalSpend.usd.toFixed(6)}</div>
+            <div className="text-[11px] text-white/35">desde que empezó a registrarse</div>
+          </div>
+        </div>
       </div>
 
       <div>
