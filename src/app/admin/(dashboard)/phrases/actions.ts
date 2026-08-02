@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/admin-session";
 import { approvePhrase, rejectPhrase, setPhraseActive } from "@/lib/phrases";
+import { classifyUserPhrase } from "@/lib/phrase-narratives";
 
 function getId(formData: FormData): string | null {
   const id = formData.get("id");
@@ -38,5 +39,15 @@ export async function deactivatePhraseAction(formData: FormData): Promise<void> 
   const id = getId(formData);
   if (!id) return;
   await setPhraseActive(id, false);
+  revalidatePath("/admin/phrases");
+}
+
+// Part of the public-narrative experiment (see docs/workshop-updates) — manual,
+// one phrase at a time, same posture as the rest of this panel.
+export async function classifyPhraseAction(formData: FormData): Promise<void> {
+  await requireAdminSession();
+  const id = getId(formData);
+  if (!id) return;
+  await classifyUserPhrase(id);
   revalidatePath("/admin/phrases");
 }

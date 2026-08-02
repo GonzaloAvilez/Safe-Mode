@@ -1,5 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { approvePhraseAction, rejectPhraseAction, activatePhraseAction, deactivatePhraseAction } from "./actions";
+import {
+  approvePhraseAction,
+  rejectPhraseAction,
+  activatePhraseAction,
+  deactivatePhraseAction,
+  classifyPhraseAction,
+} from "./actions";
 
 type PhraseRow = {
   id: string;
@@ -7,6 +13,13 @@ type PhraseRow = {
   moderation_status: "pending" | "approved" | "rejected";
   active: boolean;
   created_at: string;
+};
+
+type PhraseNarrativeRow = {
+  phrase_id: string;
+  primary_theme: string;
+  public_narrative: string;
+  confidence: number;
 };
 
 const STATUS_STYLES: Record<PhraseRow["moderation_status"], string> = {
@@ -54,6 +67,25 @@ export default async function AdminPhrasesPage() {
 
   const phrases = (data ?? []) as PhraseRow[];
 
+  // Part of the public-narrative experiment — separate query rather than a join,
+  // matching this panel's existing simple-query style (see /admin/spend). Empty when
+  // no phrase here has been classified yet, which is the common case.
+  let narrativesByPhraseId = new Map<string, PhraseNarrativeRow>();
+  if (phrases.length > 0) {
+    const { data: narrativeData, error: narrativeError } = await supabaseAdmin
+      .from("phrase_narratives")
+      .select("phrase_id, primary_theme, public_narrative, confidence")
+      .in(
+        "phrase_id",
+        phrases.map((phrase) => phrase.id)
+      );
+    if (narrativeError) throw narrativeError;
+
+    narrativesByPhraseId = new Map(
+      ((narrativeData ?? []) as PhraseNarrativeRow[]).map((narrative) => [narrative.phrase_id, narrative])
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -79,6 +111,17 @@ export default async function AdminPhrasesPage() {
                   {phrase.moderation_status}
                 </span>
               </div>
+              {narrativesByPhraseId.has(phrase.id) && (
+                <p className="mt-2 rounded border border-dashed border-white/15 bg-white/[0.03] px-3 py-2 text-xs text-white/60">
+                  <span className="text-white/40 uppercase tracking-wide">
+                    {narrativesByPhraseId.get(phrase.id)!.primary_theme}
+                  </span>{" "}
+                  — {narrativesByPhraseId.get(phrase.id)!.public_narrative}{" "}
+                  <span className="text-white/30">
+                    (confidence {narrativesByPhraseId.get(phrase.id)!.confidence.toFixed(2)})
+                  </span>
+                </p>
+              )}
               <div className="mt-3 flex items-center justify-between gap-4">
                 <span className="text-[11px] text-white/35">
                   {new Date(phrase.created_at).toLocaleString()} · {phrase.active ? "activa en el corpus" : "no activa"}
@@ -96,6 +139,11 @@ export default async function AdminPhrasesPage() {
                   {phrase.active && (
                     <ActionButton action={deactivatePhraseAction} id={phrase.id} label="Desactivar" />
                   )}
+                  <ActionButton
+                    action={classifyPhraseAction}
+                    id={phrase.id}
+                    label={narrativesByPhraseId.has(phrase.id) ? "Re-clasificar" : "Clasificar"}
+                  />
                 </div>
               </div>
             </li>
