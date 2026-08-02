@@ -22,6 +22,10 @@ type PhraseNarrativeRow = {
   confidence: number;
 };
 
+type PhraseResonanceRow = {
+  phrase_id: string;
+};
+
 const STATUS_STYLES: Record<PhraseRow["moderation_status"], string> = {
   approved: "border-emerald-500/40 text-emerald-300",
   rejected: "border-red-500/40 text-red-300",
@@ -86,6 +90,25 @@ export default async function AdminPhrasesPage() {
     );
   }
 
+  // Part of the "resonate" experiment — a private per-phrase tap signal, never shown
+  // to visitors. This admin count is the only place the number is visible at all.
+  let resonanceCountByPhraseId = new Map<string, number>();
+  if (phrases.length > 0) {
+    const { data: resonanceData, error: resonanceError } = await supabaseAdmin
+      .from("phrase_resonances")
+      .select("phrase_id")
+      .in(
+        "phrase_id",
+        phrases.map((phrase) => phrase.id)
+      );
+    if (resonanceError) throw resonanceError;
+
+    resonanceCountByPhraseId = new Map<string, number>();
+    for (const row of (resonanceData ?? []) as PhraseResonanceRow[]) {
+      resonanceCountByPhraseId.set(row.phrase_id, (resonanceCountByPhraseId.get(row.phrase_id) ?? 0) + 1);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -125,6 +148,8 @@ export default async function AdminPhrasesPage() {
               <div className="mt-3 flex items-center justify-between gap-4">
                 <span className="text-[11px] text-white/35">
                   {new Date(phrase.created_at).toLocaleString()} · {phrase.active ? "activa en el corpus" : "no activa"}
+                  {resonanceCountByPhraseId.has(phrase.id) &&
+                    ` · ${resonanceCountByPhraseId.get(phrase.id)} resonate (visible en Observe)`}
                 </span>
                 <div className="flex shrink-0 gap-2">
                   {phrase.moderation_status !== "approved" && (

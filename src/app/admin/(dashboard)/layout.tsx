@@ -1,7 +1,19 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-session";
-import { currentSettingsEnvironment, isContributeOpen, isPublicNarrativeEnabled, isSitePublic } from "@/lib/settings";
-import { logoutAdmin, setContributeOpenAction, setPublicNarrativeEnabledAction, setSitePublicAction } from "./actions";
+import {
+  currentSettingsEnvironment,
+  isContributeOpen,
+  isPublicNarrativeEnabled,
+  isResonateEnabled,
+  isSitePublic,
+} from "@/lib/settings";
+import {
+  logoutAdmin,
+  setContributeOpenAction,
+  setPublicNarrativeEnabledAction,
+  setResonateEnabledAction,
+  setSitePublicAction,
+} from "./actions";
 
 const NAV_LINKS = [
   { href: "/admin/phrases", label: "Phrases" },
@@ -15,6 +27,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   const sitePublic = await isSitePublic();
   const contributeOpen = await isContributeOpen();
   const publicNarrativeEnabled = await isPublicNarrativeEnabled();
+  const resonateEnabled = await isResonateEnabled();
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -52,6 +65,15 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
             <input type="hidden" name="value" value={(!publicNarrativeEnabled).toString()} />
             <button type="submit" className="text-sm text-white/40 hover:text-white/70">
               {publicNarrativeEnabled ? "Apagar narrativa" : "Prender narrativa"}
+            </button>
+          </form>
+          <span className={`text-xs ${resonateEnabled ? "text-green-400" : "text-red-400"}`}>
+            Resonate {resonateEnabled ? "ON" : "OFF"}
+          </span>
+          <form action={setResonateEnabledAction}>
+            <input type="hidden" name="value" value={(!resonateEnabled).toString()} />
+            <button type="submit" className="text-sm text-white/40 hover:text-white/70">
+              {resonateEnabled ? "Apagar resonate" : "Prender resonate"}
             </button>
           </form>
           <form action={logoutAdmin}>

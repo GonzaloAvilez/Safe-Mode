@@ -6,7 +6,7 @@ import { ObserveCanvas } from "../observe-canvas";
 import { ObserveTransition } from "./observe-transition";
 import { ObserveMeditation } from "./observe-meditation";
 
-type Phrase = { id: string; text: string };
+type Phrase = { id: string; text: string; resonanceCount?: number };
 type ObserveData = { phrases: Phrase[]; similarities: number[][] };
 type FetchState = "loading" | "ready" | "error";
 
@@ -19,7 +19,7 @@ const RETRY_INTERVAL_MS = 6000;
 // fetch that fails or times out falls through to a static meditation screen instead
 // of a dead end, retried silently in the background; see observe-meditation.tsx for
 // how a recovery mid-meditation is offered rather than forced.
-export function ObserveScreen() {
+export function ObserveScreen({ resonateEnabled }: { resonateEnabled: boolean }) {
   const [animationDone, setAnimationDone] = useState(false);
   const [fetchState, setFetchState] = useState<FetchState>("loading");
   const [data, setData] = useState<ObserveData | null>(null);
@@ -100,7 +100,7 @@ export function ObserveScreen() {
   if (data) {
     return (
       <>
-        <ObserveCanvas phrases={data.phrases} similarities={data.similarities} />
+        <ObserveCanvas phrases={data.phrases} similarities={data.similarities} resonateEnabled={resonateEnabled} />
         <ScreenHeader tagline="Ecosystem of presences" />
       </>
     );

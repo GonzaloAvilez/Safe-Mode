@@ -35,3 +35,34 @@ export async function isRateLimited({ ip, sessionId }: RateLimitIdentifiers): Pr
     return false;
   }
 }
+
+// Separate instance/prefix from the entries limiter above, so resonate taps (a much
+// higher-frequency, lower-stakes action) don't share — and can't exhaust — the same
+// budget as entry submission. Own threshold, not entries' — Home cycles phrases every
+// ~4.3s (HOLD_MS + GAP_MS in living-phrases.tsx), so a genuinely engaged visitor
+// resonating with literally everything they see can hit ~14 distinct phrases/minute —
+// that natural ceiling is the number itself, not a floor to pad above: it already
+// covers "resonated with all of them," and anything faster than that isn't a human
+// tapping a button. 10/60s (entries' number) cut that visitor off mid-browse; found
+// live 2026-08-02.
+const RESONATE_RATE_LIMIT_MAX_REQUESTS = 14;
+
+const resonateRatelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(RESONATE_RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW),
+  prefix: "ratelimit:resonate",
+});
+
+export async function isResonateRateLimited({ ip, sessionId }: RateLimitIdentifiers): Promise<boolean> {
+  try {
+    const [ipResult, sessionResult] = await Promise.all([
+      resonateRatelimit.limit(`ip:${ip}`),
+      resonateRatelimit.limit(`session:${sessionId}`),
+    ]);
+    return !ipResult.success || !sessionResult.success;
+  } catch (error) {
+    logRequestOutcome(ip, "rate_limit_unavailable");
+    console.error("Upstash rate limit check failed, failing open:", error);
+    return false;
+  }
+}

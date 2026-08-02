@@ -9,6 +9,7 @@ import { playRandomNote } from "../_shared/handpan-audio";
 type Phrase = {
   id: string;
   text: string;
+  resonanceCount?: number;
 };
 
 const COLORS: [number, number, number][] = [
@@ -104,6 +105,13 @@ function repelFromZone(p: Point, zone: Rect, margin: number, strength: number) {
 
 function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+}
+
+// A 0 isn't evidence of anything, so it renders as nothing rather than "0 others" —
+// the whole point of showing this at all is proof someone else was here, not a stat.
+function resonanceCountLabel(count: number): string {
+  if (count <= 0) return "";
+  return count === 1 ? "1 other felt this too" : `${count} others felt this too`;
 }
 
 class Point {
@@ -230,14 +238,18 @@ class Point {
 export function ObserveCanvas({
   phrases,
   similarities,
+  resonateEnabled = false,
 }: {
   phrases: Phrase[];
   similarities: number[][];
+  resonateEnabled?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const tooltipLeadRef = useRef<HTMLDivElement>(null);
   const tooltipTextRef = useRef<HTMLDivElement>(null);
+  const resonateCountRef = useRef<HTMLDivElement>(null);
+  const resonateButtonRef = useRef<HTMLButtonElement>(null);
   const buttonZoneRef = useRef<HTMLAnchorElement>(null);
   const captionZoneRef = useRef<HTMLDivElement>(null);
 
@@ -246,6 +258,11 @@ export function ObserveCanvas({
     const tooltip = tooltipRef.current;
     const tooltipLead = tooltipLeadRef.current;
     const tooltipText = tooltipTextRef.current;
+    // Not part of the guard below on purpose: when resonateEnabled is false this button
+    // doesn't exist in the DOM at all, so the ref is legitimately null — the rest of the
+    // canvas (points, tooltip) must still work. Null-checked individually at each use site.
+    const resonateCountEl = resonateCountRef.current;
+    const resonateButtonEl = resonateButtonRef.current;
     const buttonZoneEl = buttonZoneRef.current;
     const captionZoneEl = captionZoneRef.current;
     if (!canvas || !tooltip || !tooltipLead || !tooltipText || !buttonZoneEl || !captionZoneEl) return;
@@ -319,17 +336,67 @@ export function ObserveCanvas({
     let hoverTarget: Point | null = null;
     let revealTimer: ReturnType<typeof setTimeout> | null = null;
 
+    // Part of the "resonate" experiment (see docs/workshop-updates) — a plain closure
+    // variable, not React state, matching hoverTarget's own pattern: nothing outside
+    // this effect needs to react to it, it only drives the button's own DOM.
+    const resonatedIds = new Set<string>();
+
+    // The tooltip is positioned near the cursor, not at the point itself, so moving the
+    // mouse from a hovered point toward the button crosses genuinely empty space first —
+    // outside the point's small hover radius, but not yet over the tooltip's rect either.
+    // A pure "hide the instant findHoveredPoint stops matching" rule (the pre-existing
+    // behavior) closes it mid-transit, before the cursor can ever reach the button.
+    // Fixed two ways together: isOverTooltipRect (below) is a same-tick geometric check
+    // against the tooltip's real getBoundingClientRect — not a DOM mouseenter/mouseleave
+    // listener, since those depend on pointer-events being active, which itself depends
+    // on the "visible" class this fix exists to keep from being removed (a chicken-and-
+    // egg problem an event-based check can't escape). And hoverLossTimer gives a brief
+    // grace window for the empty space in between, instead of hiding on the very first
+    // mousemove tick that misses both zones — same pattern native tooltip/menu libraries
+    // use for exactly this trigger-to-popover gap.
+    const HOVER_LOSS_GRACE_MS = 250;
+    let hoverLossTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function isOverTooltipRect(x: number, y: number): boolean {
+      if (!tooltip!.classList.contains("visible")) return false;
+      const rect = tooltip!.getBoundingClientRect();
+      return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    }
+
     // Updated once the real phrase text is measured, so positioning can clamp against
     // the tooltip's actual footprint instead of guessing — a two-word phrase and a
     // six-line one need different amounts of edge margin.
     let tooltipSize = { width: 240, height: 60 };
 
+    // Same fixed UI chrome repelFromZone already keeps points away from — the tooltip
+    // itself (now a real card, not just floating text) needs the same treatment, or a
+    // point sitting just outside a point's own exclusion margin can still produce a
+    // tooltip that visually overlaps the CTA/caption, letting a tap meant for the
+    // resonate button land on "Enter" instead.
+    function overlapsUiZone(rect: Rect): boolean {
+      return [buttonZone, captionZone, soundToggleZone]
+        .filter((zone): zone is Rect => !!zone && zone.right > zone.left)
+        .some((zone) => rect.left < zone.right && rect.right > zone.left && rect.top < zone.bottom && rect.bottom > zone.top);
+    }
+
     function positionTooltip(clientX: number, clientY: number) {
       const margin = 16;
       const maxLeft = window.innerWidth - tooltipSize.width - margin;
-      const maxTop = window.innerHeight - tooltipSize.height - margin;
       const left = Math.min(clientX + 14, Math.max(margin, maxLeft));
-      const top = Math.max(margin, Math.min(clientY - 20, Math.max(margin, maxTop)));
+
+      const belowTop = Math.max(margin, Math.min(clientY - 20, window.innerHeight - tooltipSize.height - margin));
+      const belowRect: Rect = {
+        left,
+        top: belowTop,
+        right: left + tooltipSize.width,
+        bottom: belowTop + tooltipSize.height,
+      };
+
+      // Default stays below-right of the cursor, same as always. Only flips above it
+      // when that default would land on fixed UI chrome — most hovers never touch a
+      // zone at all, so this only changes behavior right where the bug actually was.
+      const top = overlapsUiZone(belowRect) ? Math.max(margin, clientY - 20 - tooltipSize.height) : belowTop;
+
       tooltip!.style.left = `${left}px`;
       tooltip!.style.top = `${top}px`;
     }
@@ -350,7 +417,14 @@ export function ObserveCanvas({
 
     function setHoverTarget(hovered: Point | null, clientX: number, clientY: number) {
       if (hovered === hoverTarget) {
-        if (hoverTarget) positionTooltip(clientX, clientY);
+        // Once revealed, freeze position rather than continuing to hug the cursor on
+        // every tick — with a button inside, that turns "move toward it" into a moving
+        // target (each micro-movement drags the button the same direction). Only frozen
+        // once actually visible, and only when resonateEnabled — during the pre-reveal
+        // dwell, and whenever there's no button to reach for, follow the cursor exactly
+        // as before.
+        const alreadyRevealed = resonateEnabled && tooltip!.classList.contains("visible");
+        if (hoverTarget && !alreadyRevealed) positionTooltip(clientX, clientY);
         return;
       }
 
@@ -363,6 +437,26 @@ export function ObserveCanvas({
         revealTimer = setTimeout(() => {
           tooltipLead!.textContent = leadPhrase;
           tooltipText!.textContent = truncate(phraseText, TOOLTIP_MAX_LENGTH);
+
+          // The tooltip's frame takes on this phrase's own point color — same diversity
+          // already carried by the dots/connections/halos, now extended to the moment of
+          // reading one. The button stays a fixed gold regardless (see its own className)
+          // so the action itself reads the same no matter which color the frame is.
+          const [cr, cg, cb] = hovered.color;
+          tooltip!.style.borderColor = `rgba(${cr},${cg},${cb},0.28)`;
+          tooltip!.style.boxShadow = `0 0 44px -10px rgba(${cr},${cg},${cb},0.35)`;
+
+          // Must run before the tooltipSize measurement below — the button's label
+          // (and the count line) changes the tooltip's rendered footprint.
+          if (resonateButtonEl && hovered.phraseIndex !== null) {
+            const phrase = phrases[hovered.phraseIndex];
+            const already = resonatedIds.has(phrase.id);
+            resonateButtonEl.textContent = already ? "💛 this resonated" : "✨ this resonates";
+            resonateButtonEl.disabled = already;
+            resonateButtonEl.setAttribute("aria-pressed", String(already));
+            if (resonateCountEl) resonateCountEl.textContent = resonanceCountLabel(phrase.resonanceCount ?? 0);
+          }
+
           tooltipSize = {
             width: tooltip!.offsetWidth,
             height: tooltip!.offsetHeight,
@@ -373,6 +467,51 @@ export function ObserveCanvas({
       }
     }
 
+    // Reads hoverTarget fresh at click time rather than capturing it at reveal time —
+    // in practice the two can't diverge (a hovered point is frozen, and the button only
+    // exists inside its own tooltip), but reading live costs nothing and is more robust.
+    async function handleResonateClick() {
+      if (!hoverTarget || hoverTarget.phraseIndex === null) return;
+      const phraseId = phrases[hoverTarget.phraseIndex].id;
+      if (resonatedIds.has(phraseId)) return;
+
+      // fetch() doesn't throw on a 4xx/5xx status, only on real network failures — has
+      // to be checked explicitly. Quiet failure either way (no error UI, no optimistic
+      // update ahead of the real outcome), same posture as the rest of this experiment.
+      let ok = false;
+      try {
+        const response = await fetch(`/api/phrases/${phraseId}/resonate`, { method: "POST" });
+        ok = response.ok;
+      } catch {
+        ok = false;
+      }
+      if (!ok) return;
+
+      resonatedIds.add(phraseId);
+      if (resonateButtonEl) {
+        resonateButtonEl.textContent = "💛 this resonated";
+        resonateButtonEl.disabled = true;
+        resonateButtonEl.setAttribute("aria-pressed", "true");
+      }
+
+      // Looked up by the id captured before the await, not hoverTarget.phraseIndex
+      // again — hoverTarget could in principle have moved to a different point while
+      // the request was in flight. Reflects the tap that just landed immediately,
+      // without waiting on a refetch — a local mutation on this client's own copy of
+      // the phrase, same reasoning as resonatedIds above.
+      const phrase = phrases.find((p) => p.id === phraseId);
+      if (phrase) {
+        phrase.resonanceCount = (phrase.resonanceCount ?? 0) + 1;
+        const currentPhraseId =
+          hoverTarget && hoverTarget.phraseIndex !== null ? phrases[hoverTarget.phraseIndex].id : null;
+        if (resonateCountEl && currentPhraseId === phraseId) {
+          resonateCountEl.textContent = resonanceCountLabel(phrase.resonanceCount);
+        }
+      }
+    }
+
+    if (resonateButtonEl) resonateButtonEl.addEventListener("click", handleResonateClick);
+
     // Once a real touch happens, stop reacting to mousemove — mobile browsers fire a
     // single synthetic mousemove/click after touchend, and letting both handlers run
     // double-processes the same tap with two different (and conflicting) hit radii.
@@ -382,14 +521,61 @@ export function ObserveCanvas({
       if (isTouchMode) return;
       mouse.x = e.clientX;
       mouse.y = e.clientY;
+
+      // Cursor is over the tooltip itself right now — leave hoverTarget alone
+      // regardless of distance from the point (see isOverTooltipRect above).
+      if (resonateEnabled && hoverTarget && isOverTooltipRect(e.clientX, e.clientY)) {
+        if (hoverLossTimer) {
+          clearTimeout(hoverLossTimer);
+          hoverLossTimer = null;
+        }
+        return;
+      }
+
       const hovered = findHoveredPoint(e.clientX, e.clientY, MOUSE_HOVER_RADIUS);
-      setHoverTarget(hovered, e.clientX, e.clientY);
+
+      if (hovered) {
+        if (hoverLossTimer) {
+          clearTimeout(hoverLossTimer);
+          hoverLossTimer = null;
+        }
+        setHoverTarget(hovered, e.clientX, e.clientY);
+        return;
+      }
+
+      if (resonateEnabled && hoverTarget) {
+        // Not over a point or the tooltip right now, but could just be mid-transit
+        // between them — give it a brief grace window before actually closing,
+        // instead of hiding on this first missed tick.
+        if (!hoverLossTimer) {
+          hoverLossTimer = setTimeout(() => {
+            hoverLossTimer = null;
+            setHoverTarget(null, e.clientX, e.clientY);
+          }, HOVER_LOSS_GRACE_MS);
+        }
+        return;
+      }
+
+      setHoverTarget(null, e.clientX, e.clientY);
     }
 
     function handleTouchStart(e: TouchEvent) {
       const touch = e.touches[0];
       if (!touch) return;
       isTouchMode = true;
+
+      // The resonate button is the one element inside the (otherwise pointer-events-none)
+      // tooltip that can actually be the real touch target — everything else in the
+      // tooltip stays pointer-events-none, so a tap there always falls through to the
+      // canvas and is safe to treat as "tap anywhere closes it" below. A tap that lands
+      // on the button itself must not be treated as that dismiss gesture, or it would
+      // close the tooltip instead of activating the button. Returning here (without
+      // touching hoverTarget) lets the browser's native touch-to-click synthesis fire a
+      // real click on the button afterward, handled by handleResonateClick above.
+      const touchTarget = e.target as Node | null;
+      if (resonateButtonEl && touchTarget && resonateButtonEl.contains(touchTarget)) {
+        return;
+      }
 
       if (hoverTarget) {
         // A tap while something is open only dismisses it — it must never also open
@@ -506,10 +692,12 @@ export function ObserveCanvas({
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("touchstart", handleTouchStart);
+      if (resonateButtonEl) resonateButtonEl.removeEventListener("click", handleResonateClick);
       stop();
       if (revealTimer) clearTimeout(revealTimer);
+      if (hoverLossTimer) clearTimeout(hoverLossTimer);
     };
-  }, [phrases, similarities]);
+  }, [phrases, similarities, resonateEnabled]);
 
   return (
     <>
@@ -530,10 +718,18 @@ export function ObserveCanvas({
 
       <div
         ref={tooltipRef}
-        className="pointer-events-none fixed max-w-[240px] text-center opacity-0 transition-opacity duration-700 [&.visible]:opacity-100"
+        className="pointer-events-none fixed max-w-[240px] rounded-2xl border bg-[rgba(18,15,11,0.72)] px-4 py-3 text-center opacity-0 backdrop-blur-sm transition-opacity duration-700 [&.visible]:opacity-100"
       >
         <div ref={tooltipLeadRef} className="text-[9px] tracking-[1.5px] text-white/35 uppercase" />
         <div ref={tooltipTextRef} className="mt-1 text-[10px] tracking-[.5px] text-white/60" />
+        {resonateEnabled && <div ref={resonateCountRef} className="mt-1.5 text-[9px] tracking-[.2px] text-white/35" />}
+        {resonateEnabled && (
+          <button
+            ref={resonateButtonRef}
+            type="button"
+            className="pointer-events-auto mt-2 inline-flex items-center gap-1.5 rounded-full border border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] px-2.5 py-1 text-[9px] tracking-[.2px] text-white/60 transition-all duration-300 hover:scale-105 hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)] active:scale-95 disabled:hover:scale-100"
+          />
+        )}
       </div>
     </>
   );
