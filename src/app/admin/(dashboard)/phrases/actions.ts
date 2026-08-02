@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/admin-session";
 import { approvePhrase, rejectPhrase, setPhraseActive } from "@/lib/phrases";
-import { classifyUserPhrase } from "@/lib/phrase-narratives";
+import { classifyPhraseNarrative } from "@/lib/phrase-narratives";
 
 function getId(formData: FormData): string | null {
   const id = formData.get("id");
@@ -48,6 +48,6 @@ export async function classifyPhraseAction(formData: FormData): Promise<void> {
   await requireAdminSession();
   const id = getId(formData);
   if (!id) return;
-  await classifyUserPhrase(id);
+  await classifyPhraseNarrative(id);
   revalidatePath("/admin/phrases");
 }
