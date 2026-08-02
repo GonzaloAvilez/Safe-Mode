@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { deleteAdminSession, requireAdminSession } from "@/lib/admin-session";
-import { setContributeOpen, setPublicNarrativeEnabled, setSitePublic } from "@/lib/settings";
+import { setContributeOpen, setPublicNarrativeEnabled, setResonateEnabled, setSitePublic } from "@/lib/settings";
 
 export async function logoutAdmin(): Promise<void> {
   await deleteAdminSession();
@@ -25,5 +25,11 @@ export async function setContributeOpenAction(formData: FormData): Promise<void>
 export async function setPublicNarrativeEnabledAction(formData: FormData): Promise<void> {
   await requireAdminSession();
   await setPublicNarrativeEnabled(formData.get("value") === "true");
+  revalidatePath("/", "layout");
+}
+
+export async function setResonateEnabledAction(formData: FormData): Promise<void> {
+  await requireAdminSession();
+  await setResonateEnabled(formData.get("value") === "true");
   revalidatePath("/", "layout");
 }

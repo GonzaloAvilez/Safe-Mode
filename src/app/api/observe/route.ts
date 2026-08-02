@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { isResonateEnabled } from "@/lib/settings";
 
 // pgvector returns embeddings either as a real array or a "[0.1,0.2,...]" string, depending on driver path.
 function parseEmbedding(raw: unknown): number[] {
@@ -49,7 +50,30 @@ export async function GET() {
     }
   }
 
-  const phrases = rows.map((row) => ({ id: row.id, text: row.text }));
+  // Public per-phrase resonate count — deliberate risk-accepted decision 2026-08-02
+  // (see docs/workshop-updates/2026-08-02-resonate-public-counter-risk-accepted.md).
+  // Gated the same as the button itself: no extra query, no field on the response,
+  // when the flag is off.
+  const resonateEnabled = await isResonateEnabled();
+  const resonanceCountByPhraseId = new Map<string, number>();
+  if (resonateEnabled && rows.length > 0) {
+    const { data: resonanceRows } = await supabaseAdmin
+      .from("phrase_resonances")
+      .select("phrase_id")
+      .in(
+        "phrase_id",
+        rows.map((row) => row.id)
+      );
+    for (const r of resonanceRows ?? []) {
+      resonanceCountByPhraseId.set(r.phrase_id, (resonanceCountByPhraseId.get(r.phrase_id) ?? 0) + 1);
+    }
+  }
+
+  const phrases = rows.map((row) => ({
+    id: row.id,
+    text: row.text,
+    resonanceCount: resonateEnabled ? (resonanceCountByPhraseId.get(row.id) ?? 0) : undefined,
+  }));
 
   return Response.json({ phrases, similarities });
 }

@@ -76,6 +76,18 @@ export async function setPublicNarrativeEnabled(value: boolean): Promise<void> {
   return setFlag("public_narrative_enabled", value);
 }
 
+// Fails closed like contribute_open/public_narrative_enabled — gates the "resonate"
+// private-signal experiment (a visitor tap recorded per phrase, never shown to other
+// visitors). Off by default so this app's first anonymous public write path only
+// exists once an admin deliberately turns it on.
+export async function isResonateEnabled(): Promise<boolean> {
+  return getFlag("resonate_enabled", false);
+}
+
+export async function setResonateEnabled(value: boolean): Promise<void> {
+  return setFlag("resonate_enabled", value);
+}
+
 // So the admin UI can make it obvious which environment's flag is being toggled —
 // same shared table, easy to forget which row you're touching otherwise.
 export function currentSettingsEnvironment(): string {
