@@ -64,19 +64,19 @@ export default function MirrorPage() {
           {matched ? (
             <>
               <div className="font-serif text-[26px] leading-none text-[rgba(200,160,200,0.45)]">&ldquo;</div>
-              <p className="mt-1 text-[15px] leading-[1.8] tracking-[.2px] text-white/72 italic">
+              <p className="mt-1 text-[18px] leading-[1.7] tracking-[.2px] text-white/72 italic">
                 <QuoteReveal text={handoff.text} />
               </p>
-              <div className="mt-3 text-[11px] tracking-[.5px] text-white/25">— someone in this place</div>
+              <div className="mt-3 text-[13px] tracking-[.5px] text-white/25">— someone in this place</div>
             </>
           ) : (
-            <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/35">
+            <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/35">
               No one has felt exactly this yet.
             </p>
           )}
         </div>
 
-        <div className="mt-6 max-w-[280px] text-[12px] leading-[1.8] tracking-[.3px] text-white/45">
+        <div className="mt-6 max-w-[280px] text-[14px] leading-[1.7] tracking-[.3px] text-white/45">
           {matched
             ? "Their words were already here, waiting."
             : "Your presence stayed here, waiting to meet someone else's."}
@@ -87,7 +87,7 @@ export default function MirrorPage() {
             type="button"
             onClick={handleResonate}
             aria-pressed={resonated}
-            className={`mt-4 rounded-full border px-5 py-1.5 text-[11px] tracking-[.5px] transition-colors duration-500 ${
+            className={`mt-4 rounded-full border px-5 py-1.5 text-[13px] tracking-[.5px] transition-colors duration-500 ${
               resonated
                 ? "border-[rgba(165,125,220,0.55)] text-[rgba(200,175,255,0.85)]"
                 : "border-[rgba(165,125,220,0.3)] text-[rgba(165,125,220,0.6)] hover:border-[rgba(165,125,220,0.5)]"

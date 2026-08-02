@@ -201,7 +201,7 @@ export function RememberCanvas() {
       <canvas ref={canvasRef} className="fixed inset-0 h-full w-full" />
       <div
         ref={echoRef}
-        className="pointer-events-none fixed top-1/2 left-1/2 z-10 max-w-[280px] -translate-x-1/2 translate-y-[70px] text-center text-[11px] tracking-[.4px] text-white/55 opacity-0 transition-opacity ease-out [&.visible]:opacity-100"
+        className="pointer-events-none fixed top-1/2 left-1/2 z-10 max-w-[300px] -translate-x-1/2 translate-y-[70px] text-center text-[14px] tracking-[.4px] text-white/55 opacity-0 transition-opacity ease-out [&.visible]:opacity-100"
         style={{ transitionDuration: `${ECHO_FADE_MS}ms` }}
       />
     </>

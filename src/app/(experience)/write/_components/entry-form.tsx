@@ -85,7 +85,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         <button
           type="button"
           onClick={reset}
-          className="rounded-full border border-white/20 px-6 py-2 text-[11px] tracking-[1.5px] text-white/50 transition-colors duration-300 hover:border-[rgba(200,160,30,0.5)] hover:text-white/75"
+          className="rounded-full border border-white/20 px-6 py-2 text-[13px] tracking-[1px] text-white/50 transition-colors duration-300 hover:border-[rgba(200,160,30,0.5)] hover:text-white/75"
         >
           Write again
         </button>
@@ -108,7 +108,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       <button
         type="submit"
         disabled={text.trim().length === 0}
-        className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[11px] tracking-[1.5px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
+        className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
       >
         Send
       </button>
@@ -120,7 +120,7 @@ function OutcomeMessage({ outcome }: { outcome: Outcome }) {
   switch (outcome.type) {
     case "crisis":
       return (
-        <div className="flex flex-col gap-3 text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
+        <div className="flex flex-col gap-3 text-[16px] leading-[1.8] tracking-[.3px] text-white/55">
           <p>You&rsquo;re not alone. If you feel like you need to talk to someone right now, here&rsquo;s help:</p>
           <a
             href={CRISIS_RESOURCE_URL}
@@ -134,17 +134,17 @@ function OutcomeMessage({ outcome }: { outcome: Outcome }) {
       );
     case "general_flagged":
       return (
-        <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
+        <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/55">
           Your text couldn&rsquo;t be published this time.
         </p>
       );
     case "cap_reached":
       return (
-        <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/55">
+        <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/55">
           We&rsquo;ve used up today&rsquo;s space, come back tomorrow.
         </p>
       );
     case "error":
-      return <p className="text-[13px] leading-[1.9] tracking-[.3px] text-white/55">{outcome.message}</p>;
+      return <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/55">{outcome.message}</p>;
   }
 }

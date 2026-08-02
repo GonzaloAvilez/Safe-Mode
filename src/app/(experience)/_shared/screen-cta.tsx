@@ -27,7 +27,7 @@ export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function 
       <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-transparent transition-all duration-400 group-hover/enter:scale-110 group-hover/enter:border-[rgba(var(--cta-rgb),0.7)]">
         <span className="h-2.5 w-2.5 rounded-full bg-[rgba(var(--cta-rgb),0.55)] transition-colors group-hover/enter:bg-[rgba(var(--cta-rgb),0.9)]" />
       </span>
-      <span className="text-[10px] tracking-[1.5px] text-white/22">{label}</span>
+      <span className="text-[13px] tracking-[1px] text-white/22">{label}</span>
     </>
   );
 

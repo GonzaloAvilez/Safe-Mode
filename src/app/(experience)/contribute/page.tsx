@@ -46,7 +46,7 @@ export default function ContributePage() {
           }
         />
 
-        <p className="max-w-md text-center text-[12px] leading-[1.8] tracking-[.2px] text-white/30 italic">
+        <p className="max-w-md text-center text-[14px] leading-[1.7] tracking-[.2px] text-white/30 italic">
           If it helps: maybe something from today — the frustration of a stuck prompt, the
           tiredness by hour six, the moment something finally clicked.
         </p>
