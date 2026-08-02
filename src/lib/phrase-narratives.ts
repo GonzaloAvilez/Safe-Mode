@@ -15,19 +15,18 @@ export type PhraseNarrative = {
 };
 
 // Admin-triggered, one phrase at a time — same manual, human-in-the-loop posture as
-// approvePhrase/setPhraseActive. Only valid for source='user' phrases: seed phrases
-// have no real "when it happened" and aren't part of this experiment's scope.
-export async function classifyUserPhrase(phraseId: string): Promise<void> {
+// approvePhrase/setPhraseActive. No source restriction: originally scoped to
+// source='user' only on a consent argument (only classify text someone knew would be
+// shown), but that same reasoning already covers seed phrases too — they're real
+// reflections, deliberately shared by seeding them into the corpus, not placeholder
+// content. Revised 2026-08-02, same call already made for showing their real date.
+export async function classifyPhraseNarrative(phraseId: string): Promise<void> {
   const { data, error: fetchError } = await supabaseAdmin
     .from("phrases")
-    .select("text, source")
+    .select("text")
     .eq("id", phraseId)
     .single();
   if (fetchError) throw fetchError;
-
-  if (data.source !== "user") {
-    throw new Error("Only user-submitted phrases can be classified.");
-  }
 
   const withinDailyCap = await canSpendToday(estimateClassificationCostUsd(data.text.length));
   if (!withinDailyCap) throw new Error("Daily spend cap reached — try again later.");

@@ -33,7 +33,7 @@ vi.mock("@/lib/spend", () => ({
   recordClassificationSpend: recordClassificationSpendMock,
 }));
 
-const { classifyUserPhrase } = await import("@/lib/phrase-narratives");
+const { classifyPhraseNarrative } = await import("@/lib/phrase-narratives");
 
 function setUpChains() {
   fromMock.mockImplementation((table: string) => {
@@ -59,32 +59,24 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("classifyUserPhrase", () => {
-  it("throws without calling the classifier when the phrase is not source='user'", async () => {
-    setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase", source: "seed" }, error: null });
-
-    await expect(classifyUserPhrase("phrase-1")).rejects.toThrow("Only user-submitted phrases can be classified.");
-    expect(classifyPhraseMock).not.toHaveBeenCalled();
-  });
-
+describe("classifyPhraseNarrative", () => {
   it("throws instead of classifying when the daily spend cap is reached", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase", source: "user" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(false);
 
-    await expect(classifyUserPhrase("phrase-1")).rejects.toThrow("Daily spend cap reached — try again later.");
+    await expect(classifyPhraseNarrative("phrase-1")).rejects.toThrow("Daily spend cap reached — try again later.");
     expect(classifyPhraseMock).not.toHaveBeenCalled();
   });
 
-  it("classifies, records spend, and upserts the sanitized result", async () => {
+  it("classifies, records spend, and upserts the sanitized result — no source restriction", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase", source: "user" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(true);
     classifyPhraseMock.mockResolvedValueOnce(rawClassification);
     upsertMock.mockResolvedValueOnce({ error: null });
 
-    await classifyUserPhrase("phrase-1");
+    await classifyPhraseNarrative("phrase-1");
 
     expect(recordClassificationSpendMock).toHaveBeenCalledWith(42);
     expect(upsertMock).toHaveBeenCalledWith({
@@ -101,12 +93,12 @@ describe("classifyUserPhrase", () => {
 
   it("clamps an out-of-range confidence before upserting", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase", source: "user" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(true);
     classifyPhraseMock.mockResolvedValueOnce({ ...rawClassification, confidence: 1.5 });
     upsertMock.mockResolvedValueOnce({ error: null });
 
-    await classifyUserPhrase("phrase-1");
+    await classifyPhraseNarrative("phrase-1");
 
     expect(upsertMock).toHaveBeenCalledWith(expect.objectContaining({ confidence: 1 }));
   });
@@ -115,16 +107,16 @@ describe("classifyUserPhrase", () => {
     setUpChains();
     singleMock.mockResolvedValueOnce({ data: null, error: new Error("select failed") });
 
-    await expect(classifyUserPhrase("phrase-1")).rejects.toThrow("select failed");
+    await expect(classifyPhraseNarrative("phrase-1")).rejects.toThrow("select failed");
   });
 
   it("throws when the upsert fails", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase", source: "user" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(true);
     classifyPhraseMock.mockResolvedValueOnce(rawClassification);
     upsertMock.mockResolvedValueOnce({ error: new Error("upsert failed") });
 
-    await expect(classifyUserPhrase("phrase-1")).rejects.toThrow("upsert failed");
+    await expect(classifyPhraseNarrative("phrase-1")).rejects.toThrow("upsert failed");
   });
 });

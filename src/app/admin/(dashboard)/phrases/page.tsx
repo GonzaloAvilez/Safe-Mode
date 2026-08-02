@@ -168,13 +168,11 @@ export default async function AdminPhrasesPage() {
                   {phrase.active && (
                     <ActionButton action={deactivatePhraseAction} id={phrase.id} label="Desactivar" />
                   )}
-                  {phrase.source === "user" && (
-                    <ActionButton
-                      action={classifyPhraseAction}
-                      id={phrase.id}
-                      label={narrativesByPhraseId.has(phrase.id) ? "Re-clasificar" : "Clasificar"}
-                    />
-                  )}
+                  <ActionButton
+                    action={classifyPhraseAction}
+                    id={phrase.id}
+                    label={narrativesByPhraseId.has(phrase.id) ? "Re-clasificar" : "Clasificar"}
+                  />
                 </div>
               </div>
             </li>
