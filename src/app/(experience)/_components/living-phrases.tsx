@@ -15,7 +15,10 @@ const SLOTS = [
   { top: "42%", left: "50%" },
 ];
 
-const HOLD_MS = 3400;
+// Slowed from 3400ms, 2026-08-02: with the narrative/date lines and the arrival flash
+// now part of what there is to take in, the old pace read as rushed — there's more to
+// actually spend time with per phrase than there used to be.
+const HOLD_MS = 5600;
 const GAP_MS = 900;
 
 function prefersReducedMotion(): boolean {
@@ -110,10 +113,12 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
           &ldquo;{current.text}&rdquo;
         </p>
         {current.publicNarrative && (
-          <p className="mt-1.5 text-[14px] leading-[1.4] text-white/40">{current.publicNarrative}</p>
+          <p className="mt-1.5 text-right text-[14px] leading-[1.4] text-white/40">{current.publicNarrative}</p>
         )}
         {current.createdAt && (
-          <p className="mt-1.5 text-[12px] tracking-[.3px] text-white/25">{formatRelativeTime(current.createdAt)}</p>
+          <p className="mt-1.5 text-right text-[12px] tracking-[.3px] text-white/25">
+            {formatRelativeTime(current.createdAt)}
+          </p>
         )}
       </div>
     </div>
