@@ -40,9 +40,12 @@ function formatRelativeTime(iso: string): string {
 
 export type LivingPhraseItem = {
   text: string;
-  // Both only ever set together, by the public-narrative experiment (see
-  // docs/workshop-updates) when its flag is on — absent otherwise, in which case
-  // this renders exactly as before: just the phrase text.
+  // Set independently, both by the public-narrative experiment (see
+  // docs/workshop-updates) when its flag is on — absent otherwise, in which case this
+  // renders exactly as before: just the phrase text. publicNarrative stays scoped to
+  // consented, classified submissions; createdAt is shown for any active phrase
+  // (seed included — it's the date whoever wrote it dared to share it, not a
+  // synthetic placeholder that needs hiding).
   publicNarrative?: string;
   createdAt?: string;
 };
