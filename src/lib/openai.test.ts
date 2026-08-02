@@ -1,14 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   benignModerationResponseFixture,
+  classificationResponseFixture,
   concerningModerationResponseFixture,
   embeddingResponseFixture,
 } from "@/test/fixtures/openai-responses";
 import { shouldTriggerCrisisFlow } from "@/lib/safety/moderation-gate";
 
-const { createEmbeddingMock, createModerationMock } = vi.hoisted(() => ({
+const { createEmbeddingMock, createModerationMock, createChatCompletionMock } = vi.hoisted(() => ({
   createEmbeddingMock: vi.fn(),
   createModerationMock: vi.fn(),
+  createChatCompletionMock: vi.fn(),
 }));
 
 vi.mock("openai", () => ({
@@ -16,11 +18,12 @@ vi.mock("openai", () => ({
     return {
       embeddings: { create: createEmbeddingMock },
       moderations: { create: createModerationMock },
+      chat: { completions: { create: createChatCompletionMock } },
     };
   }),
 }));
 
-const { getEmbedding, moderateText } = await import("@/lib/openai");
+const { getEmbedding, moderateText, classifyPhrase } = await import("@/lib/openai");
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -138,5 +141,50 @@ describe("moderateText + shouldTriggerCrisisFlow contract", () => {
     const result = await moderateText("texto preocupante");
 
     expect(shouldTriggerCrisisFlow(result.selfHarmScores)).toBe(true);
+  });
+});
+
+describe("classifyPhrase", () => {
+  it("calls the chat completions API with gpt-4o-mini and a strict json_schema response format", async () => {
+    createChatCompletionMock.mockResolvedValueOnce(classificationResponseFixture);
+
+    await classifyPhrase("a phrase already in the public corpus");
+
+    const call = createChatCompletionMock.mock.calls[0][0];
+    expect(call.model).toBe("gpt-4o-mini");
+    expect(call.response_format.type).toBe("json_schema");
+    expect(call.response_format.json_schema.strict).toBe(true);
+    expect(call.messages[1]).toEqual({ role: "user", content: "a phrase already in the public corpus" });
+  });
+
+  it("parses the classification fields out of the response content", async () => {
+    createChatCompletionMock.mockResolvedValueOnce(classificationResponseFixture);
+
+    const result = await classifyPhrase("a phrase already in the public corpus");
+
+    expect(result).toEqual({
+      primaryTheme: "grief",
+      primaryNeed: "connection",
+      transitionFrom: "isolated",
+      transitionTo: "seen",
+      publicNarrative: "A quiet shift from isolation toward feeling seen",
+      confidence: 0.8,
+      totalTokens: 58,
+    });
+  });
+
+  it("throws when the response has no message content", async () => {
+    createChatCompletionMock.mockResolvedValueOnce({
+      ...classificationResponseFixture,
+      choices: [{ message: { content: null } }],
+    });
+
+    await expect(classifyPhrase("a phrase")).rejects.toThrow("Classification response had no content.");
+  });
+
+  it("propagates the error when the chat completions API call fails", async () => {
+    createChatCompletionMock.mockRejectedValueOnce(new Error("network error"));
+
+    await expect(classifyPhrase("a phrase")).rejects.toThrow("network error");
   });
 });

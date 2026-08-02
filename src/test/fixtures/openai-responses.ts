@@ -91,3 +91,25 @@ export const concerningModerationResponseFixture: ModerationCreateResponse = {
     }),
   ],
 };
+
+// Minimal shape — classifyPhrase only reads choices[0].message.content and usage.total_tokens.
+export const classificationResponseFixture = {
+  id: "chatcmpl-classification-fixture",
+  model: "gpt-4o-mini",
+  choices: [
+    {
+      message: {
+        content: JSON.stringify({
+          primary_theme: "grief",
+          primary_need: "connection",
+          transition: { from: "isolated", to: "seen" },
+          public_narrative: "A quiet shift from isolation toward feeling seen",
+          confidence: 0.8,
+        }),
+      },
+    },
+  ],
+  usage: {
+    total_tokens: 58,
+  },
+};

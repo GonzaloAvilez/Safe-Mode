@@ -64,6 +64,18 @@ export async function setContributeOpen(value: boolean): Promise<void> {
   return setFlag("contribute_open", value);
 }
 
+// Fails closed like contribute_open — this gates the public-narrative experiment
+// (LLM-derived theme/narrative shown on Home for user-submitted phrases). Off by
+// default so Home's current plain-phrase behavior is the default state everywhere,
+// and a missing/errored row never accidentally turns on an unreviewed experiment.
+export async function isPublicNarrativeEnabled(): Promise<boolean> {
+  return getFlag("public_narrative_enabled", false);
+}
+
+export async function setPublicNarrativeEnabled(value: boolean): Promise<void> {
+  return setFlag("public_narrative_enabled", value);
+}
+
 // So the admin UI can make it obvious which environment's flag is being toggled —
 // same shared table, easy to forget which row you're touching otherwise.
 export function currentSettingsEnvironment(): string {

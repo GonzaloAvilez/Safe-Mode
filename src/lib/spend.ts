@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { canSpend, DAILY_SPEND_CAP_USD } from "@/lib/safety/spend-cap";
 import { actualEmbeddingCostUsd } from "@/lib/safety/embedding-cost";
+import { actualClassificationCostUsd } from "@/lib/safety/classification-cost";
 
 function todayDateString(): string {
   return new Date().toISOString().slice(0, 10);
@@ -31,6 +32,19 @@ export async function recordEmbeddingSpend(totalTokens: number): Promise<void> {
   const { error } = await supabaseAdmin.rpc("increment_daily_spend", {
     spend_date: todayDateString(),
     amount_usd: actualEmbeddingCostUsd(totalTokens),
+    tokens: totalTokens,
+  });
+
+  if (error) throw error;
+}
+
+// Same increment_daily_spend RPC as recordEmbeddingSpend — it's already generic
+// (amount_usd/tokens, not embedding-specific), so classification spend blends into
+// the same shared $5/day total rather than needing its own tracking path.
+export async function recordClassificationSpend(totalTokens: number): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("increment_daily_spend", {
+    spend_date: todayDateString(),
+    amount_usd: actualClassificationCostUsd(totalTokens),
     tokens: totalTokens,
   });
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-session";
-import { currentSettingsEnvironment, isContributeOpen, isSitePublic } from "@/lib/settings";
-import { logoutAdmin, setContributeOpenAction, setSitePublicAction } from "./actions";
+import { currentSettingsEnvironment, isContributeOpen, isPublicNarrativeEnabled, isSitePublic } from "@/lib/settings";
+import { logoutAdmin, setContributeOpenAction, setPublicNarrativeEnabledAction, setSitePublicAction } from "./actions";
 
 const NAV_LINKS = [
   { href: "/admin/phrases", label: "Phrases" },
@@ -14,6 +14,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   await requireAdminSession();
   const sitePublic = await isSitePublic();
   const contributeOpen = await isContributeOpen();
+  const publicNarrativeEnabled = await isPublicNarrativeEnabled();
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -42,6 +43,15 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
             <input type="hidden" name="value" value={(!contributeOpen).toString()} />
             <button type="submit" className="text-sm text-white/40 hover:text-white/70">
               {contributeOpen ? "Cerrar contribute" : "Abrir contribute"}
+            </button>
+          </form>
+          <span className={`text-xs ${publicNarrativeEnabled ? "text-green-400" : "text-red-400"}`}>
+            Narrativa {publicNarrativeEnabled ? "experimento ON" : "experimento OFF"}
+          </span>
+          <form action={setPublicNarrativeEnabledAction}>
+            <input type="hidden" name="value" value={(!publicNarrativeEnabled).toString()} />
+            <button type="submit" className="text-sm text-white/40 hover:text-white/70">
+              {publicNarrativeEnabled ? "Apagar narrativa" : "Prender narrativa"}
             </button>
           </form>
           <form action={logoutAdmin}>
