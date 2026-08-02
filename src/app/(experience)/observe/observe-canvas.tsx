@@ -379,23 +379,37 @@ export function ObserveCanvas({
         .some((zone) => rect.left < zone.right && rect.right > zone.left && rect.top < zone.bottom && rect.bottom > zone.top);
     }
 
+    function rectAt(left: number, top: number): Rect {
+      return { left, top, right: left + tooltipSize.width, bottom: top + tooltipSize.height };
+    }
+
     function positionTooltip(clientX: number, clientY: number) {
       const margin = 16;
       const maxLeft = window.innerWidth - tooltipSize.width - margin;
       const left = Math.min(clientX + 14, Math.max(margin, maxLeft));
 
-      const belowTop = Math.max(margin, Math.min(clientY - 20, window.innerHeight - tooltipSize.height - margin));
-      const belowRect: Rect = {
-        left,
-        top: belowTop,
-        right: left + tooltipSize.width,
-        bottom: belowTop + tooltipSize.height,
-      };
+      // Default stays below-right of the cursor, same as always.
+      let top = Math.max(margin, Math.min(clientY - 20, window.innerHeight - tooltipSize.height - margin));
 
-      // Default stays below-right of the cursor, same as always. Only flips above it
-      // when that default would land on fixed UI chrome — most hovers never touch a
-      // zone at all, so this only changes behavior right where the bug actually was.
-      const top = overlapsUiZone(belowRect) ? Math.max(margin, clientY - 20 - tooltipSize.height) : belowTop;
+      // Flip above the cursor if the default would land on fixed UI chrome — covers
+      // the common case (a point sitting just above a zone).
+      if (overlapsUiZone(rectAt(left, top))) {
+        top = Math.max(margin, clientY - 20 - tooltipSize.height);
+      }
+
+      // Still overlapping after the flip means the cursor itself is close enough to
+      // (or past) the zone that neither side of the cursor clears it — jump above the
+      // zone's own top edge instead of the cursor's position. Found live 2026-08-02: a
+      // point can drift close enough to/below the CTA that "above the cursor" is still
+      // inside it.
+      if (overlapsUiZone(rectAt(left, top))) {
+        const zoneTops = [buttonZone, captionZone, soundToggleZone]
+          .filter((zone): zone is Rect => !!zone && zone.right > zone.left && left < zone.right && left + tooltipSize.width > zone.left)
+          .map((zone) => zone.top);
+        if (zoneTops.length > 0) {
+          top = Math.max(margin, Math.min(...zoneTops) - 8 - tooltipSize.height);
+        }
+      }
 
       tooltip!.style.left = `${left}px`;
       tooltip!.style.top = `${top}px`;
