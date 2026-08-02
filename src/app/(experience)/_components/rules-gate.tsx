@@ -26,13 +26,13 @@ export function RulesGate({ onAcknowledge }: { onAcknowledge: () => void }) {
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md" />
         <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(90vw,380px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-white/[0.08] bg-[#0f1216] px-6 py-7 text-center outline-none">
-          <AlertDialog.Title className="text-[11px] tracking-[2px] text-white/50">
+          <AlertDialog.Title className="text-[13px] tracking-[1.5px] text-white/50">
             BEFORE YOU ENTER
           </AlertDialog.Title>
 
           <AlertDialog.Description
             render={<div />}
-            className="mt-5 flex flex-col gap-3 text-left text-[13px] leading-[1.8] tracking-[.2px] text-white/60"
+            className="mt-5 flex flex-col gap-3 text-left text-[15px] leading-[1.7] tracking-[.2px] text-white/60"
           >
             <p>It&rsquo;s anonymous — no accounts, no names, no photos. Just whatever you want to write.</p>
             <p>It&rsquo;s not a chat — no one replies to you directly. What you see here is real, human, from someone else.</p>
@@ -50,7 +50,7 @@ export function RulesGate({ onAcknowledge }: { onAcknowledge: () => void }) {
             </p>
           </AlertDialog.Description>
 
-          <AlertDialog.Close className="mt-6 rounded-full border border-white/20 px-8 py-2.5 text-[11px] tracking-[1.5px] text-white/70 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/90">
+          <AlertDialog.Close className="mt-6 rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/70 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/90">
             Got it
           </AlertDialog.Close>
         </AlertDialog.Popup>

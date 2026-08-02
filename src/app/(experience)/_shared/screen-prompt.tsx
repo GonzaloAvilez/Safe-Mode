@@ -17,7 +17,7 @@ export function ScreenPrompt({
     <div className={`text-center ${className ?? ""}`}>
       <div className="text-[22px] font-light tracking-[5px] text-white/82">{headline}</div>
       {subcopy && (
-        <div className="mx-auto mt-4 max-w-[360px] text-[13px] leading-[1.9] tracking-[.3px] text-white/50">
+        <div className="mx-auto mt-4 max-w-[360px] text-[15px] leading-[1.8] tracking-[.3px] text-white/50">
           {subcopy}
         </div>
       )}

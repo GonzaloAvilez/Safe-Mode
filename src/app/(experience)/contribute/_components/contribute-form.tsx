@@ -69,10 +69,10 @@ export function ContributeForm() {
       />
 
       {status?.type === "error" && (
-        <p className="text-center text-[12px] leading-[1.7] tracking-[.3px] text-white/50">{status.message}</p>
+        <p className="text-center text-[14px] leading-[1.6] tracking-[.3px] text-white/50">{status.message}</p>
       )}
       {status?.type === "saved" && (
-        <p className="text-center text-[12px] leading-[1.7] tracking-[.3px] text-[rgba(200,160,30,0.75)]">
+        <p className="text-center text-[14px] leading-[1.6] tracking-[.3px] text-[rgba(200,160,30,0.75)]">
           Added. Leave another whenever you&rsquo;re ready.
         </p>
       )}
@@ -80,13 +80,13 @@ export function ContributeForm() {
       <button
         type="submit"
         disabled={submitting || text.trim().length === 0}
-        className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[11px] tracking-[1.5px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
+        className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
       >
         {submitting ? "Saving…" : "Add phrase"}
       </button>
 
       {count > 0 && (
-        <p className="text-center text-[11px] tracking-[.3px] text-white/25">
+        <p className="text-center text-[13px] tracking-[.3px] text-white/25">
           {count} {count === 1 ? "phrase" : "phrases"} added so far — thank you.
         </p>
       )}

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 
 // Screen positions for where a phrase can appear, kept away from the header (top-left),
-// the fixed CTA (bottom-center), and — with a 180px max-width text block centered on
+// the fixed CTA (bottom-center), and — with a 240px max-width text block centered on
 // each point — far enough from the left/right edges to never clip on narrow viewports
-// (verified down to 375px).
+// (verified down to 375px). Widened alongside the 2026-08-02 font-size increase
+// (issue #124 — real feedback, twice, that the quotes were too small to read).
 const SLOTS = [
   { top: "24%", left: "32%" },
   { top: "34%", left: "62%" },
@@ -84,15 +85,15 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
   return (
     <div className="pointer-events-none fixed inset-0 z-[6]">
       <div
-        className="absolute max-w-[180px] -translate-x-1/2 text-center transition-opacity duration-[1400ms]"
+        className="absolute max-w-[240px] -translate-x-1/2 text-center transition-opacity duration-[1400ms]"
         style={{ top: slot.top, left: slot.left, opacity: reduced ? 1 : visible ? 1 : 0 }}
       >
-        <p className="text-[13px] leading-[1.6] tracking-[.2px] text-white/55 italic">&ldquo;{current.text}&rdquo;</p>
+        <p className="text-[17px] leading-[1.5] tracking-[.2px] text-white/55 italic">&ldquo;{current.text}&rdquo;</p>
         {current.publicNarrative && (
-          <p className="mt-1 text-[11px] leading-[1.5] text-white/40">{current.publicNarrative}</p>
+          <p className="mt-1.5 text-[14px] leading-[1.4] text-white/40">{current.publicNarrative}</p>
         )}
         {current.createdAt && (
-          <p className="mt-1 text-[10px] tracking-[.3px] text-white/25">{formatRelativeTime(current.createdAt)}</p>
+          <p className="mt-1.5 text-[12px] tracking-[.3px] text-white/25">{formatRelativeTime(current.createdAt)}</p>
         )}
       </div>
     </div>

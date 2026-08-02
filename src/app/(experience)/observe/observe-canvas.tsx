@@ -719,7 +719,7 @@ export function ObserveCanvas({
 
       <div
         ref={captionZoneRef}
-        className="fixed top-24 left-12 z-10 max-w-[220px] text-[13px] leading-[1.8] tracking-[.3px] text-white/22 sm:top-auto sm:bottom-12"
+        className="fixed top-24 left-12 z-10 max-w-[260px] text-[16px] leading-[1.7] tracking-[.3px] text-white/22 sm:top-auto sm:bottom-12"
       >
         Every light you see
         <br />
@@ -732,16 +732,16 @@ export function ObserveCanvas({
 
       <div
         ref={tooltipRef}
-        className="pointer-events-none fixed max-w-[240px] rounded-2xl border bg-[rgba(18,15,11,0.72)] px-4 py-3 text-center opacity-0 backdrop-blur-sm transition-opacity duration-700 [&.visible]:opacity-100"
+        className="pointer-events-none fixed max-w-[300px] rounded-2xl border bg-[rgba(18,15,11,0.72)] px-5 py-4 text-center opacity-0 backdrop-blur-sm transition-opacity duration-700 [&.visible]:opacity-100"
       >
-        <div ref={tooltipLeadRef} className="text-[9px] tracking-[1.5px] text-white/35 uppercase" />
-        <div ref={tooltipTextRef} className="mt-1 text-[10px] tracking-[.5px] text-white/60" />
-        {resonateEnabled && <div ref={resonateCountRef} className="mt-1.5 text-[9px] tracking-[.2px] text-white/35" />}
+        <div ref={tooltipLeadRef} className="text-[13px] tracking-[1.2px] text-white/35 uppercase" />
+        <div ref={tooltipTextRef} className="mt-1.5 text-[15px] leading-[1.5] tracking-[.3px] text-white/60" />
+        {resonateEnabled && <div ref={resonateCountRef} className="mt-2 text-[13px] tracking-[.2px] text-white/35" />}
         {resonateEnabled && (
           <button
             ref={resonateButtonRef}
             type="button"
-            className="pointer-events-auto mt-2 inline-flex items-center gap-1.5 rounded-full border border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] px-2.5 py-1 text-[9px] tracking-[.2px] text-white/60 transition-all duration-300 hover:scale-105 hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)] active:scale-95 disabled:hover:scale-100"
+            className="pointer-events-auto mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] px-3 py-1.5 text-[13px] tracking-[.2px] text-white/60 transition-all duration-300 hover:scale-105 hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)] active:scale-95 disabled:hover:scale-100"
           />
         )}
       </div>

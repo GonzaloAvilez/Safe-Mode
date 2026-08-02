@@ -67,14 +67,14 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
       />
 
       {error && (
-        <p className="text-center text-[12px] leading-[1.7] tracking-[.3px] text-white/50">{error.message}</p>
+        <p className="text-center text-[14px] leading-[1.6] tracking-[.3px] text-white/50">{error.message}</p>
       )}
 
       <div className="flex flex-col items-center gap-4">
         <button
           type="submit"
           disabled={submitting || text.trim().length === 0}
-          className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[11px] tracking-[1.5px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
+          className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
         >
           {submitting ? "Saving…" : "Leave a trace"}
         </button>
@@ -82,7 +82,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
           type="button"
           onClick={() => onResolved("skipped")}
           disabled={submitting}
-          className="text-[11px] tracking-[.5px] text-white/25 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/45 disabled:pointer-events-none disabled:opacity-30"
+          className="text-[13px] tracking-[.5px] text-white/25 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/45 disabled:pointer-events-none disabled:opacity-30"
         >
           I&rsquo;d rather not leave anything
         </button>
