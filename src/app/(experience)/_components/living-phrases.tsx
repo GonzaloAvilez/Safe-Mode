@@ -21,6 +21,19 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+// "23 minutes ago" instead of an absolute date — a real submission time reads as more
+// alive/recent this way, and it matches how the rest of the app already speaks (English,
+// resolved 2026-07-15).
+function formatRelativeTime(iso: string): string {
+  const diffMinutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+  if (Math.abs(diffMinutes) < 60) return rtf.format(-diffMinutes, "minute");
+  const diffHours = Math.round(diffMinutes / 60);
+  if (Math.abs(diffHours) < 24) return rtf.format(-diffHours, "hour");
+  return rtf.format(-Math.round(diffHours / 24), "day");
+}
+
 export type LivingPhraseItem = {
   text: string;
   // Both only ever set together, by the public-narrative experiment (see
@@ -79,9 +92,7 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
           <p className="mt-1 text-[11px] leading-[1.5] text-white/40">{current.publicNarrative}</p>
         )}
         {current.createdAt && (
-          <p className="mt-1 text-[10px] tracking-[.3px] text-white/25">
-            {new Date(current.createdAt).toLocaleDateString()}
-          </p>
+          <p className="mt-1 text-[10px] tracking-[.3px] text-white/25">{formatRelativeTime(current.createdAt)}</p>
         )}
       </div>
     </div>
