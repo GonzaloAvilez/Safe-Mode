@@ -7,7 +7,7 @@ import { logRequestOutcome } from "@/lib/logging";
 import { getOrCreateSessionId } from "@/lib/session";
 import { PHRASE_ORIGINS, PhraseOrigin } from "@/lib/phrase-origin";
 
-const MAX_TEXT_LENGTH = 120;
+const MAX_TEXT_LENGTH = 400;
 
 export async function POST(request: Request) {
   const ip = getRequestIp(request);

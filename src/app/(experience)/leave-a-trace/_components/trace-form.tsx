@@ -3,13 +3,13 @@
 import { useState, type SubmitEvent } from "react";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
-const MAX_TEXT_LENGTH = 120;
+const MAX_TEXT_LENGTH = 400;
 
 type ErrorOutcome = { message: string } | null;
 
 // The last step of the flow — optional, so it offers an explicit way out ("prefiero
 // no dejar nada") rather than only a submit button. Reuses Write's own textarea/button
-// spec per the 2026-07-12 mockup direction, just at 120 chars instead of 800 and
+// spec per the 2026-07-12 mockup direction, just at 400 chars instead of 800 and
 // without Searching: submitUserPhrase is a single insert (moderation runs after the
 // response via next/server's after(), see /api/phrases), so there's no real wait to
 // ritualize here.

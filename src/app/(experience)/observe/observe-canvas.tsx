@@ -29,10 +29,10 @@ const COLLISION_STRENGTH = 0.06;
 // Observe's whole point is reading someone else's real, complete words — cutting a
 // genuine phrase off mid-thought works against that. Not a real UI constraint either:
 // the tooltip already measures its own size and repositions itself, short or long.
-// 150 is just a defensive ceiling above the corpus's actual max (seed phrases run up
-// to ~94 chars, user submissions are hard-capped at 120 by /api/phrases), not a design
+// 420 is just a defensive ceiling above the corpus's actual max (seed phrases run up
+// to ~94 chars, user submissions are hard-capped at 400 by /api/phrases), not a design
 // choice meant to bite in practice.
-const TOOLTIP_MAX_LENGTH = 150;
+const TOOLTIP_MAX_LENGTH = 420;
 
 // A held-hover pause before the phrase reveals itself — "la transformación necesita reposar":
 // text landing instantly reads as a UI tooltip, text that waits a beat reads as a moment.
