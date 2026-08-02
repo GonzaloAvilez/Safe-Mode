@@ -10,6 +10,7 @@ import {
 type PhraseRow = {
   id: string;
   text: string;
+  source: "seed" | "user";
   moderation_status: "pending" | "approved" | "rejected";
   active: boolean;
   created_at: string;
@@ -63,8 +64,7 @@ function ActionButton({
 export default async function AdminPhrasesPage() {
   const { data, error } = await supabaseAdmin
     .from("phrases")
-    .select("id, text, moderation_status, active, created_at")
-    .eq("source", "user")
+    .select("id, text, source, moderation_status, active, created_at")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -112,27 +112,31 @@ export default async function AdminPhrasesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-medium">Phrases de usuario (Leave a Trace)</h1>
+        <h1 className="text-lg font-medium">Phrases (semilla + usuarios)</h1>
         <p className="mt-1 text-sm text-white/40">
-          {phrases.length} frase{phrases.length === 1 ? "" : "s"} enviada{phrases.length === 1 ? "" : "s"}.
-          Esto es una herramienta de aprobación: puedes revisar, aprobar, rechazar, activar o desactivar cualquier frase antes 
-          de que forme parte del corpus de Refugio.
+          {phrases.length} frase{phrases.length === 1 ? "" : "s"} en total — semilla y enviadas por usuarios juntas.
+          Esto es una herramienta de aprobación: puedes revisar, aprobar, rechazar, activar o desactivar cualquier frase.
         </p>
       </div>
 
       {phrases.length === 0 ? (
-        <p className="text-sm text-white/40">Todavía no hay frases enviadas por usuarios.</p>
+        <p className="text-sm text-white/40">Todavía no hay frases.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {phrases.map((phrase) => (
             <li key={phrase.id} className="rounded-lg border border-white/10 p-4">
               <div className="flex items-start justify-between gap-4">
                 <p className="text-sm leading-relaxed text-white/85">{phrase.text}</p>
-                <span
-                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] tracking-wide uppercase ${STATUS_STYLES[phrase.moderation_status]}`}
-                >
-                  {phrase.moderation_status}
-                </span>
+                <div className="flex shrink-0 gap-1.5">
+                  <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] tracking-wide text-white/40 uppercase">
+                    {phrase.source}
+                  </span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] tracking-wide uppercase ${STATUS_STYLES[phrase.moderation_status]}`}
+                  >
+                    {phrase.moderation_status}
+                  </span>
+                </div>
               </div>
               {narrativesByPhraseId.has(phrase.id) && (
                 <p className="mt-2 rounded border border-dashed border-white/15 bg-white/[0.03] px-3 py-2 text-xs text-white/60">
@@ -164,11 +168,13 @@ export default async function AdminPhrasesPage() {
                   {phrase.active && (
                     <ActionButton action={deactivatePhraseAction} id={phrase.id} label="Desactivar" />
                   )}
-                  <ActionButton
-                    action={classifyPhraseAction}
-                    id={phrase.id}
-                    label={narrativesByPhraseId.has(phrase.id) ? "Re-clasificar" : "Clasificar"}
-                  />
+                  {phrase.source === "user" && (
+                    <ActionButton
+                      action={classifyPhraseAction}
+                      id={phrase.id}
+                      label={narrativesByPhraseId.has(phrase.id) ? "Re-clasificar" : "Clasificar"}
+                    />
+                  )}
                 </div>
               </div>
             </li>
