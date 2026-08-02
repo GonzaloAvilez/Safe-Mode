@@ -24,9 +24,12 @@ function excerpt(text: string, maxWords = 6): string {
 
 // Part of the public-narrative experiment (see docs/workshop-updates) — off by
 // default, so this always returns the exact plain-text behavior unless an admin
-// has explicitly turned the flag on. Narrative + date are only attached to
-// source='user' phrases that have actually been classified; seed phrases and
-// not-yet-classified user phrases always fall back to plain text.
+// has explicitly turned the flag on. Narrative stays scoped to source='user'
+// phrases that have actually been classified (consent — see the experiment's own
+// risk writeup), but the date is shown for every active phrase regardless of
+// source, seed included: created_at isn't "when this was felt," it's when whoever
+// wrote it — seed phrases too, real reflections, not placeholder content — dared
+// to share it. Still gated behind this same flag for now, not its own toggle yet.
 async function fetchPhrasesWithNarratives(): Promise<LivingPhraseItem[]> {
   const { data } = await supabaseAdmin.from("phrases").select("id, text, source, created_at").eq("active", true);
   const rows = data ?? [];
@@ -47,7 +50,7 @@ async function fetchPhrasesWithNarratives(): Promise<LivingPhraseItem[]> {
     return {
       text: excerpt(row.text),
       publicNarrative: narrative?.public_narrative,
-      createdAt: narrative ? row.created_at : undefined,
+      createdAt: row.created_at,
     };
   });
 }
