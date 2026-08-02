@@ -103,7 +103,12 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
         className="absolute max-w-[240px] -translate-x-1/2 text-center transition-opacity duration-[1400ms]"
         style={{ top: slot.top, left: slot.left, opacity: reduced ? 1 : visible ? 1 : 0 }}
       >
-        <p className="text-[17px] leading-[1.5] tracking-[.2px] text-white/55 italic">&ldquo;{current.text}&rdquo;</p>
+        <p
+          key={index}
+          className="phrase-flash text-[17px] leading-[1.5] tracking-[.2px] text-white/55 italic"
+        >
+          &ldquo;{current.text}&rdquo;
+        </p>
         {current.publicNarrative && (
           <p className="mt-1.5 text-[14px] leading-[1.4] text-white/40">{current.publicNarrative}</p>
         )}

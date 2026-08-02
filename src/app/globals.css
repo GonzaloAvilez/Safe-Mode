@@ -148,3 +148,38 @@
     animation: none;
   }
 }
+
+/* A brief gold flare that settles into a faint resting glow, on each phrase's
+   arrival in LivingPhrases (Home) — the same "presence quietly surfacing" flash
+   Observe's own points already do (FLASH_CHANCE in observe-canvas.tsx), brought to
+   Home for visual consistency across the app. Retriggered by remounting the element
+   via a `key` change, not by toggling this class, since a CSS animation left in its
+   end state doesn't restart on its own. */
+@keyframes phrase-flash {
+  0% {
+    text-shadow:
+      0 0 0px rgba(200, 160, 30, 0),
+      0 0 0px rgba(200, 160, 30, 0);
+  }
+  18% {
+    text-shadow:
+      0 0 14px rgba(200, 160, 30, 0.85),
+      0 0 42px rgba(200, 160, 30, 0.5),
+      0 0 78px rgba(200, 160, 30, 0.25);
+  }
+  100% {
+    text-shadow:
+      0 0 8px rgba(200, 160, 30, 0.18),
+      0 0 22px rgba(200, 160, 30, 0.08);
+  }
+}
+
+.phrase-flash {
+  animation: phrase-flash 1.8s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phrase-flash {
+    animation: none;
+  }
+}
