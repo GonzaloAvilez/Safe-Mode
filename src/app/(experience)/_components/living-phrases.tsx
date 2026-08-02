@@ -44,12 +44,27 @@ export type LivingPhraseItem = {
   createdAt?: string;
 };
 
+function randomStartIndex(length: number): number {
+  return length > 0 ? Math.floor(Math.random() * length) : 0;
+}
+
+// Picks a fresh random phrase on every transition (never repeating the one just
+// shown) rather than a fixed sequential order or a once-shuffled one — real feedback
+// (2026-08-02) was that the same order every visit read as a repetitive pattern, and
+// staying long enough to complete one lap of a once-shuffled order would eventually
+// hit that same wall. This never settles into a repeating sequence at all.
+function nextRandomIndex(length: number, current: number): number {
+  if (length <= 1) return 0;
+  const next = Math.floor(Math.random() * (length - 1));
+  return next < current ? next : next + 1;
+}
+
 // The home page's only "explanation" of what Refugio is: real excerpted phrases from
 // the actual corpus (same table Observe reads from), appearing and fading one at a
 // time — evidence instead of a description, per the "never presume/explain, just show
 // what's real" principle already established for the rest of this flow.
 export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => randomStartIndex(phrases.length));
   const [visible, setVisible] = useState(true);
   const reduced = prefersReducedMotion();
 
@@ -63,7 +78,7 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
       holdId = setTimeout(() => {
         setVisible(false);
         gapId = setTimeout(() => {
-          setIndex((i) => (i + 1) % phrases.length);
+          setIndex((i) => nextRandomIndex(phrases.length, i));
           setVisible(true);
           cycle();
         }, GAP_MS);
