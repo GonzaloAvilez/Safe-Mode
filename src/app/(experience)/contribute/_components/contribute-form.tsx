@@ -4,7 +4,7 @@ import { useState, type SubmitEvent } from "react";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { CONTRIBUTE_ORIGIN } from "@/lib/phrase-origin";
 
-const MAX_TEXT_LENGTH = 120;
+const MAX_TEXT_LENGTH = 400;
 
 type Status = { type: "error"; message: string } | { type: "saved" } | null;
 

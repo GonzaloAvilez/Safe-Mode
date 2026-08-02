@@ -24,8 +24,8 @@ describe("estimateClassificationCostUsd", () => {
     expect(costFor5Chars).toBeGreaterThan(costFor4Chars);
   });
 
-  it("stays well within a cent for a phrase-length input (120 chars, Leave a Trace's cap)", () => {
-    expect(estimateClassificationCostUsd(120)).toBeLessThan(0.01);
+  it("stays well within a cent for a phrase-length input (400 chars, Leave a Trace's cap)", () => {
+    expect(estimateClassificationCostUsd(400)).toBeLessThan(0.01);
   });
 });
 
