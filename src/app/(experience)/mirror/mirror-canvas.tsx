@@ -11,6 +11,13 @@ import { startAnimationLoop } from "../_shared/animation-loop";
 const OTHER: [number, number, number] = [170, 130, 230];
 const SELF: [number, number, number] = [210, 158, 32];
 
+// Self orbits other rather than holding a fixed position — closest at 3 o'clock and
+// 9 o'clock each revolution (radius modulated at 2x the orbit angle), farthest at
+// 12/6, so there are exactly two approaches per rotation, never quite arriving.
+// 0.05 rad/s felt too slow; 1.3x reads as more restless without losing the calm pace
+// the rest of the screen keeps.
+const ORBIT_ANGULAR_SPEED = 0.05 * 1.3;
+
 type MirrorCanvasProps = {
   // 1 for a real match (the other's node reads as present), near-0 for no_match —
   // the node is still there (nobody's presence is erased for not matching), just
@@ -39,10 +46,6 @@ export function MirrorCanvas({ otherIntensity = 1 }: MirrorCanvasProps) {
       height = canvas!.height = window.innerHeight;
       otherX = width / 2;
       otherY = height * 0.3;
-      // Below and slightly right of the other's node — reaching toward it, not
-      // centered under it.
-      selfX = otherX + Math.min(48, width * 0.04);
-      selfY = otherY + Math.min(150, height * 0.16);
     }
     resize();
 
@@ -119,6 +122,16 @@ export function MirrorCanvas({ otherIntensity = 1 }: MirrorCanvasProps) {
       // Slightly out of phase with the other's — two separate presences breathing
       // on their own, not a synchronized pair.
       const selfPulse = 0.78 + Math.sin(t * 0.7 + 1.1) * 0.22;
+
+      // Radius swings between 0.6x and 1.4x the base distance, one full swing per
+      // half-revolution (angle * 2) — minimum right at angle 0 and π, i.e. 3 o'clock
+      // and 9 o'clock, kept clear of other's inner core (44px mid-glow) even at its
+      // closest.
+      const baseRadius = Math.max(80, Math.min(150, width * 0.13));
+      const angle = t * ORBIT_ANGULAR_SPEED;
+      const radius = baseRadius - Math.cos(angle * 2) * baseRadius * 0.4;
+      selfX = otherX + Math.cos(angle) * radius;
+      selfY = otherY + Math.sin(angle) * radius * 0.75;
 
       drawCurve();
       drawOther(otherPulse);
