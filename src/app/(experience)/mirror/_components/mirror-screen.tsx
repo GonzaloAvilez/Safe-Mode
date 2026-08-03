@@ -135,7 +135,7 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
             </>
           ) : (
             <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/35">
-              No one has felt exactly this yet.
+              Nothing here matches this exactly.
             </p>
           )}
         </div>
