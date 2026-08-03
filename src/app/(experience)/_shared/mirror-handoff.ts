@@ -5,7 +5,7 @@
 const MIRROR_HANDOFF_KEY = "sm:mirrorHandoff";
 
 export type MirrorHandoff =
-  | { outcome: "matched"; text: string; entryId: string }
+  | { outcome: "matched"; text: string; entryId: string; phraseId: string }
   | { outcome: "no_match"; entryId: string };
 
 export function writeMirrorHandoff(handoff: MirrorHandoff): void {
@@ -16,20 +16,34 @@ export function writeMirrorHandoff(handoff: MirrorHandoff): void {
   }
 }
 
+// Memoized once window exists, so repeated calls return the same reference rather
+// than a fresh JSON.parse result each time — required for useSyncExternalStore
+// (mirror-screen.tsx) to see a stable snapshot instead of "changed" on every render.
+// Never cached on the server: that branch must stay live per-request, not shared
+// across requests via module scope.
+let cachedHandoff: MirrorHandoff | null | undefined;
+
 export function readMirrorHandoff(): MirrorHandoff | null {
   if (typeof window === "undefined") return null;
+  if (cachedHandoff !== undefined) return cachedHandoff;
+
   try {
     const raw = window.sessionStorage.getItem(MIRROR_HANDOFF_KEY);
-    if (!raw) return null;
+    if (!raw) return (cachedHandoff = null);
     const parsed = JSON.parse(raw);
-    if (parsed?.outcome === "matched" && typeof parsed.text === "string" && typeof parsed.entryId === "string") {
-      return parsed;
+    if (
+      parsed?.outcome === "matched" &&
+      typeof parsed.text === "string" &&
+      typeof parsed.entryId === "string" &&
+      typeof parsed.phraseId === "string"
+    ) {
+      return (cachedHandoff = parsed);
     }
     if (parsed?.outcome === "no_match" && typeof parsed.entryId === "string") {
-      return parsed;
+      return (cachedHandoff = parsed);
     }
-    return null;
+    return (cachedHandoff = null);
   } catch {
-    return null;
+    return (cachedHandoff = null);
   }
 }

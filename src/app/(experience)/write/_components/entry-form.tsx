@@ -46,7 +46,12 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       }
 
       if (body.type === "matched") {
-        writeMirrorHandoff({ outcome: "matched", text: body.phrase.text, entryId: body.entryId });
+        writeMirrorHandoff({
+          outcome: "matched",
+          text: body.phrase.text,
+          entryId: body.entryId,
+          phraseId: body.phrase.id,
+        });
         router.push("/mirror");
         // Leave submitting=true — Searching stays on screen through the route swap
         // instead of the form flashing back for a frame first.
