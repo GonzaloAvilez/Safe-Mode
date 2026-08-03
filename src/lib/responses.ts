@@ -16,10 +16,11 @@ export async function createResponse(
   return { id: data.id };
 }
 
-// Backs Mirror's "resonó conmigo" toggle — reuses the existing wants_reply column
-// (originally scoped for D16's fake-door reply test) as the connection-intent signal.
-// A real toggle rather than a one-way flag: a stray/accidental tap can be undone by
-// tapping again, which is the signal that the *remaining* true value meant it.
+// Backs Mirror's "I would love to connect" toggle — the wants_reply column, true to
+// its original D16 fake-door-reply-test name again now that resonance itself has its
+// own home in phrase_resonances (see recordResonance). A real toggle rather than a
+// one-way flag: a stray/accidental tap can be undone by tapping again, which is the
+// signal that the *remaining* true value meant it.
 export async function setWantsReply(entryId: string, value: boolean): Promise<void> {
   const { error } = await supabaseAdmin.from("responses").update({ wants_reply: value }).eq("entry_id", entryId);
 

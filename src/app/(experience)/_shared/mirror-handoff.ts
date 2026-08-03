@@ -5,7 +5,7 @@
 const MIRROR_HANDOFF_KEY = "sm:mirrorHandoff";
 
 export type MirrorHandoff =
-  | { outcome: "matched"; text: string; entryId: string }
+  | { outcome: "matched"; text: string; entryId: string; phraseId: string }
   | { outcome: "no_match"; entryId: string };
 
 export function writeMirrorHandoff(handoff: MirrorHandoff): void {
@@ -22,7 +22,12 @@ export function readMirrorHandoff(): MirrorHandoff | null {
     const raw = window.sessionStorage.getItem(MIRROR_HANDOFF_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed?.outcome === "matched" && typeof parsed.text === "string" && typeof parsed.entryId === "string") {
+    if (
+      parsed?.outcome === "matched" &&
+      typeof parsed.text === "string" &&
+      typeof parsed.entryId === "string" &&
+      typeof parsed.phraseId === "string"
+    ) {
       return parsed;
     }
     if (parsed?.outcome === "no_match" && typeof parsed.entryId === "string") {
