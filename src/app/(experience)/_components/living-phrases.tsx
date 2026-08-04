@@ -2,18 +2,38 @@
 
 import { useEffect, useState } from "react";
 
-// Screen positions for where a phrase can appear, kept away from the header (top-left),
-// the fixed CTA (bottom-center), and — with a 240px max-width text block centered on
-// each point — far enough from the left/right edges to never clip on narrow viewports
-// (verified down to 375px). Widened alongside the 2026-08-02 font-size increase
-// (issue #124 — real feedback, twice, that the quotes were too small to read).
+// Screen positions for where a phrase can appear, spread across most of the viewport
+// instead of one small central cluster — kept away from the header (top-left, ~top-10),
+// the sound toggle (top-right, ~top-24/top-10 depending on breakpoint), and the fixed
+// CTA (bottom-center). Horizontal clipping on narrow viewports is handled separately by
+// the clamp() in the render below, which is what actually makes positions this close to
+// the edges safe — these percentages alone would clip a 240px-wide box on a 375px phone.
 const SLOTS = [
-  { top: "24%", left: "32%" },
-  { top: "34%", left: "62%" },
-  { top: "50%", left: "38%" },
-  { top: "58%", left: "58%" },
-  { top: "42%", left: "50%" },
+  { top: "20%", left: "15%" },
+  { top: "24%", left: "50%" },
+  { top: "30%", left: "82%" },
+  { top: "38%", left: "25%" },
+  { top: "44%", left: "65%" },
+  { top: "50%", left: "12%" },
+  { top: "54%", left: "45%" },
+  { top: "56%", left: "78%" },
 ];
+
+// Half the phrase box's max-width (240px) plus a small buffer — the min/max bounds a
+// slot's left percentage gets clamped into, so a box centered via -translate-x-1/2 never
+// clips off either edge regardless of viewport width. Replaces the old approach (keeping
+// every SLOT itself within a narrow 32%-68% band) which was the actual reason positions
+// used to read as clustered in the center rather than spread across the screen.
+const LEFT_CLAMP_PX = 130;
+
+// Same idea, vertically. A percentage-only top clips on short viewports in a way the
+// horizontal clamp doesn't cover: caught live on a 375x568 viewport, where a 20% top
+// (114px) landed inside the sound toggle's own box (top-24, ~96-132px, since sm: hasn't
+// kicked in yet at that width). 150px clears both the header and the toggle on any
+// viewport width; the bottom-side 220px leaves room for the tallest phrase block
+// (quote + narrative + date) plus the fixed CTA.
+const TOP_CLAMP_MIN_PX = 150;
+const TOP_CLAMP_BOTTOM_BUFFER_PX = 220;
 
 // Slowed from 3400ms, 2026-08-02: with the narrative/date lines and the arrival flash
 // now part of what there is to take in, the old pace read as rushed — there's more to
@@ -107,7 +127,11 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
     <div className="pointer-events-none fixed inset-0 z-[6]">
       <div
         className="absolute max-w-[240px] -translate-x-1/2 text-center transition-opacity duration-[1400ms]"
-        style={{ top: slot.top, left: slot.left, opacity: reduced ? 1 : visible ? 1 : 0 }}
+        style={{
+          top: `clamp(${TOP_CLAMP_MIN_PX}px, ${slot.top}, calc(100% - ${TOP_CLAMP_BOTTOM_BUFFER_PX}px))`,
+          left: `clamp(${LEFT_CLAMP_PX}px, ${slot.left}, calc(100% - ${LEFT_CLAMP_PX}px))`,
+          opacity: reduced ? 1 : visible ? 1 : 0,
+        }}
       >
         <p
           key={index}
