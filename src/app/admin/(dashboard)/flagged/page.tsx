@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { CRISIS_RETENTION_DAYS } from "@/lib/crisis-entries";
+import { AdminCard } from "../../_components/admin-card";
 
 type FlaggedEntryRow = {
   id: string;
@@ -49,14 +50,14 @@ export default async function AdminFlaggedPage() {
         ) : (
           <ul className="flex flex-col gap-3">
             {crisis.map((row) => (
-              <li key={row.entry_id} className="rounded-lg border border-red-500/20 p-4">
+              <AdminCard as="li" key={row.entry_id} tone="danger" className="p-4">
                 {row.anonymized_at ? (
                   <p className="text-sm text-white/35 italic">Texto anonimizado el {new Date(row.anonymized_at).toLocaleString()}.</p>
                 ) : (
                   <p className="text-sm leading-relaxed text-white/85">{row.text}</p>
                 )}
                 <p className="mt-3 text-[11px] text-white/35">{new Date(row.created_at).toLocaleString()}</p>
-              </li>
+              </AdminCard>
             ))}
           </ul>
         )}
@@ -74,10 +75,10 @@ export default async function AdminFlaggedPage() {
         ) : (
           <ul className="flex flex-col gap-3">
             {flagged.map((row) => (
-              <li key={row.id} className="rounded-lg border border-amber-500/20 p-4">
+              <AdminCard as="li" key={row.id} tone="warning" className="p-4">
                 <p className="text-sm leading-relaxed text-white/85">{row.text}</p>
                 <p className="mt-3 text-[11px] text-white/35">{new Date(row.created_at).toLocaleString()}</p>
-              </li>
+              </AdminCard>
             ))}
           </ul>
         )}

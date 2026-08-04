@@ -30,8 +30,8 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   const resonateEnabled = await isResonateEnabled();
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+    <div className="min-h-screen bg-neutral-900 text-white">
+      <header className="flex items-center justify-between border-b border-white/10 bg-white/[0.02] px-6 py-4">
         <nav className="flex gap-5 text-sm text-white/70">
           {NAV_LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="hover:text-white">

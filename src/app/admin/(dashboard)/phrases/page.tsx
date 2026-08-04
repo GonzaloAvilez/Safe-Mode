@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { AdminCard } from "../../_components/admin-card";
 import {
   approvePhraseAction,
   rejectPhraseAction,
@@ -124,7 +125,7 @@ export default async function AdminPhrasesPage() {
       ) : (
         <ul className="flex flex-col gap-3">
           {phrases.map((phrase) => (
-            <li key={phrase.id} className="rounded-lg border border-white/10 p-4">
+            <AdminCard as="li" key={phrase.id} className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <p className="text-sm leading-relaxed text-white/85">{phrase.text}</p>
                 <div className="flex shrink-0 gap-1.5">
@@ -175,7 +176,7 @@ export default async function AdminPhrasesPage() {
                   />
                 </div>
               </div>
-            </li>
+            </AdminCard>
           ))}
         </ul>
       )}

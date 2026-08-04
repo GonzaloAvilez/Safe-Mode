@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { DAILY_SPEND_CAP_USD } from "@/lib/safety/spend-cap";
+import { AdminCard } from "../../_components/admin-card";
 import { DailySpendChart } from "./daily-chart";
 
 type DailySpendRow = {
@@ -55,7 +56,7 @@ export default async function AdminSpendPage() {
         </p>
       </div>
 
-      <div className="max-w-md rounded-lg border border-white/10 p-5">
+      <AdminCard className="max-w-md p-5">
         <div className="flex items-baseline gap-6">
           <div>
             <div className="text-2xl font-medium">{todayCalls}</div>
@@ -77,9 +78,9 @@ export default async function AdminSpendPage() {
           />
         </div>
         <p className="mt-2 text-[11px] text-white/35">{pctOfCap.toFixed(4)}% del tope de hoy ({today}).</p>
-      </div>
+      </AdminCard>
 
-      <div className="max-w-md rounded-lg border border-white/10 p-5">
+      <AdminCard className="max-w-md p-5">
         <h2 className="text-sm font-medium text-white/70">Gasto total histórico</h2>
         <div className="mt-3 flex items-baseline gap-6">
           <div>
@@ -95,7 +96,7 @@ export default async function AdminSpendPage() {
             <div className="text-[11px] text-white/35">desde que empezó a registrarse</div>
           </div>
         </div>
-      </div>
+      </AdminCard>
 
       <div>
         <h2 className="text-sm font-medium text-white/70">Últimos {RECENT_DAYS} días</h2>
@@ -103,9 +104,9 @@ export default async function AdminSpendPage() {
           <p className="mt-2 text-sm text-white/40">Sin registros de gasto todavía.</p>
         ) : (
           <>
-            <div className="mt-4 rounded-lg border border-white/10 p-5">
+            <AdminCard className="mt-4 p-5">
               <DailySpendChart rows={[...rows].reverse()} />
-            </div>
+            </AdminCard>
             <details className="mt-3 text-sm">
               <summary className="cursor-pointer text-white/40 hover:text-white/70">Ver tabla</summary>
               <table className="mt-2 w-full text-left">

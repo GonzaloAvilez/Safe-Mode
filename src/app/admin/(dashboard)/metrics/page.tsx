@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { AdminCard } from "../../_components/admin-card";
 
 type OutcomeCounts = Record<string, number>;
 
@@ -30,10 +31,10 @@ export default async function AdminMetricsPage() {
         </p>
       </div>
 
-      <div className="max-w-md rounded-lg border border-white/10 p-5">
+      <AdminCard className="max-w-md p-5">
         <div className="text-2xl font-medium">{matchRate.toFixed(1)}%</div>
         <div className="text-[11px] text-white/35">match rate (de las que llegaron a intentar matchear)</div>
-      </div>
+      </AdminCard>
 
       <div>
         <h2 className="text-sm font-medium text-white/70">Desglose por resultado</h2>
