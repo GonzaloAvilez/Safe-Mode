@@ -7,7 +7,10 @@ export function LoginForm() {
   const [state, action, pending] = useActionState(loginAdmin, undefined);
 
   return (
-    <form action={action} className="flex w-full max-w-xs flex-col gap-4">
+    <form
+      action={action}
+      className="flex w-full max-w-xs flex-col gap-4 rounded-lg border border-white/10 bg-white/[0.04] p-6"
+    >
       <h1 className="text-center text-lg font-medium text-white">Admin — Safe-Mode</h1>
       <input
         type="password"
