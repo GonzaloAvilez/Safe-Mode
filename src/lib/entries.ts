@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { unwrap } from "@/lib/supabase-result";
 import { getEmbedding, moderateText } from "@/lib/openai";
 import { resolveModerationFlags } from "@/lib/safety/moderation-flags";
 import { resolveEntryRoute } from "@/lib/safety/entry-routing";
@@ -29,20 +30,19 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
     })
     .select("id")
     .single();
-
-  if (error) throw error;
+  const entry = unwrap(data, error);
 
   if (params.flaggedCrisis) {
-    await insertCrisisContent(data.id, params.text);
+    await insertCrisisContent(entry.id, params.text);
   }
 
-  return { id: data.id };
+  return { id: entry.id };
 }
 
 
 export async function updateEntryOutcome(id: string, outcome: EntryOutcome["type"]): Promise<void> {
-  const { error} = await supabaseAdmin.from("entries").update({ outcome: outcome}).eq("id", id);
-  if (error) throw error;
+  const { error } = await supabaseAdmin.from("entries").update({ outcome: outcome }).eq("id", id);
+  unwrap(null, error);
 }
   
 

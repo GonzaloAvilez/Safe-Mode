@@ -1,10 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { unwrap } from "@/lib/supabase-result";
 
 // Crisis text lives only here, never in the general-purpose entries table (see P2 of #20).
 export async function insertCrisisContent(entryId: string, text: string): Promise<void> {
   const { error } = await supabaseAdmin.from("crisis_entries").insert({ entry_id: entryId, text });
-
-  if (error) throw error;
+  unwrap(null, error);
 }
 
 export const CRISIS_RETENTION_DAYS = 30;
@@ -21,7 +21,5 @@ export async function anonymizeExpiredCrisisEntries(): Promise<number> {
     .is("anonymized_at", null)
     .select("entry_id");
 
-  if (error) throw error;
-
-  return data?.length ?? 0;
+  return unwrap(data, error)?.length ?? 0;
 }
