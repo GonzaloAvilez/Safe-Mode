@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { unwrap } from "@/lib/supabase-result";
 import { canSpend, DAILY_SPEND_CAP_USD } from "@/lib/safety/spend-cap";
 import { actualEmbeddingCostUsd } from "@/lib/safety/embedding-cost";
 import { actualClassificationCostUsd } from "@/lib/safety/classification-cost";
@@ -14,9 +15,7 @@ export async function getTodaysSpendUsd(): Promise<number> {
     .eq("date", todayDateString())
     .maybeSingle();
 
-  if (error) throw error;
-
-  return data?.total_usd ?? 0;
+  return unwrap(data, error)?.total_usd ?? 0;
 }
 
 // Pre-call gate: read today's accumulated spend and check it against the hard cap.
@@ -34,8 +33,7 @@ export async function recordEmbeddingSpend(totalTokens: number): Promise<void> {
     amount_usd: actualEmbeddingCostUsd(totalTokens),
     tokens: totalTokens,
   });
-
-  if (error) throw error;
+  unwrap(null, error);
 }
 
 // Same increment_daily_spend RPC as recordEmbeddingSpend — it's already generic
@@ -47,6 +45,5 @@ export async function recordClassificationSpend(totalTokens: number): Promise<vo
     amount_usd: actualClassificationCostUsd(totalTokens),
     tokens: totalTokens,
   });
-
-  if (error) throw error;
+  unwrap(null, error);
 }

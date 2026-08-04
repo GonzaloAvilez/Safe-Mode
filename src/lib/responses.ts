@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { unwrap } from "@/lib/supabase-result";
 
 export async function createResponse(
   entryId: string,
@@ -11,9 +12,7 @@ export async function createResponse(
     .select("id")
     .single();
 
-  if (error) throw error;
-
-  return { id: data.id };
+  return { id: unwrap(data, error).id };
 }
 
 // Backs Mirror's "I would love to connect" toggle — the wants_reply column, true to
@@ -23,6 +22,5 @@ export async function createResponse(
 // signal that the *remaining* true value meant it.
 export async function setWantsReply(entryId: string, value: boolean): Promise<void> {
   const { error } = await supabaseAdmin.from("responses").update({ wants_reply: value }).eq("entry_id", entryId);
-
-  if (error) throw error;
+  unwrap(null, error);
 }
