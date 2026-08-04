@@ -48,6 +48,11 @@ export function RulesGate({ onAcknowledge }: { onAcknowledge: () => void }) {
               </a>
               .
             </p>
+            <p>
+              It&rsquo;s a short path with a few quiet moments — what you write stays private, only compared with
+              what others have already left, echoing back or not. Only what you leave at the end is shared, so
+              someone else might find it and see themselves in it.
+            </p>
           </AlertDialog.Description>
 
           <AlertDialog.Close className="mt-6 rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/70 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/90">
