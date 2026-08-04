@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { DAILY_SPEND_CAP_USD } from "@/lib/safety/spend-cap";
+import { DailySpendChart } from "./daily-chart";
 
 type DailySpendRow = {
   date: string;
@@ -101,17 +102,34 @@ export default async function AdminSpendPage() {
         {rows.length === 0 ? (
           <p className="mt-2 text-sm text-white/40">Sin registros de gasto todavía.</p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {rows.map((row) => (
-              <li key={row.date} className="flex items-center justify-between border-b border-white/5 py-1.5 text-sm">
-                <span className="text-white/60">{row.date}</span>
-                <span className="text-white/85">
-                  {row.call_count} llamadas · {row.total_tokens.toLocaleString()} tokens · $
-                  {row.total_usd.toFixed(6)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className="mt-4 rounded-lg border border-white/10 p-5">
+              <DailySpendChart rows={[...rows].reverse()} />
+            </div>
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer text-white/40 hover:text-white/70">Ver tabla</summary>
+              <table className="mt-2 w-full text-left">
+                <thead>
+                  <tr className="text-[11px] text-white/35">
+                    <th className="border-b border-white/5 py-1.5 font-normal">Día</th>
+                    <th className="border-b border-white/5 py-1.5 font-normal">Llamadas</th>
+                    <th className="border-b border-white/5 py-1.5 font-normal">Tokens</th>
+                    <th className="border-b border-white/5 py-1.5 font-normal">Gasto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.date} className="border-b border-white/5">
+                      <td className="py-1.5 text-white/60">{row.date}</td>
+                      <td className="py-1.5 text-white/85">{row.call_count}</td>
+                      <td className="py-1.5 text-white/85">{row.total_tokens.toLocaleString()}</td>
+                      <td className="py-1.5 text-white/85">${row.total_usd.toFixed(6)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </>
         )}
       </div>
     </div>
