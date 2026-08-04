@@ -102,11 +102,19 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center">
         <div
-          className="w-full max-w-[360px] rounded-2xl border bg-[rgba(18,15,11,0.72)] px-6 py-6 backdrop-blur-sm"
+          className="w-full max-w-[360px] rounded-2xl border px-6 py-6 backdrop-blur-sm"
           style={
             matched
-              ? { borderColor: "rgba(165,125,220,0.28)", boxShadow: "0 0 44px -10px rgba(165,125,220,0.35)" }
-              : undefined
+              ? {
+                  backgroundColor: "rgba(18,15,11,0.72)",
+                  borderColor: "rgba(165,125,220,0.28)",
+                  boxShadow: "0 0 44px -10px rgba(165,125,220,0.35)",
+                }
+              : {
+                  backgroundColor: "#00000085",
+                  borderColor: "rgba(165,125,220,0.14)",
+                  boxShadow: "0 0 32px -14px rgba(165,125,220,0.18)",
+                }
           }
         >
           {matched ? (
@@ -134,16 +142,19 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
               )}
             </>
           ) : (
-            <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/35">
-              Nothing here matches this exactly.
-            </p>
+            <>
+              <div className="font-serif text-[26px] leading-none text-[rgba(165,125,220,0.25)]">·</div>
+              <p className="mt-1 text-[16px] leading-[1.8] tracking-[.3px] text-white/45">
+                <QuoteReveal text="The system is quiet, but you are not the first in this void." />
+              </p>
+            </>
           )}
         </div>
 
         <div className="mt-6 max-w-[280px] text-[14px] leading-[1.7] tracking-[.3px] text-white/45">
           {matched
             ? "Their words were already here, waiting."
-            : "Your presence stayed here, waiting to meet someone else's."}
+            : "Nothing echoed back this time. Not every feeling finds its match here — that's the corpus's limit, not yours."}
         </div>
 
         {matched && (
