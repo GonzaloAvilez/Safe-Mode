@@ -11,8 +11,18 @@ export type MirrorHandoff =
 export function writeMirrorHandoff(handoff: MirrorHandoff): void {
   try {
     window.sessionStorage.setItem(MIRROR_HANDOFF_KEY, JSON.stringify(handoff));
+    // Keeps the in-memory cache below in sync with what was just written — without
+    // this, a second Write submission in the same client-side session (e.g. the
+    // visitor hit the browser's back button rather than a full reload) would leave
+    // readMirrorHandoff() serving the *first* handoff it ever read, forever, since
+    // the module stays loaded across client-side navigations. Confirmed live
+    // 2026-08-07: a real second match was written to sessionStorage correctly, but
+    // Mirror kept rendering the first entry's no_match state.
+    cachedHandoff = handoff;
   } catch {
-    // Mirror degrades to bouncing back to Write when it can't read this back.
+    // Write failed — don't keep serving a stale success from before it. The next
+    // read re-checks sessionStorage directly instead of trusting old in-memory state.
+    cachedHandoff = undefined;
   }
 }
 
