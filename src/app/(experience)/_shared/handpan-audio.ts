@@ -123,6 +123,26 @@ export function playRandomNote(): void {
   playTone(noteToFreq(note), 2.2 + Math.random() * 0.8, 0.45);
 }
 
+// D4 -> C5, a deliberately large leap (not the pentatonic's usual small steps) —
+// picked over four gentler intervals in a side-by-side comparison specifically for
+// reading as the most unambiguous "moving forward" among them. Distinct from playDing
+// (grounding/presence, Remember's touch) and playRandomNote (affirmation/resonance,
+// Observe/Mirror) — this is the app's only sound that means "advancing to the next
+// screen," played from ScreenCta, the one nav control shared by all 9 screens.
+const TRANSITION_NOTES = ["D4", "C5"];
+const TRANSITION_GAP_MS = 110;
+const TRANSITION_DECAY = 1.3;
+// Lowered from 0.5 -> 0.3 -> 0.2 — two notes back to back read as louder overall
+// than a single tone at the same gain, and this fires on every screen transition,
+// far more often than playDing or playRandomNote.
+const TRANSITION_PEAK_GAIN = 0.2;
+
+export function playTransition(): void {
+  TRANSITION_NOTES.forEach((note, i) => {
+    setTimeout(() => playTone(noteToFreq(note), TRANSITION_DECAY, TRANSITION_PEAK_GAIN), i * TRANSITION_GAP_MS);
+  });
+}
+
 // Slow-fading drone on the root note — grounding ambience for Gratitude.
 export function startDrone(): void {
   if (!enabled || !audioCtx || !dryGain || !convolver || droneNodes) return;
