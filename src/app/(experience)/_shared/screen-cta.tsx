@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { forwardRef, type CSSProperties } from "react";
+import { playTransition } from "./handpan-audio";
 
 type ScreenCtaProps = {
   href: string;
@@ -47,6 +48,7 @@ export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function 
     <Link
       ref={ref}
       href={href}
+      onClick={playTransition}
       style={cssVars}
       className="group/enter fixed bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5"
     >
