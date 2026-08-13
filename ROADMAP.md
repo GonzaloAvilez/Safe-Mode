@@ -28,13 +28,13 @@ The real UX evolved past the original day-by-day spec in places — see "Added s
 **Full promotion 2026-07-14 (PR #55):** everything below is now in `master`/production, not just `preview`. It is not, however, open to the public yet — see the site-visibility flag entry under "Added scope."
 
 - [x] **D8-9 Presence ecosystem** — Observe. Animated canvas, nodes, central pulse, connections.
-- [ ] **D10 Generative audio** — Web Audio API soundscape triggered by interaction. Built (generative D Low Pygmy handpan pad, pure synthesis, no samples, plus a per-session mute toggle), but still only on branch `week2/handpan-ambient-audio` (commit `355acc0`) — never merged to `preview` or `master`. The only screen-flow-adjacent D-item still genuinely not shipped anywhere.
+- [x] **D10 Generative audio** — Web Audio API soundscape triggered by interaction (generative D Low Pygmy handpan pad, pure synthesis, no samples, plus a per-session mute toggle). Merged to `master` via PR #80 (merge commit `a8e7cfe`, source `355acc0`); lives at `src/app/(experience)/_shared/handpan-audio.ts`. Previously marked unshipped here — that was stale, the branch itself was never cleaned up/deleted after merging, which is why it looked outstanding.
 - [x] **D11 Writing field + safety text** — Write. 800-char limit; invitation prompt copy added 2026-07-14. Still no visible calm counter (e.g. "245/800") — minor, not blocking.
 - [x] **D12 Crisis screen** — outcome state inside Write's result (not a dedicated route), shows `findahelpline.com`. Manually verified end-to-end 2026-07-14, see the non-negotiable checklist below.
 - [x] **D13 Mirror screen** — its own screen (`/mirror`): violet "other" node, quote reveals letter-by-letter, "this resonated with me" tap and a separate "I would love to connect" toggle. Reached on both `matched` and `no_match`.
 - [x] **D14 Public URL + domain** — deployed to `master`/production 2026-07-14 (PR #55). **Deployed ≠ open** — the site-visibility flag (see "Added scope") is intentionally set to `site_public:production = false`, confirmed by hand after the deploy. Opening it to the public is a separate, deliberate decision still to be made (see D26).
 
-**Week 2 deliverable ("app live on the internet, full flow working end to end") is technically met** — the code is live on production. It's deliberately kept closed via the visibility flag rather than actually reachable by the public, pending the language decision and D26 soft-launch planning below. D10 (audio) remains the one unshipped Week 2 item, and it's cosmetic, not blocking.
+**Week 2 deliverable ("app live on the internet, full flow working end to end") is fully met** — the code is live on production, and all D-items (D8-14, including D10 audio) are shipped to `master`. It's deliberately kept closed via the visibility flag rather than actually reachable by the public, pending the language decision and D26 soft-launch planning below.
 
 ## Added scope — not in the original 4-week plan
 
