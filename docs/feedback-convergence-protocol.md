@@ -82,7 +82,7 @@ _Paste the most recent topic/source/status table here before analyzing new feedb
 | Small corpus (bottleneck) | Own quantitative data (not a feedback source — different category) | Pending — high priority, non-technical |
 | Segmenting audience | 1 | Noted, not acted on — conflicts with universality thesis, but single-source, not triangulated |
 | Is one encounter enough? | 1 | Unresolved — founder decision, not code. Needs more independent sources before treating as confirmed pattern |
-| Own domain (vs. vercel.app) | Internal analysis (not a feedback source — different category) | Pending — low effort, high visceral-trust impact |
+| Own domain (vs. vercel.app) | Internal analysis (not a feedback source — different category) | Resolved 2026-08-15 — production now serves from refugiospace.com |
 
 ---
 
