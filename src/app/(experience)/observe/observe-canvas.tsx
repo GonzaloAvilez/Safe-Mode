@@ -734,9 +734,14 @@ export function ObserveCanvas({
         ref={tooltipRef}
         className="pointer-events-none fixed max-w-[300px] rounded-2xl border bg-[rgba(18,15,11,0.72)] px-5 py-4 text-center opacity-0 backdrop-blur-sm transition-opacity duration-700 [&.visible]:opacity-100"
       >
-        <div ref={tooltipLeadRef} className="text-[13px] tracking-[1.2px] text-white/35 uppercase" />
-        <div ref={tooltipTextRef} className="mt-1.5 text-[15px] leading-[1.5] tracking-[.3px] text-white/60" />
-        {resonateEnabled && <div ref={resonateCountRef} className="mt-2 text-[13px] tracking-[.2px] text-white/35" />}
+        <div ref={tooltipLeadRef} className="text-[length:var(--text-quote-secondary)] tracking-[1.2px] text-white/35 uppercase" />
+        <div
+          ref={tooltipTextRef}
+          className="mt-1.5 text-[length:var(--text-quote-primary)] leading-[1.5] tracking-[.3px] text-white/60"
+        />
+        {resonateEnabled && (
+          <div ref={resonateCountRef} className="mt-2 text-[length:var(--text-quote-secondary)] tracking-[.2px] text-white/35" />
+        )}
         {resonateEnabled && (
           <button
             ref={resonateButtonRef}
