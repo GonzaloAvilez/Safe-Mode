@@ -76,7 +76,7 @@ _Paste the most recent topic/source/status table here before analyzing new feedb
 
 | Topic | Sources (verified distinct people) | Status |
 |---|---|---|
-| Font size | 4 | Confirmed, pending implementation |
+| Font size | 4 | Resolved 2026-08-19 — fluid clamp()-based sizing shipped to master (PR #170) |
 | Entry confusion | 5+ | Diagnosed — minimal wayfinding for cold arrivals |
 | Genuine reflective connection | 4+ | Strongly validated — do not touch |
 | Small corpus (bottleneck) | Own quantitative data (not a feedback source — different category) | Pending — high priority, non-technical |
