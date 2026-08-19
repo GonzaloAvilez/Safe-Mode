@@ -135,15 +135,17 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
       >
         <p
           key={index}
-          className="phrase-flash text-[17px] leading-[1.5] tracking-[.2px] text-white/55 italic"
+          className="phrase-flash text-[length:var(--text-quote-primary)] leading-[1.5] tracking-[.2px] text-white/55 italic"
         >
           &ldquo;{current.text}&rdquo;
         </p>
         {current.publicNarrative && (
-          <p className="mt-1.5 text-right text-[14px] leading-[1.4] text-white/40">{current.publicNarrative}</p>
+          <p className="mt-1.5 text-right text-[length:var(--text-quote-secondary)] leading-[1.4] text-white/40">
+            {current.publicNarrative}
+          </p>
         )}
         {current.createdAt && (
-          <p className="mt-1.5 text-right text-[12px] tracking-[.3px] text-white/25">
+          <p className="mt-1.5 text-right text-[13px] tracking-[.3px] text-white/25">
             {formatRelativeTime(current.createdAt)}
           </p>
         )}

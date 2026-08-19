@@ -183,3 +183,17 @@
     animation: none;
   }
 }
+
+/* Single source of truth for the corpus quote text shown in Home (LivingPhrases),
+   Observe (tooltip), and Mirror — the surfaces that got repeated real-user feedback
+   that the text read too small (2026-07-30, then again 2026-08-09 post-#139/issue
+   #124's first bump). clamp() scales with viewport width instead of a fixed px, so
+   it no longer needs manual re-tuning per device the way #139's flat values did.
+   -primary is the quote itself; -secondary is the narrative/lead/attribution line
+   that sits directly with it. */
+@layer base {
+  :root {
+    --text-quote-primary: clamp(18px, 1.05rem + 0.3vw, 21px);
+    --text-quote-secondary: clamp(14px, 0.875rem + 0.2vw, 16px);
+  }
+}

@@ -120,10 +120,12 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
           {matched ? (
             <>
               <div className="font-serif text-[26px] leading-none text-[rgba(200,160,200,0.45)]">&ldquo;</div>
-              <p className="mt-1 text-[18px] leading-[1.7] tracking-[.2px] text-white/72 italic">
+              <p className="mt-1 text-[length:var(--text-quote-primary)] leading-[1.7] tracking-[.2px] text-white/72 italic">
                 <QuoteReveal text={handoff.text} />
               </p>
-              <div className="mt-3 text-[13px] tracking-[.5px] text-white/25">— someone in this place</div>
+              <div className="mt-3 text-[length:var(--text-quote-secondary)] tracking-[.5px] text-white/25">
+                — someone in this place
+              </div>
 
               {resonateEnabled && (
                 <button
@@ -144,7 +146,7 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
           ) : (
             <>
               <div className="font-serif text-[26px] leading-none text-[rgba(165,125,220,0.25)]">·</div>
-              <p className="mt-1 text-[16px] leading-[1.8] tracking-[.3px] text-white/45">
+              <p className="mt-1 text-[length:var(--text-quote-primary)] leading-[1.8] tracking-[.3px] text-white/45">
                 <QuoteReveal text="The system is quiet, but you are not the first in this void." />
               </p>
             </>
