@@ -34,7 +34,7 @@ export function RulesGate({ onAcknowledge }: { onAcknowledge: () => void }) {
             render={<div />}
             className="mt-5 flex flex-col gap-3 text-left text-[15px] leading-[1.7] tracking-[.2px] text-white/60"
           >
-            <p>It&rsquo;s anonymous — no accounts, no names, no photos. Just whatever you want to write.</p>
+            <p>It&rsquo;s anonymous — no accounts, no names, no photos. Here, honesty costs less than hiding does.</p>
             <p>It&rsquo;s not a chat — no one replies to you directly. What you see here is real, human, from someone else.</p>
             <p>
               It doesn&rsquo;t replace professional help — if you need to talk to someone right now, there&rsquo;s real help at{" "}
