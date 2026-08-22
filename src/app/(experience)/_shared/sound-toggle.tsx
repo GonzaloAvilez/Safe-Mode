@@ -1,5 +1,6 @@
 "use client";
 
+import { Music } from "lucide-react";
 import { useState } from "react";
 import { setSoundEnabled } from "./handpan-audio";
 
@@ -24,15 +25,11 @@ export function SoundToggle() {
       aria-pressed={enabled}
       aria-label={enabled ? "Turn sound off" : "Turn sound on"}
       data-ui-zone="sound-toggle"
-      className={`group fixed top-24 right-12 z-20 flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors duration-300 sm:top-10 ${
-        enabled
-          ? "border-[rgba(200,160,30,0.5)] bg-[rgba(200,160,30,0.15)] text-[rgba(248,230,170,0.95)]"
-          : "border-white/20 bg-white/[0.04] text-white/70 hover:border-white/35 hover:text-white"
+      className={`group fixed top-24 right-12 z-20 flex items-center gap-2 transition-colors duration-300 sm:top-10 ${
+        enabled ? "text-[rgba(248,230,170,0.95)]" : "text-white/70 hover:text-white"
       }`}
     >
-      <span className="text-[0.72rem] font-medium tracking-[0.16em] uppercase">
-        Sound
-      </span>
+      <Music className="h-[15px] w-[15px]" strokeWidth={1.75} />
       <span
         className={`relative flex h-6 w-11 items-center rounded-full border p-0.5 transition-colors duration-300 ${
           enabled
