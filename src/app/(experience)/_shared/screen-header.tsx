@@ -4,7 +4,7 @@
 export function ScreenHeader({ tagline }: { tagline: string }) {
   return (
     <div className="fixed top-10 left-12 z-10">
-      <div className="text-[22px] font-light tracking-[5px] text-white/82">Refugio[Safe Mode]</div>
+      <div className="text-[22px] font-light tracking-[5px] text-white/82">Refugio</div>
       <div className="mt-1 text-[13px] tracking-[2px] text-white/25">{tagline}</div>
     </div>
   );
