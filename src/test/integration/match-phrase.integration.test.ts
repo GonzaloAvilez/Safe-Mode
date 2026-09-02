@@ -43,6 +43,42 @@ describe("findClosestPhrase / match_phrase (integration)", () => {
     expect(match?.similarity).toBeGreaterThan(0.99);
   });
 
+  it("keeps the existing two-argument RPC available during the expansion", async () => {
+    const target = realPhraseFixtures[0];
+    const { data, error } = await supabaseAdmin.rpc("match_phrase", {
+      query_embedding: target.embedding,
+      match_language: "en",
+    });
+
+    expect(error).toBeNull();
+    expect(data?.[0]?.text).toBe(target.text);
+  });
+
+  it("lets the three-argument RPC apply the caller's threshold", async () => {
+    const target = realPhraseFixtures[0];
+    const { data, error } = await supabaseAdmin.rpc("match_phrase", {
+      query_embedding: target.embedding,
+      match_language: "en",
+      min_similarity: 1,
+    });
+
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("seeds independently calibrated English and Spanish thresholds", async () => {
+    const { data, error } = await supabaseAdmin
+      .from("language_thresholds")
+      .select("language, min_similarity, sample_size")
+      .order("language");
+
+    expect(error).toBeNull();
+    expect(data).toEqual([
+      { language: "en", min_similarity: 0.4, sample_size: 61 },
+      { language: "es", min_similarity: 0.5, sample_size: 7 },
+    ]);
+  });
+
   it("returns null when no phrase in the corpus is active", async () => {
     await supabaseAdmin.from("phrases").update({ active: false }).in("id", insertedIds);
 
