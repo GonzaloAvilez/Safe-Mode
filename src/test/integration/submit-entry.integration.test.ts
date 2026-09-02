@@ -67,14 +67,16 @@ describe("submitEntry (integration, real match_phrase wiring)", () => {
     moderateTextMock.mockResolvedValue(benignModerationCheckFixture);
     getEmbeddingMock.mockResolvedValue({ embedding: sharedEmbedding, totalTokens: 8})
 
-    const outcome   = await submitEntry("Sometimes I burned out with AI", randomUUID());
-    insertedEntryIds.push(outcome.entryId);
-    expect(outcome.type).toBe("matched");
+    const englishOutcome = await submitEntry("Sometimes I burned out with AI", randomUUID());
+    const spanishOutcome = await submitEntry("A veces me siento agotado", randomUUID(), undefined, "es");
+    insertedEntryIds.push(englishOutcome.entryId, spanishOutcome.entryId);
+    expect(englishOutcome.type).toBe("matched");
+    expect(spanishOutcome.type).toBe("matched");
 
-    if (outcome.type !== "matched") {
-      throw new Error(`expected "matched", got "${outcome.type}"`);
+    if (englishOutcome.type !== "matched" || spanishOutcome.type !== "matched") {
+      throw new Error("expected both locale-partitioned entries to match");
     }
-    expect(outcome.phrase.text).toBe(realPhraseFixtures[0].text);
-
+    expect(englishOutcome.phrase.text).toBe(realPhraseFixtures[0].text);
+    expect(spanishOutcome.phrase.text).toBe("A veces estoy rodeado de gente y aun así me siento completamente solo.");
   });
 });

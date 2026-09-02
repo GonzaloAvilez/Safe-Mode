@@ -111,8 +111,35 @@ describe("POST /api/phrases", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true });
-    expect(submitUserPhraseMock).toHaveBeenCalledWith("un dia normal", "leave_a_trace");
+    expect(submitUserPhraseMock).toHaveBeenCalledWith("un dia normal", "leave_a_trace", "en");
     expect(afterMock).toHaveBeenCalledWith(expect.any(Function));
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "phrase_submitted");
+  });
+
+  it("forwards a supported locale and rejects an unsupported one", async () => {
+    isRateLimitedMock.mockResolvedValue(false);
+    submitUserPhraseMock.mockResolvedValue({ id: "phrase-1" });
+
+    const spanish = await POST(
+      postRequest({
+        text: "un día normal",
+        formRenderedAt: Date.now() - 5000,
+        origin: LEAVE_A_TRACE_ORIGIN,
+        locale: "es",
+      })
+    );
+    const unsupported = await POST(
+      postRequest({
+        text: "un jour normal",
+        formRenderedAt: Date.now() - 5000,
+        origin: LEAVE_A_TRACE_ORIGIN,
+        locale: "fr",
+      })
+    );
+
+    expect(spanish.status).toBe(200);
+    expect(submitUserPhraseMock).toHaveBeenCalledWith("un día normal", "leave_a_trace", "es");
+    expect(unsupported.status).toBe(400);
+    expect(submitUserPhraseMock).toHaveBeenCalledTimes(1);
   });
 });

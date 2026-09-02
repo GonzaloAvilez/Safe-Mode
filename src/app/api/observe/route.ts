@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { isResonateEnabled } from "@/lib/settings";
+import { resolveLocale } from "@/lib/locale";
 
 // pgvector returns embeddings either as a real array or a "[0.1,0.2,...]" string, depending on driver path.
 function parseEmbedding(raw: unknown): number[] {
@@ -21,11 +22,17 @@ function cosineSimilarity(a: number[], b: number[]): number {
 // Fetched client-side by ObserveScreen so the ritual transition can run independently
 // of how long this takes — see observe-screen.tsx. Previously this ran inline in
 // observe/page.tsx as a blocking Server Component; moved here unchanged otherwise.
-export async function GET() {
+export async function GET(request?: Request) {
+  const locale = resolveLocale(request ? new URL(request.url).searchParams.get("locale") : undefined);
+  if (!locale) {
+    return Response.json({ error: "locale doesn't have the correct value" }, { status: 400 });
+  }
+
   const { data, error } = await supabaseAdmin
     .from("phrases")
     .select("id, text, embedding")
     .eq("active", true)
+    .eq("language", locale)
     .order("created_at", { ascending: true });
 
   if (error) {
