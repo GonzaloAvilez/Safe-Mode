@@ -3,13 +3,18 @@ import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
+import { isLocale } from "@/lib/locale";
 import { isContributeOpen, isSitePublic } from "@/lib/settings";
 
 const intlMiddleware = createMiddleware(routing);
 
 function stripLocalePrefix(pathname: string): string {
-  const match = pathname.match(/^\/(en|es)(\/.*|$)/);
-  return match ? match[2] || "/" : pathname;
+  const [, possibleLocale, ...rest] = pathname.split("/");
+  return isLocale(possibleLocale) ? `/${rest.join("/")}` : pathname;
+}
+
+function isLocaleIndependentPage(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/closed";
 }
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
@@ -44,6 +49,16 @@ function isValidAdminCookie(value: string | undefined): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const publicPathname = stripLocalePrefix(pathname);
+
+  // Admin and the closed page have one canonical, locale-independent URL. Preserve
+  // the rest of the URL (including its query string) when correcting a prefixed link.
+  if (publicPathname !== pathname && isLocaleIndependentPage(publicPathname)) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.pathname = publicPathname;
+    return NextResponse.redirect(canonicalUrl);
+  }
+
   const hasValidSession = isValidAdminCookie(request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value);
 
   if (pathname === "/admin/login") {
@@ -60,8 +75,6 @@ export async function proxy(request: NextRequest) {
   if (ALWAYS_ALLOWED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
-
-  const publicPathname = stripLocalePrefix(pathname);
 
   // Independent of site_public — lets /contribute stay reachable (via its own flag)
   // while the rest of the site is closed, or vice versa: closing contribute_open alone

@@ -43,6 +43,26 @@ describe("locale routing proxy", () => {
     expect(intlMiddlewareMock).toHaveBeenCalledOnce();
   });
 
+  it.each([
+    ["/en/admin", "/admin"],
+    ["/es/admin/phrases?status=pending", "/admin/phrases?status=pending"],
+    ["/en/closed", "/closed"],
+  ])("canonicalizes %s to the locale-independent URL", async (source, destination) => {
+    const response = await proxy(request(source));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`http://localhost${destination}`);
+    expect(intlMiddlewareMock).not.toHaveBeenCalled();
+  });
+
+  it("does not canonicalize a locale-prefixed API path", async () => {
+    isSitePublicMock.mockResolvedValueOnce(true);
+
+    const response = await proxy(request("/es/api/entries"));
+
+    expect(response.headers.get("x-intl")).toBe("handled");
+  });
+
   it("applies the contribute gate after stripping either locale prefix", async () => {
     isContributeOpenMock.mockResolvedValue(true);
 
