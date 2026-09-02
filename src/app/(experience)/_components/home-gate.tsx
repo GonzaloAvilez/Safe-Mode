@@ -11,6 +11,8 @@ const RULES_ACKNOWLEDGED_EVENT = "sm:rules-acknowledged";
 const ARRIVAL_INTRO_SEEN_KEY = "sm:arrivalIntroSeen:v3";
 const ARRIVAL_INTRO_SEEN_EVENT = "sm:arrival-intro-seen";
 
+type HomeGateStage = "rules-required" | "intro-required" | "ready";
+
 // localStorage has no same-tab change event (the native "storage" event only fires in
 // *other* tabs), so writes here also dispatch this custom event to wake up
 // useSyncExternalStore's subscription below.
@@ -23,10 +25,14 @@ function subscribe(onStoreChange: () => void) {
   };
 }
 
-function getSnapshot(): string {
-  const acknowledged = localStorage.getItem(RULES_ACKNOWLEDGED_KEY) === "true";
-  const introSeen = localStorage.getItem(ARRIVAL_INTRO_SEEN_KEY) === "true";
-  return `${acknowledged}:${introSeen}`;
+function getSnapshot(): HomeGateStage {
+  const rulesAcknowledged = localStorage.getItem(RULES_ACKNOWLEDGED_KEY) === "true";
+  if (!rulesAcknowledged) return "rules-required";
+
+  const arrivalIntroSeen = localStorage.getItem(ARRIVAL_INTRO_SEEN_KEY) === "true";
+  if (!arrivalIntroSeen) return "intro-required";
+
+  return "ready";
 }
 
 // Server (and the client's first hydration pass) always sees "not yet acknowledged"
@@ -34,8 +40,8 @@ function getSnapshot(): string {
 // value right after hydration on its own, without the hydration-mismatch risk of
 // reading localStorage during a lazy useState initializer or setting state in a plain
 // effect.
-function getServerSnapshot(): string {
-  return "false:false";
+function getServerSnapshot(): HomeGateStage {
+  return "rules-required";
 }
 
 // Owns the one piece of client state Home needs: whether the rules modal has been
@@ -45,8 +51,7 @@ function getServerSnapshot(): string {
 // completed the whole flow) is just friction, not reinforcement.
 export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
   const router = useRouter();
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const [acknowledged, introSeen] = snapshot.split(":").map((value) => value === "true");
+  const stage = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   function handleAcknowledge() {
     localStorage.setItem(RULES_ACKNOWLEDGED_KEY, "true");
@@ -59,14 +64,14 @@ export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
     router.push("/arrive");
   }
 
-  if (acknowledged && !introSeen) {
+  if (stage === "intro-required") {
     return <ArrivalIntro onDone={handleIntroDone} phrase={introPhrase} />;
   }
 
   return (
     <>
-      {!acknowledged && <RulesGate onAcknowledge={handleAcknowledge} />}
-      <ScreenCta href="/arrive" label="Enter" accentRgb="200,160,30" disabled={!acknowledged} />
+      {stage === "rules-required" && <RulesGate onAcknowledge={handleAcknowledge} />}
+      <ScreenCta href="/arrive" label="Enter" accentRgb="200,160,30" disabled={stage !== "ready"} />
     </>
   );
 }
