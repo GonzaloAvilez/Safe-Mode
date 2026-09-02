@@ -17,12 +17,19 @@ function isLocaleIndependentPage(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/closed";
 }
 
-function replaceUnsupportedLocale(pathname: string): string | null {
+function resolveLocaleAlias(pathname: string): { locale: string; publicPathname: string } | null {
   const [, possibleLocale, ...rest] = pathname.split("/");
-  if (!/^[a-z]{2}$/i.test(possibleLocale) || isLocale(possibleLocale)) return null;
+  if (isLocale(possibleLocale) || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(possibleLocale)) return null;
 
-  const suffix = rest.length > 0 ? `/${rest.join("/")}` : "";
-  return `/${DEFAULT_LOCALE}${suffix}`;
+  try {
+    const language = new Intl.Locale(possibleLocale).language.toLowerCase();
+    return {
+      locale: isLocale(language) ? language : DEFAULT_LOCALE,
+      publicPathname: `/${rest.join("/")}`,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
@@ -57,15 +64,19 @@ function isValidAdminCookie(value: string | undefined): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const fallbackPathname = replaceUnsupportedLocale(pathname);
+  const localeAlias = resolveLocaleAlias(pathname);
 
-  // A language-shaped but unsupported first segment is an explicit locale request,
-  // not an unprefixed application path. Fall back to English instead of letting the
-  // intl middleware produce confusing nested paths such as /es/fr.
-  if (fallbackPathname) {
-    const fallbackUrl = request.nextUrl.clone();
-    fallbackUrl.pathname = fallbackPathname;
-    return NextResponse.redirect(fallbackUrl);
+  // Normalize BCP 47 aliases such as es-MX to the supported base language. Unknown
+  // languages fall back to English. APIs remain strict: a prefixed API is invalid and
+  // is never redirected into a working endpoint.
+  if (localeAlias) {
+    if (localeAlias.publicPathname.startsWith("/api/")) return NextResponse.next();
+
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.pathname = isLocaleIndependentPage(localeAlias.publicPathname)
+      ? localeAlias.publicPathname
+      : `/${localeAlias.locale}${localeAlias.publicPathname === "/" ? "" : localeAlias.publicPathname}`;
+    return NextResponse.redirect(canonicalUrl);
   }
 
   const publicPathname = stripLocalePrefix(pathname);

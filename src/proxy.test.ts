@@ -66,11 +66,32 @@ describe("locale routing proxy", () => {
   it.each([
     ["/fr", "/en"],
     ["/FR/observe?from=test", "/en/observe?from=test"],
+    ["/es-MX", "/es"],
+    ["/ES-mx/observe?from=test", "/es/observe?from=test"],
+    ["/en-US/write", "/en/write"],
+    ["/fr-CA/write", "/en/write"],
   ])("falls back from unsupported locale %s to %s", async (source, destination) => {
     const response = await proxy(request(source));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(`http://localhost${destination}`);
+    expect(intlMiddlewareMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["/es-MX/admin/phrases?status=pending", "/admin/phrases?status=pending"],
+    ["/en-US/closed", "/closed"],
+  ])("canonicalizes locale aliases on independent pages without a second redirect", async (source, destination) => {
+    const response = await proxy(request(source));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`http://localhost${destination}`);
+  });
+
+  it("does not redirect an API prefixed by a locale alias", async () => {
+    const response = await proxy(request("/es-MX/api/entries"));
+
+    expect(response.headers.get("location")).toBeNull();
     expect(intlMiddlewareMock).not.toHaveBeenCalled();
   });
 
