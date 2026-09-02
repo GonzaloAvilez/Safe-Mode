@@ -35,11 +35,9 @@ function getSnapshot(): HomeGateStage {
   return "ready";
 }
 
-// Server (and the client's first hydration pass) always sees "not yet acknowledged"
-// — localStorage doesn't exist there. useSyncExternalStore resyncs to the real client
-// value right after hydration on its own, without the hydration-mismatch risk of
-// reading localStorage during a lazy useState initializer or setting state in a plain
-// effect.
+// The server cannot read localStorage, so use Refugio's safest initial state:
+// require the rules until hydration finishes and getSnapshot reads the visitor's
+// real stage from the browser.
 function getServerSnapshot(): HomeGateStage {
   return "rules-required";
 }
