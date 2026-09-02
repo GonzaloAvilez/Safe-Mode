@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import type { Locale } from "@/lib/locale";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import { writeMirrorHandoff } from "../../_shared/mirror-handoff";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
@@ -21,6 +22,7 @@ type EntryFormProps = {
 };
 
 export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
+  const { locale } = useParams<{ locale: Locale }>();
   const router = useRouter();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +36,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       const res = await fetch("/api/entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, honeypot, formRenderedAt }),
+        body: JSON.stringify({ text, honeypot, formRenderedAt, locale }),
       });
 
       const body = await res.json();
@@ -52,7 +54,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
           entryId: body.entryId,
           phraseId: body.phrase.id,
         });
-        router.push("/mirror");
+        router.push(`/${locale}/mirror`);
         // Leave submitting=true — Searching stays on screen through the route swap
         // instead of the form flashing back for a frame first.
         return;
@@ -62,7 +64,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         // No phrase to mirror back, but the visitor still passes through Mirror
         // rather than dead-ending here — see MirrorPage's no_match rendering.
         writeMirrorHandoff({ outcome: "no_match", entryId: body.entryId });
-        router.push("/mirror");
+        router.push(`/${locale}/mirror`);
         return;
       }
 

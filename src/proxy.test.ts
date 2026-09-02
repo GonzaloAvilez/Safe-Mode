@@ -1,0 +1,65 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+const { intlMiddlewareMock, isContributeOpenMock, isSitePublicMock } = vi.hoisted(() => ({
+  intlMiddlewareMock: vi.fn(() => new Response(null, { headers: { "x-intl": "handled" } })),
+  isContributeOpenMock: vi.fn(),
+  isSitePublicMock: vi.fn(),
+}));
+
+vi.mock("next-intl/middleware", () => ({
+  default: vi.fn(() => intlMiddlewareMock),
+}));
+
+vi.mock("@/lib/settings", () => ({
+  isContributeOpen: isContributeOpenMock,
+  isSitePublic: isSitePublicMock,
+}));
+
+const { proxy } = await import("@/proxy");
+
+function request(pathname: string) {
+  return new NextRequest(`http://localhost${pathname}`);
+}
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("locale routing proxy", () => {
+  it.each(["/api/phrases", "/closed", "/icon.png"])("keeps %s outside locale routing", async (pathname) => {
+    const response = await proxy(request(pathname));
+
+    expect(response.headers.get("x-intl")).toBeNull();
+    expect(intlMiddlewareMock).not.toHaveBeenCalled();
+  });
+
+  it("hands public experience routes to locale negotiation", async () => {
+    isSitePublicMock.mockResolvedValueOnce(true);
+
+    const response = await proxy(request("/"));
+
+    expect(response.headers.get("x-intl")).toBe("handled");
+    expect(intlMiddlewareMock).toHaveBeenCalledOnce();
+  });
+
+  it("applies the contribute gate after stripping either locale prefix", async () => {
+    isContributeOpenMock.mockResolvedValue(true);
+
+    await proxy(request("/en/contribute"));
+    await proxy(request("/es/contribute"));
+
+    expect(intlMiddlewareMock).toHaveBeenCalledTimes(2);
+    expect(isSitePublicMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects a localized experience route to /closed when the site is closed", async () => {
+    isSitePublicMock.mockResolvedValueOnce(false);
+
+    const response = await proxy(request("/es/observe"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("http://localhost/closed");
+    expect(intlMiddlewareMock).not.toHaveBeenCalled();
+  });
+});

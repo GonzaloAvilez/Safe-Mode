@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import type { Locale } from "@/lib/locale";
 import { ScreenHeader } from "../../_shared/screen-header";
 import { ObserveCanvas } from "../observe-canvas";
 import { ObserveTransition } from "./observe-transition";
@@ -20,6 +22,7 @@ const RETRY_INTERVAL_MS = 6000;
 // of a dead end, retried silently in the background; see observe-meditation.tsx for
 // how a recovery mid-meditation is offered rather than forced.
 export function ObserveScreen({ resonateEnabled }: { resonateEnabled: boolean }) {
+  const { locale } = useParams<{ locale: Locale }>();
   const [animationDone, setAnimationDone] = useState(false);
   const [fetchState, setFetchState] = useState<FetchState>("loading");
   const [data, setData] = useState<ObserveData | null>(null);
@@ -44,7 +47,7 @@ export function ObserveScreen({ resonateEnabled }: { resonateEnabled: boolean })
       const timeoutId = timeoutMs ? window.setTimeout(() => controller!.abort(), timeoutMs) : null;
 
       try {
-        const res = await fetch("/api/observe", { signal: controller?.signal });
+        const res = await fetch(`/api/observe?locale=${locale}`, { signal: controller?.signal });
         if (timeoutId) clearTimeout(timeoutId);
         if (!res.ok) throw new Error("server error");
         const body = (await res.json()) as ObserveData;
@@ -75,7 +78,7 @@ export function ObserveScreen({ resonateEnabled }: { resonateEnabled: boolean })
       cancelled = true;
       if (retryId) clearInterval(retryId);
     };
-  }, []);
+  }, [locale]);
 
   // Adjusting state during render (React's recommended alternative to an effect here:
   // https://react.dev/learn/you-might-not-need-an-effect) — fires exactly once, the

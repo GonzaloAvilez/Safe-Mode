@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import createMiddleware from "next-intl/middleware";
+import { routing } from "@/i18n/routing";
 import { isContributeOpen, isSitePublic } from "@/lib/settings";
+
+const intlMiddleware = createMiddleware(routing);
+
+function stripLocalePrefix(pathname: string): string {
+  const match = pathname.match(/^\/(en|es)(\/.*|$)/);
+  return match ? match[2] || "/" : pathname;
+}
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
 // cookies() internally, which isn't how Proxy reads cookies (req.cookies instead) — this
@@ -18,7 +27,7 @@ const SESSION_PAYLOAD = "admin";
 // main flow when Contribute is off, and gating it on site_public alone would break
 // Contribute while the main site is closed. Its own rate limiting/moderation are the
 // real defense here, not this proxy check.
-const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron", "/api/phrases"];
+const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron", "/api/phrases", "/icon.png"];
 
 function isValidAdminCookie(value: string | undefined): boolean {
   if (!value) return false;
@@ -52,18 +61,26 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const publicPathname = stripLocalePrefix(pathname);
+
   // Independent of site_public — lets /contribute stay reachable (via its own flag)
   // while the rest of the site is closed, or vice versa: closing contribute_open alone
   // once the workshop wraps up, without touching site_public at all.
-  if (pathname.startsWith("/contribute") && (await isContributeOpen())) {
-    return NextResponse.next();
+  if (publicPathname.startsWith("/contribute") && (await isContributeOpen())) {
+    return intlMiddleware(request);
   }
 
   if (!(await isSitePublic())) {
     return NextResponse.redirect(new URL("/closed", request.url));
   }
 
-  return NextResponse.next();
+  // API handlers deliberately remain outside locale routing. The request payload or
+  // query parameter carries locale for the bilingual backend contract.
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
+  return intlMiddleware(request);
 }
 
 export const config = {
