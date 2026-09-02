@@ -67,7 +67,7 @@ describe("submitEntry (integration, real match_phrase wiring)", () => {
     moderateTextMock.mockResolvedValue(benignModerationCheckFixture);
     getEmbeddingMock.mockResolvedValue({ embedding: sharedEmbedding, totalTokens: 8})
 
-    const outcome   = await submitEntry("Sometimes I burned out with AI", randomUUID());
+    const outcome   = await submitEntry("Sometimes I burned out with AI", randomUUID(), "en");
     insertedEntryIds.push(outcome.entryId);
     expect(outcome.type).toBe("matched");
 

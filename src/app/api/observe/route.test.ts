@@ -1,27 +1,30 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { orderMock, eqMock, fromMock, inMock, resonanceSelectMock, isResonateEnabledMock } = vi.hoisted(() => {
-  const orderMock = vi.fn();
-  const eqMock = vi.fn(() => ({ order: orderMock }));
-  const phrasesSelectMock = vi.fn(() => ({ eq: eqMock }));
+const { orderMock, languageEqMock, activeEqMock, fromMock, inMock, resonanceSelectMock, isResonateEnabledMock } =
+  vi.hoisted(() => {
+    const orderMock = vi.fn();
+    const languageEqMock = vi.fn(() => ({ order: orderMock }));
+    const activeEqMock = vi.fn(() => ({ eq: languageEqMock }));
+    const phrasesSelectMock = vi.fn(() => ({ eq: activeEqMock }));
 
-  const inMock = vi.fn();
-  const resonanceSelectMock = vi.fn(() => ({ in: inMock }));
+    const inMock = vi.fn();
+    const resonanceSelectMock = vi.fn(() => ({ in: inMock }));
 
-  const fromMock = vi.fn((table: string) => {
-    if (table === "phrase_resonances") return { select: resonanceSelectMock };
-    return { select: phrasesSelectMock };
+    const fromMock = vi.fn((table: string) => {
+      if (table === "phrase_resonances") return { select: resonanceSelectMock };
+      return { select: phrasesSelectMock };
+    });
+
+    return {
+      orderMock,
+      languageEqMock,
+      activeEqMock,
+      fromMock,
+      inMock,
+      resonanceSelectMock,
+      isResonateEnabledMock: vi.fn().mockResolvedValue(false),
+    };
   });
-
-  return {
-    orderMock,
-    eqMock,
-    fromMock,
-    inMock,
-    resonanceSelectMock,
-    isResonateEnabledMock: vi.fn().mockResolvedValue(false),
-  };
-});
 
 vi.mock("@/lib/supabase", () => ({
   supabaseAdmin: { from: fromMock },
@@ -33,16 +36,35 @@ vi.mock("@/lib/settings", () => ({
 
 const { GET } = await import("@/app/api/observe/route");
 
+function getRequest(locale: string | null = "en"): Request {
+  const url = locale === null ? "http://localhost/api/observe" : `http://localhost/api/observe?locale=${locale}`;
+  return new Request(url);
+}
+
 afterEach(() => {
   vi.clearAllMocks();
   isResonateEnabledMock.mockResolvedValue(false);
 });
 
 describe("GET /api/observe", () => {
+  it("returns 400 when locale is missing or not a routed locale", async () => {
+    const response = await GET(getRequest(null));
+
+    expect(response.status).toBe(400);
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for a locale outside the routed set", async () => {
+    const response = await GET(getRequest("fr"));
+
+    expect(response.status).toBe(400);
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
   it("returns 500 with the error message when the query fails", async () => {
     orderMock.mockResolvedValueOnce({ data: null, error: { message: "connection refused" } });
 
-    const response = await GET();
+    const response = await GET(getRequest());
     const body = await response.json();
 
     expect(response.status).toBe(500);
@@ -58,7 +80,7 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET();
+    const response = await GET(getRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -75,7 +97,7 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET();
+    const response = await GET(getRequest());
     const body = await response.json();
 
     // Identical vectors in either form -> cosine similarity 1.
@@ -93,7 +115,7 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET();
+    const response = await GET(getRequest());
     const body = await response.json();
 
     expect(body.similarities[0][0]).toBe(0);
@@ -113,20 +135,21 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET();
+    const response = await GET(getRequest());
     const body = await response.json();
 
     expect(body.phrases[0]).toEqual({ id: "1", text: "some phrase" });
     expect(body.phrases[0]).not.toHaveProperty("embedding");
   });
 
-  it("queries only active phrases, ordered by created_at ascending", async () => {
+  it("queries only active phrases in the requested language, ordered by created_at ascending", async () => {
     orderMock.mockResolvedValueOnce({ data: [], error: null });
 
-    await GET();
+    await GET(getRequest("es"));
 
     expect(fromMock).toHaveBeenCalledWith("phrases");
-    expect(eqMock).toHaveBeenCalledWith("active", true);
+    expect(activeEqMock).toHaveBeenCalledWith("active", true);
+    expect(languageEqMock).toHaveBeenCalledWith("language", "es");
     expect(orderMock).toHaveBeenCalledWith("created_at", { ascending: true });
   });
 
@@ -138,7 +161,7 @@ describe("GET /api/observe", () => {
         error: null,
       });
 
-      const response = await GET();
+      const response = await GET(getRequest());
       const body = await response.json();
 
       expect(resonanceSelectMock).not.toHaveBeenCalled();
@@ -159,7 +182,7 @@ describe("GET /api/observe", () => {
         error: null,
       });
 
-      const response = await GET();
+      const response = await GET(getRequest());
       const body = await response.json();
 
       expect(inMock).toHaveBeenCalledWith("phrase_id", ["1", "2"]);
@@ -173,7 +196,7 @@ describe("GET /api/observe", () => {
       isResonateEnabledMock.mockResolvedValueOnce(true);
       orderMock.mockResolvedValueOnce({ data: [], error: null });
 
-      await GET();
+      await GET(getRequest());
 
       expect(resonanceSelectMock).not.toHaveBeenCalled();
     });

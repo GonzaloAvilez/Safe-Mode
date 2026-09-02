@@ -12,17 +12,43 @@ export type PhraseMatch = {
   similarity: number;
 };
 
+// One row per language (not per language-pair) — see language_thresholds migration.
+// A missing row for a routed locale is a real configuration error, not a case to
+// silently fall back on, so this fails the same way `unwrap` fails everywhere else.
+async function getLanguageThreshold(language: string): Promise<number> {
+  const { data, error } = await supabaseAdmin
+    .from("language_thresholds")
+    .select("min_similarity")
+    .eq("language", language)
+    .single();
+
+  return unwrap(data, error).min_similarity;
+}
+
 // Closest active phrase to the given embedding, or null when the corpus has no match (e.g. before D7 seeding).
 export async function findClosestPhrase(embedding: number[], language: string): Promise<PhraseMatch | null> {
-  const { data, error } = await supabaseAdmin.rpc("match_phrase", { query_embedding: embedding, match_language: language });
+  const minSimilarity = await getLanguageThreshold(language);
+  const { data, error } = await supabaseAdmin.rpc("match_phrase", {
+    query_embedding: embedding,
+    match_language: language,
+    min_similarity: minSimilarity,
+  });
 
   return unwrap(data, error)?.[0] ?? null;
 }
 
 // Inserts with the table defaults: moderation_status='pending', active=false.
 // finalizeUserPhraseModeration (below) resolves this automatically moments later.
-export async function submitUserPhrase(text: string, origin: PhraseOrigin): Promise<{ id: string }> {
-  const { data, error } = await supabaseAdmin.from("phrases").insert({ text, origin, source: "user" }).select("id").single();
+// `language` is set explicitly from the submitter's locale — without it the column's
+// DB default ('en') would silently mistag non-English submissions (the exact gap
+// entries.ts had before locale threading: see language-content-segmented-matching in
+// project memory).
+export async function submitUserPhrase(text: string, origin: PhraseOrigin, language: string): Promise<{ id: string }> {
+  const { data, error } = await supabaseAdmin
+    .from("phrases")
+    .insert({ text, origin, source: "user", language })
+    .select("id")
+    .single();
 
   return { id: unwrap(data, error).id };
 }

@@ -56,6 +56,7 @@ export type EntryOutcome =
 export async function submitEntry(
   text: string,
   sessionId: string,
+  language: string,
   scaleBefore?: number
 ): Promise<EntryOutcome> {
   const moderation = await moderateText(text);
@@ -93,9 +94,7 @@ export async function submitEntry(
 
   await createResponse(entry.id, sessionId, scaleBefore);
 
-  // language = "english" by default since this is the only one lang for the MVP, 
-  // there are no seed phrases in another language.
-  const match = await findClosestPhrase(embedding, "en");
+  const match = await findClosestPhrase(embedding, language);
   
   const outcome = match ? "matched" : "no_match";
   await updateEntryOutcome(entry.id, outcome)

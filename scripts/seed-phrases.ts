@@ -1,9 +1,15 @@
 // One-off operational script: seeds the phrases table for D7.
 // Run: npx tsx --env-file=.env.local scripts/seed-phrases.ts
 //
-// Translated to English 2026-07-15 (workshop's shared language — see ROADMAP.md's
-// language decision). Transcreated, not translated literally, same as the UI copy pass:
-// permission to deviate from the original Spanish structure for naturalness.
+// English set translated 2026-07-15 (workshop's shared language — see ROADMAP.md's
+// language decision). Transcreated, not translated literally, same as the UI copy pass.
+//
+// Spanish set added for bilingual support (2026-09-01): these are the *original* 50
+// phrases, recovered from git history (commit 21f0bcf, before the English translation)
+// rather than translated back from the English set — the original phrasing predates any
+// translation pass, so it's the more natural source. Same 9 categories/order as the
+// English set (English category slugs reused here purely so the two arrays are easy to
+// cross-reference — `category` isn't a DB column, just a console-log label).
 import { supabaseAdmin } from "@/lib/supabase";
 import { getEmbedding } from "@/lib/openai";
 import { recordEmbeddingSpend } from "@/lib/spend";
@@ -11,7 +17,7 @@ import { recordEmbeddingSpend } from "@/lib/spend";
 type SeedPhrase = {
   text: string;
   category: string;
-  language: "en";
+  language: "en" | "es";
 };
 
 const seedPhrases: SeedPhrase[] = [
@@ -82,6 +88,74 @@ const seedPhrases: SeedPhrase[] = [
   { category: "relief", text: "I found out I wasn't as alone as I thought.", language: "en" },
   { category: "relief", text: "I found a little peace in a place I didn't expect to find it.", language: "en" },
   { category: "relief", text: "I felt, even if just for a moment, that it was okay to be exactly who I am.", language: "en" },
+
+  // Soledad / sentirse incomprendido
+  { category: "loneliness", text: "A veces estoy rodeado de gente y aun así me siento completamente solo.", language: "es" },
+  { category: "loneliness", text: "Nadie parece entender lo que realmente pienso, así que dejé de intentar explicarlo.", language: "es" },
+  { category: "loneliness", text: "Siento que hablo un idioma distinto al de todos los que me rodean.", language: "es" },
+  { category: "loneliness", text: "Me cuesta encontrar a alguien con quien pueda simplemente ser yo, sin actuar.", language: "es" },
+  { category: "loneliness", text: "Llevo tiempo buscando a alguien que entienda mi silencio sin que tenga que explicarlo.", language: "es" },
+  { category: "loneliness", text: "A veces creo que soy la única persona que siente esto.", language: "es" },
+
+  // Incertidumbre laboral / miedo a no ser suficiente
+  { category: "uncertainty", text: "Siento que la tecnología está avanzando más rápido que yo y me da miedo quedarme atrás.", language: "es" },
+  { category: "uncertainty", text: "Llevo meses dudando si lo que sé hacer todavía sirve para algo.", language: "es" },
+  { category: "uncertainty", text: "Me pregunto qué voy a ser si lo que hacía ya no es suficiente.", language: "es" },
+  { category: "uncertainty", text: "Cada vez que aplico a algo, siento que ya no soy competitivo.", language: "es" },
+  { category: "uncertainty", text: "Tengo miedo de que mi experiencia ya no valga lo que valía antes.", language: "es" },
+  { category: "uncertainty", text: "No sé si me subestimo o si de verdad ya no encajo en ningún lado.", language: "es" },
+
+  // Duelo / rupturas / pérdidas
+  { category: "grief", text: "Perdí algo que pensé que sería para siempre y todavía no sé cómo seguir.", language: "es" },
+  { category: "grief", text: "Extraño a alguien que ya no está, aunque nadie más lo note.", language: "es" },
+  { category: "grief", text: "Terminó algo importante y siento que perdí también un pedazo de mí.", language: "es" },
+  { category: "grief", text: "Sigo aprendiendo a vivir en un espacio que antes no estaba vacío.", language: "es" },
+  { category: "grief", text: "No sé si estoy de duelo por la persona o por quien era yo a su lado.", language: "es" },
+
+  // Autenticidad / miedo a ser juzgado
+  { category: "authenticity", text: "Escondo partes de mí porque tengo miedo de que me rechacen si las ven.", language: "es" },
+  { category: "authenticity", text: "Me cansé de medir cada palabra para no incomodar a los demás.", language: "es" },
+  { category: "authenticity", text: "Siento que si muestro cómo soy en realidad, voy a perder a la gente que tengo cerca.", language: "es" },
+  { category: "authenticity", text: "Nunca me he sentido libre de ser exactamente quien soy, sin editarme.", language: "es" },
+  { category: "authenticity", text: "Tengo miedo de que mi sensibilidad sea demasiado para las personas que me rodean.", language: "es" },
+  { category: "authenticity", text: "Aprendí a sonreír aunque por dentro sintiera otra cosa completamente distinta.", language: "es" },
+
+  // Vacío interno / desconexión de uno mismo
+  { category: "emptiness", text: "Siento un vacío que no sé cómo llenar, aunque tenga todo lo que debería hacerme feliz.", language: "es" },
+  { category: "emptiness", text: "No sé exactamente qué me pasa, solo sé que algo no está bien.", language: "es" },
+  { category: "emptiness", text: "Me siento perdido, como si hubiera olvidado qué es lo que realmente quiero.", language: "es" },
+  { category: "emptiness", text: "Hay días en que hago todo automático, sin sentir nada de lo que hago.", language: "es" },
+  { category: "emptiness", text: "Dejé de reconocerme a mí mismo en algún punto del camino.", language: "es" },
+  { category: "emptiness", text: "Siento que necesito ayuda, pero no sé ni por dónde empezar a pedirla.", language: "es" },
+
+  // Necesidad de ser escuchado / presencia sin juicio
+  { category: "being-heard", text: "No busco consejos, solo alguien que me escuche sin querer arreglarme.", language: "es" },
+  { category: "being-heard", text: "A veces lo único que necesito es que alguien esté presente, sin pedir nada a cambio.", language: "es" },
+  { category: "being-heard", text: "Me hace falta una conversación real, no otra más de las que se olvidan rápido.", language: "es" },
+  { category: "being-heard", text: "Necesito sentir que a alguien le importa cómo estoy, aunque sea por un momento.", language: "es" },
+  { category: "being-heard", text: "Solo quiero que alguien me escuche sin apurarse a responder.", language: "es" },
+
+  // Transición / reconstrucción
+  { category: "transition", text: "Todo lo que conocía se derrumbó y todavía estoy aprendiendo a pararme de nuevo.", language: "es" },
+  { category: "transition", text: "Siento que estoy en medio de un cambio que no elegí pero que tengo que atravesar.", language: "es" },
+  { category: "transition", text: "No sé quién voy a ser cuando esto termine, solo sé que ya no soy quien era.", language: "es" },
+  { category: "transition", text: "Estoy reconstruyendo mi vida desde cero y algunos días pesa más que otros.", language: "es" },
+  { category: "transition", text: "Aunque duela, siento que este quiebre también puede ser un inicio.", language: "es" },
+  { category: "transition", text: "Estoy aprendiendo a caminar de nuevo, aunque nadie vea el esfuerzo que eso lleva.", language: "es" },
+
+  // Protección de energía / necesidad de espacio propio
+  { category: "energy", text: "Necesito alejarme del ruido para poder escucharme a mí mismo otra vez.", language: "es" },
+  { category: "energy", text: "Cuidar mi energía no significa que no me importe la gente, solo que aprendí a protegerme.", language: "es" },
+  { category: "energy", text: "Prefiero el silencio a una conversación que no se siente genuina.", language: "es" },
+  { category: "energy", text: "No busco multitudes, busco un lugar donde pueda respirar tranquilo.", language: "es" },
+  { category: "energy", text: "Aprendí que retirarme a tiempo también es una forma de cuidarme.", language: "es" },
+
+  // Alivio / aceptación experimentada
+  { category: "relief", text: "Por primera vez en mucho tiempo, sentí que podía ser yo sin que nadie se alejara.", language: "es" },
+  { category: "relief", text: "Alguien me escuchó sin juzgarme y sentí que algo en mí se aflojó.", language: "es" },
+  { category: "relief", text: "Descubrí que no estaba tan solo como pensaba.", language: "es" },
+  { category: "relief", text: "Encontré un poco de paz en un lugar donde no esperaba encontrarla.", language: "es" },
+  { category: "relief", text: "Sentí, aunque sea por un momento, que estaba bien ser exactamente quien soy.", language: "es" },
 ];
 
 async function main() {

@@ -1,7 +1,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import createMiddleware from "next-intl/middleware";
+import { routing } from "@/i18n/routing";
 import { isContributeOpen, isSitePublic } from "@/lib/settings";
+
+// The experience app lives under /[locale] (en|es); /admin, /closed, /api are outside
+// it and untouched by locale resolution — this handles the prefix redirect/cookie for
+// everything else, invoked from within `proxy` below rather than as its own default
+// export, since this fork renamed middleware.ts to proxy.ts (see file header comment
+// on the exported `proxy` function).
+const intlMiddleware = createMiddleware(routing);
+
+// Strips a leading /en or /es segment so the site_public/contribute_open checks below
+// see the same pathname shape they always have, regardless of locale prefix.
+function stripLocalePrefix(pathname: string): string {
+  const match = pathname.match(/^\/(en|es)(\/.*|$)/);
+  return match ? match[2] || "/" : pathname;
+}
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
 // cookies() internally, which isn't how Proxy reads cookies (req.cookies instead) — this
@@ -52,18 +68,30 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Everything past this point is the locale-prefixed experience app — check
+  // visibility gates against the locale-stripped shape, then hand off to next-intl
+  // for the actual prefix redirect/cookie handling.
+  const localizedPathname = stripLocalePrefix(pathname);
+
   // Independent of site_public — lets /contribute stay reachable (via its own flag)
   // while the rest of the site is closed, or vice versa: closing contribute_open alone
   // once the workshop wraps up, without touching site_public at all.
-  if (pathname.startsWith("/contribute") && (await isContributeOpen())) {
-    return NextResponse.next();
+  if (localizedPathname.startsWith("/contribute") && (await isContributeOpen())) {
+    return intlMiddleware(request);
   }
 
   if (!(await isSitePublic())) {
     return NextResponse.redirect(new URL("/closed", request.url));
   }
 
-  return NextResponse.next();
+  // API routes live outside /[locale] entirely (see file header) — intlMiddleware
+  // would otherwise redirect them into a /en/api/... prefix, which is wrong and (for
+  // POST bodies especially) breaks the request. Only page navigations reach it.
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
+  return intlMiddleware(request);
 }
 
 export const config = {

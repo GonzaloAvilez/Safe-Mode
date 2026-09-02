@@ -97,21 +97,37 @@ describe("POST /api/phrases", () => {
   it("returns 400 when text exceeds the max length", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
 
-    const response = await POST(postRequest({ text: "a".repeat(121), formRenderedAt: Date.now() - 5000 }));
+    const response = await POST(
+      postRequest({ text: "a".repeat(401), formRenderedAt: Date.now() - 5000, origin: LEAVE_A_TRACE_ORIGIN, locale: "en" })
+    );
 
     expect(response.status).toBe(400);
+    expect(submitUserPhraseMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when locale is missing or not a routed locale", async () => {
+    isRateLimitedMock.mockResolvedValueOnce(false);
+
+    const response = await POST(
+      postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000, origin: LEAVE_A_TRACE_ORIGIN })
+    );
+
+    expect(response.status).toBe(400);
+    expect(submitUserPhraseMock).not.toHaveBeenCalled();
   });
 
   it("returns 200 and schedules moderation when allowed", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
     submitUserPhraseMock.mockResolvedValueOnce({ id: "phrase-1" });
 
-    const response = await POST(postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000, origin: LEAVE_A_TRACE_ORIGIN }));
+    const response = await POST(
+      postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000, origin: LEAVE_A_TRACE_ORIGIN, locale: "es" })
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true });
-    expect(submitUserPhraseMock).toHaveBeenCalledWith("un dia normal", "leave_a_trace");
+    expect(submitUserPhraseMock).toHaveBeenCalledWith("un dia normal", "leave_a_trace", "es");
     expect(afterMock).toHaveBeenCalledWith(expect.any(Function));
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "phrase_submitted");
   });

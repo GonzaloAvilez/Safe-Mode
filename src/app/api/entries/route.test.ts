@@ -85,21 +85,30 @@ describe("POST /api/entries", () => {
   it("returns 400 when text exceeds the max length", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
 
-    const response = await POST(postRequest({ text: "a".repeat(801), formRenderedAt: Date.now() - 5000 }));
+    const response = await POST(postRequest({ text: "a".repeat(801), formRenderedAt: Date.now() - 5000, locale: "en" }));
 
     expect(response.status).toBe(400);
   });
 
-  it("returns 200 with the submitEntry outcome when allowed, forwarding the session id", async () => {
+  it("returns 400 when locale is missing or not a routed locale", async () => {
+    isRateLimitedMock.mockResolvedValueOnce(false);
+
+    const response = await POST(postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000 }));
+
+    expect(response.status).toBe(400);
+    expect(submitEntryMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 with the submitEntry outcome when allowed, forwarding the session id and locale", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
     submitEntryMock.mockResolvedValueOnce({ type: "no_match", entryId: "entry-1" });
 
-    const response = await POST(postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000 }));
+    const response = await POST(postRequest({ text: "un dia normal", formRenderedAt: Date.now() - 5000, locale: "es" }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ type: "no_match", entryId: "entry-1" });
-    expect(submitEntryMock).toHaveBeenCalledWith("un dia normal", "session-1", undefined);
+    expect(submitEntryMock).toHaveBeenCalledWith("un dia normal", "session-1", "es", undefined);
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "no_match");
   });
 });

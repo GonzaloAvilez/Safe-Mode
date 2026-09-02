@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { isResonateEnabled } from "@/lib/settings";
+import { routing } from "@/i18n/routing";
 
 // pgvector returns embeddings either as a real array or a "[0.1,0.2,...]" string, depending on driver path.
 function parseEmbedding(raw: unknown): number[] {
@@ -21,11 +22,22 @@ function cosineSimilarity(a: number[], b: number[]): number {
 // Fetched client-side by ObserveScreen so the ritual transition can run independently
 // of how long this takes — see observe-screen.tsx. Previously this ran inline in
 // observe/page.tsx as a blocking Server Component; moved here unchanged otherwise.
-export async function GET() {
+//
+// Filtered to the visitor's own locale — same same-language partitioning principle
+// match_phrase already enforces (see 20260720190000_add_match_phrase_language_filter),
+// applied here too so the pairwise-similarity constellation never mixes languages
+// whose embeddings aren't directly comparable.
+export async function GET(request: Request) {
+  const locale = new URL(request.url).searchParams.get("locale");
+  if (!locale || !routing.locales.includes(locale as (typeof routing.locales)[number])) {
+    return Response.json({ error: "locale doesn't have the correct value" }, { status: 400 });
+  }
+
   const { data, error } = await supabaseAdmin
     .from("phrases")
     .select("id, text, embedding")
     .eq("active", true)
+    .eq("language", locale)
     .order("created_at", { ascending: true });
 
   if (error) {

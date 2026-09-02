@@ -16,6 +16,7 @@ type PhraseRow = {
   moderation_status: "pending" | "approved" | "rejected";
   active: boolean;
   created_at: string;
+  language: string;
 };
 
 type PhraseNarrativeRow = {
@@ -65,7 +66,7 @@ function isValidTab(value: string | undefined): value is Tab {
 function fullPhrasesQueryForTab(tab: Tab, unclassifiedIds: string[]) {
   const base = supabaseAdmin
     .from("phrases")
-    .select("id, text, source, moderation_status, active, created_at", { count: "exact" })
+    .select("id, text, source, moderation_status, active, created_at, language", { count: "exact" })
     .order("created_at", { ascending: false });
   switch (tab) {
     case "pending":
@@ -244,6 +245,9 @@ export default async function AdminPhrasesPage({
               <div className="flex items-start justify-between gap-4">
                 <p className="text-sm leading-relaxed text-white/85">{phrase.text}</p>
                 <div className="flex shrink-0 gap-1.5">
+                  <span className="rounded-full border border-sky-500/30 px-2 py-0.5 text-[11px] tracking-wide text-sky-300 uppercase">
+                    {phrase.language}
+                  </span>
                   <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] tracking-wide text-white/40 uppercase">
                     {phrase.source}
                   </span>

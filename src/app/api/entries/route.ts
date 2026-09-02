@@ -3,6 +3,7 @@ import { getRequestIp } from "@/lib/request-ip";
 import { logRequestOutcome } from "@/lib/logging";
 import { getOrCreateSessionId } from "@/lib/session";
 import { rateLimitGuard, botGuard, textLengthGuard } from "@/lib/public-submission-guards";
+import { routing } from "@/i18n/routing";
 
 const MAX_TEXT_LENGTH = 800;
 
@@ -14,11 +15,16 @@ export async function POST(request: Request) {
   if (rateLimited) return rateLimited;
 
   const body = await request.json();
+  const locale = body.locale;
 
   const blocked = botGuard(ip, body.honeypot, body.formRenderedAt) ?? textLengthGuard(body.text, MAX_TEXT_LENGTH);
   if (blocked) return blocked;
 
-  const result = await submitEntry(body.text, sessionId, body.scaleBefore);
+  if (typeof locale !== "string" || !routing.locales.includes(locale as (typeof routing.locales)[number])) {
+    return Response.json({ error: "locale doesn't have the correct value" }, { status: 400 });
+  }
+
+  const result = await submitEntry(body.text, sessionId, locale, body.scaleBefore);
   logRequestOutcome(ip, result.type);
 
   return Response.json(result);
