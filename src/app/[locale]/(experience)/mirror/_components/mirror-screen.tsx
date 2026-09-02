@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import type { Locale } from "@/lib/locale";
 import { ScreenCta } from "../../_shared/screen-cta";
 import { ScreenHeader } from "../../_shared/screen-header";
 import { readMirrorHandoff } from "../../_shared/mirror-handoff";
@@ -37,6 +38,7 @@ function getServerHandoffSnapshot() {
 // than dead-ending in Write). Write stashes which one in sessionStorage before
 // navigating; a direct visit has nothing to read, so it bounces back to Write.
 export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) {
+  const { locale } = useParams<{ locale: Locale }>();
   const router = useRouter();
   const handoff = useSyncExternalStore(subscribeToHandoff, readMirrorHandoff, getServerHandoffSnapshot);
   const [resonated, setResonated] = useState(false);
@@ -51,9 +53,9 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
   // regardless of which render triggered it. Runs once, tied only to mount.
   useEffect(() => {
     if (!readMirrorHandoff()) {
-      router.replace("/write");
+      router.replace(`/${locale}/write`);
     }
-  }, [router]);
+  }, [locale, router]);
 
   if (!handoff) {
     return null;

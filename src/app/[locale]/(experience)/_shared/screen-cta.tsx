@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { forwardRef, type CSSProperties } from "react";
+import type { Locale } from "@/lib/locale";
 import { playTransition } from "./handpan-audio";
 
 type ScreenCtaProps = {
@@ -22,6 +24,8 @@ export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function 
   { href, label, accentRgb, disabled = false },
   ref
 ) {
+  const { locale } = useParams<{ locale: Locale }>();
+  const localizedHref = href === "/" ? `/${locale}` : `/${locale}${href}`;
   const cssVars = { "--cta-rgb": accentRgb } as CSSProperties;
   const inner = (
     <>
@@ -47,7 +51,7 @@ export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function 
   return (
     <Link
       ref={ref}
-      href={href}
+      href={localizedHref}
       onClick={playTransition}
       style={cssVars}
       className="group/enter fixed bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5"

@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import type { Locale } from "@/lib/locale";
 import { ScreenCta } from "../_shared/screen-cta";
 import { RulesGate } from "./rules-gate";
 import { ArrivalIntro } from "./arrival-intro";
@@ -48,6 +49,7 @@ function getServerSnapshot(): HomeGateStage {
 // re-showing it on every single visit to someone who already read it (or already
 // completed the whole flow) is just friction, not reinforcement.
 export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
+  const { locale } = useParams<{ locale: Locale }>();
   const router = useRouter();
   const stage = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
@@ -59,7 +61,7 @@ export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
   function handleIntroDone() {
     localStorage.setItem(ARRIVAL_INTRO_SEEN_KEY, "true");
     window.dispatchEvent(new Event(ARRIVAL_INTRO_SEEN_EVENT));
-    router.push("/arrive");
+    router.push(`/${locale}/arrive`);
   }
 
   if (stage === "intro-required") {

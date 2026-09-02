@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
+import { useParams } from "next/navigation";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { CONTRIBUTE_ORIGIN } from "@/lib/phrase-origin";
+import type { Locale } from "@/lib/locale";
 
 const MAX_TEXT_LENGTH = 400;
 
@@ -13,6 +15,7 @@ type Status = { type: "error"; message: string } | { type: "saved" } | null;
 // several submissions in one sitting, so a successful submit clears the field and loops
 // back to a blank form instead of resolving to a closing screen.
 export function ContributeForm() {
+  const { locale } = useParams<{ locale: Locale }>();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
@@ -33,6 +36,7 @@ export function ContributeForm() {
           honeypot, 
           formRenderedAt,
           origin: CONTRIBUTE_ORIGIN,
+          locale,
          }),
       });
 

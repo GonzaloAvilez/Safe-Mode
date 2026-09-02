@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
+import { useParams } from "next/navigation";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
+import type { Locale } from "@/lib/locale";
 const MAX_TEXT_LENGTH = 400;
 
 type ErrorOutcome = { message: string } | null;
@@ -18,6 +20,7 @@ type ErrorOutcome = { message: string } | null;
 // Gratitude-style canvas + closing copy), so it just reports back which way this
 // resolved.
 export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "skipped") => void }) {
+  const { locale } = useParams<{ locale: Locale }>();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<ErrorOutcome>(null);
@@ -36,7 +39,8 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
           text, 
           honeypot, 
           formRenderedAt, 
-          origin: LEAVE_A_TRACE_ORIGIN
+          origin: LEAVE_A_TRACE_ORIGIN,
+          locale,
         }),
       });
 

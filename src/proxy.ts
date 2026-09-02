@@ -1,7 +1,36 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import createMiddleware from "next-intl/middleware";
+import { routing } from "@/i18n/routing";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/locale";
 import { isContributeOpen, isSitePublic } from "@/lib/settings";
+
+const intlMiddleware = createMiddleware(routing);
+
+function stripLocalePrefix(pathname: string): string {
+  const [, possibleLocale, ...rest] = pathname.split("/");
+  return isLocale(possibleLocale) ? `/${rest.join("/")}` : pathname;
+}
+
+function isLocaleIndependentPage(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/closed";
+}
+
+function resolveLocaleAlias(pathname: string): { locale: string; publicPathname: string } | null {
+  const [, possibleLocale, ...rest] = pathname.split("/");
+  if (isLocale(possibleLocale) || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(possibleLocale)) return null;
+
+  try {
+    const language = new Intl.Locale(possibleLocale).language.toLowerCase();
+    return {
+      locale: isLocale(language) ? language : DEFAULT_LOCALE,
+      publicPathname: `/${rest.join("/")}`,
+    };
+  } catch {
+    return null;
+  }
+}
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
 // cookies() internally, which isn't how Proxy reads cookies (req.cookies instead) — this
@@ -18,7 +47,7 @@ const SESSION_PAYLOAD = "admin";
 // main flow when Contribute is off, and gating it on site_public alone would break
 // Contribute while the main site is closed. Its own rate limiting/moderation are the
 // real defense here, not this proxy check.
-const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron", "/api/phrases"];
+const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron", "/api/phrases", "/icon.png"];
 
 function isValidAdminCookie(value: string | undefined): boolean {
   if (!value) return false;
@@ -35,6 +64,31 @@ function isValidAdminCookie(value: string | undefined): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const localeAlias = resolveLocaleAlias(pathname);
+
+  // Normalize BCP 47 aliases such as es-MX to the supported base language. Unknown
+  // languages fall back to English. APIs remain strict: a prefixed API is invalid and
+  // is never redirected into a working endpoint.
+  if (localeAlias) {
+    if (localeAlias.publicPathname.startsWith("/api/")) return NextResponse.next();
+
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.pathname = isLocaleIndependentPage(localeAlias.publicPathname)
+      ? localeAlias.publicPathname
+      : `/${localeAlias.locale}${localeAlias.publicPathname === "/" ? "" : localeAlias.publicPathname}`;
+    return NextResponse.redirect(canonicalUrl);
+  }
+
+  const publicPathname = stripLocalePrefix(pathname);
+
+  // Admin and the closed page have one canonical, locale-independent URL. Preserve
+  // the rest of the URL (including its query string) when correcting a prefixed link.
+  if (publicPathname !== pathname && isLocaleIndependentPage(publicPathname)) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.pathname = publicPathname;
+    return NextResponse.redirect(canonicalUrl);
+  }
+
   const hasValidSession = isValidAdminCookie(request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value);
 
   if (pathname === "/admin/login") {
@@ -55,15 +109,21 @@ export async function proxy(request: NextRequest) {
   // Independent of site_public — lets /contribute stay reachable (via its own flag)
   // while the rest of the site is closed, or vice versa: closing contribute_open alone
   // once the workshop wraps up, without touching site_public at all.
-  if (pathname.startsWith("/contribute") && (await isContributeOpen())) {
-    return NextResponse.next();
+  if (publicPathname.startsWith("/contribute") && (await isContributeOpen())) {
+    return intlMiddleware(request);
   }
 
   if (!(await isSitePublic())) {
     return NextResponse.redirect(new URL("/closed", request.url));
   }
 
-  return NextResponse.next();
+  // API handlers deliberately remain outside locale routing. The request payload or
+  // query parameter carries locale for the bilingual backend contract.
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
+  return intlMiddleware(request);
 }
 
 export const config = {
