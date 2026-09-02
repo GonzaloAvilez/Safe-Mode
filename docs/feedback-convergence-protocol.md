@@ -77,12 +77,17 @@ _Paste the most recent topic/source/status table here before analyzing new feedb
 | Topic | Sources (verified distinct people) | Status |
 |---|---|---|
 | Font size | 4 | Resolved 2026-08-19 — fluid clamp()-based sizing shipped to master (PR #170) |
-| Entry confusion | 5+ | Diagnosed — minimal wayfinding for cold arrivals |
+| Entry confusion | 5+ | Guided cold-arrival intro built in PR #177 — pending validation |
 | Genuine reflective connection | 4+ | Strongly validated — do not touch |
 | Small corpus (bottleneck) | Own quantitative data (not a feedback source — different category) | Pending — high priority, non-technical |
 | Segmenting audience | 1 | Noted, not acted on — conflicts with universality thesis, but single-source, not triangulated |
 | Is one encounter enough? | 1 | Unresolved — founder decision, not code. Needs more independent sources before treating as confirmed pattern |
 | Own domain (vs. vercel.app) | Internal analysis (not a feedback source — different category) | Resolved 2026-08-15 — production now serves from refugiospace.com |
+
+**Cold-arrival experiment:** PR #177 introduces a three-part, visitor-paced
+orientation: promise → mechanism → human evidence. It has no automatic reading
+timers and appears once per browser. Do not mark entry confusion as resolved until
+it has been tested with people who arrived without prior context.
 
 ---
 
