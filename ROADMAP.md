@@ -64,6 +64,11 @@ English is now the UI's working language, matching the workshop's shared languag
 
 **Multi-language *content* is a separate, still-open question** — see "Open / deferred" below. This resolves the UI-language gate only; it does not mean the corpus itself is multilingual yet. **This was the last blocker on D18-19; it's now clear.**
 
+**Bilingual English/Spanish expansion — planned 2026-09-02.** The architecture is recorded in
+[ADR-003](./docs/decisions/ADR-003-bilingual-routing-and-matching.md); delivery order,
+validation gates, and per-concern PRs are tracked in [GitHub issue #178](https://github.com/GonzaloAvilez/Safe-Mode/issues/178).
+The existing English experience remains available throughout the rollout.
+
 ## Week 3 — Real users (not started)
 
 - [ ] **D15 Before/after scale** — 1-5 question, saved to Supabase. Schema exists (`scale_before`/`scale_after` columns), no UI control on any screen yet.
