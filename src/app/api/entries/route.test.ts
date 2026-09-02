@@ -90,7 +90,7 @@ describe("POST /api/entries", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 200 with the submitEntry outcome when allowed, forwarding the session id", async () => {
+  it("defaults legacy requests without locale to English", async () => {
     isRateLimitedMock.mockResolvedValueOnce(false);
     submitEntryMock.mockResolvedValueOnce({ type: "no_match", entryId: "entry-1" });
 
@@ -99,7 +99,24 @@ describe("POST /api/entries", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ type: "no_match", entryId: "entry-1" });
-    expect(submitEntryMock).toHaveBeenCalledWith("un dia normal", "session-1", undefined);
+    expect(submitEntryMock).toHaveBeenCalledWith("un dia normal", "session-1", undefined, "en");
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "no_match");
+  });
+
+  it("forwards a supported locale and rejects an unsupported one", async () => {
+    isRateLimitedMock.mockResolvedValue(false);
+    submitEntryMock.mockResolvedValue({ type: "no_match", entryId: "entry-1" });
+
+    const spanish = await POST(
+      postRequest({ text: "un día normal", formRenderedAt: Date.now() - 5000, locale: "es" })
+    );
+    const unsupported = await POST(
+      postRequest({ text: "un jour normal", formRenderedAt: Date.now() - 5000, locale: "fr" })
+    );
+
+    expect(spanish.status).toBe(200);
+    expect(submitEntryMock).toHaveBeenCalledWith("un día normal", "session-1", undefined, "es");
+    expect(unsupported.status).toBe(400);
+    expect(submitEntryMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -5,6 +5,7 @@ import { resolvePhraseModerationStatus, shouldActivatePhrase } from "@/lib/safet
 import { estimateEmbeddingCostUsd } from "@/lib/safety/embedding-cost";
 import { canSpendToday, recordEmbeddingSpend } from "@/lib/spend";
 import { PhraseOrigin } from "@/lib/phrase-origin";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/locale";
 
 export type PhraseMatch = {
   id: string;
@@ -12,17 +13,40 @@ export type PhraseMatch = {
   similarity: number;
 };
 
+async function getLanguageThreshold(language: Locale): Promise<number> {
+  const { data, error } = await supabaseAdmin
+    .from("language_thresholds")
+    .select("min_similarity")
+    .eq("language", language)
+    .single();
+
+  return unwrap(data, error).min_similarity;
+}
+
 // Closest active phrase to the given embedding, or null when the corpus has no match (e.g. before D7 seeding).
-export async function findClosestPhrase(embedding: number[], language: string): Promise<PhraseMatch | null> {
-  const { data, error } = await supabaseAdmin.rpc("match_phrase", { query_embedding: embedding, match_language: language });
+export async function findClosestPhrase(embedding: number[], language: Locale): Promise<PhraseMatch | null> {
+  const minSimilarity = await getLanguageThreshold(language);
+  const { data, error } = await supabaseAdmin.rpc("match_phrase", {
+    query_embedding: embedding,
+    match_language: language,
+    min_similarity: minSimilarity,
+  });
 
   return unwrap(data, error)?.[0] ?? null;
 }
 
 // Inserts with the table defaults: moderation_status='pending', active=false.
 // finalizeUserPhraseModeration (below) resolves this automatically moments later.
-export async function submitUserPhrase(text: string, origin: PhraseOrigin): Promise<{ id: string }> {
-  const { data, error } = await supabaseAdmin.from("phrases").insert({ text, origin, source: "user" }).select("id").single();
+export async function submitUserPhrase(
+  text: string,
+  origin: PhraseOrigin,
+  language: Locale = DEFAULT_LOCALE
+): Promise<{ id: string }> {
+  const { data, error } = await supabaseAdmin
+    .from("phrases")
+    .insert({ text, origin, source: "user", language })
+    .select("id")
+    .single();
 
   return { id: unwrap(data, error).id };
 }

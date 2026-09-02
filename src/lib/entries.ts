@@ -8,6 +8,7 @@ import { canSpendToday, recordEmbeddingSpend } from "@/lib/spend";
 import { findClosestPhrase, type PhraseMatch } from "@/lib/phrases";
 import { createResponse } from "@/lib/responses";
 import { insertCrisisContent } from "@/lib/crisis-entries";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/locale";
 
 type InsertEntryParams = {
   text: string;
@@ -56,7 +57,8 @@ export type EntryOutcome =
 export async function submitEntry(
   text: string,
   sessionId: string,
-  scaleBefore?: number
+  scaleBefore?: number,
+  language: Locale = DEFAULT_LOCALE
 ): Promise<EntryOutcome> {
   const moderation = await moderateText(text);
   const flags = resolveModerationFlags(moderation);
@@ -93,9 +95,7 @@ export async function submitEntry(
 
   await createResponse(entry.id, sessionId, scaleBefore);
 
-  // language = "english" by default since this is the only one lang for the MVP, 
-  // there are no seed phrases in another language.
-  const match = await findClosestPhrase(embedding, "en");
+  const match = await findClosestPhrase(embedding, language);
   
   const outcome = match ? "matched" : "no_match";
   await updateEntryOutcome(entry.id, outcome)

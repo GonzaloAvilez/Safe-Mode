@@ -5,6 +5,7 @@ import { logRequestOutcome } from "@/lib/logging";
 import { getOrCreateSessionId } from "@/lib/session";
 import { PHRASE_ORIGINS, PhraseOrigin } from "@/lib/phrase-origin";
 import { rateLimitGuard, botGuard, textLengthGuard } from "@/lib/public-submission-guards";
+import { resolveLocale } from "@/lib/locale";
 
 const MAX_TEXT_LENGTH = 400;
 
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const origin = body.origin;
+  const locale = resolveLocale(body.locale);
 
   const blocked = botGuard(ip, body.honeypot, body.formRenderedAt) ?? textLengthGuard(body.text, MAX_TEXT_LENGTH);
   if (blocked) return blocked;
@@ -25,7 +27,11 @@ export async function POST(request: Request) {
     return Response.json({ error: `origin doesn't have the correct value` }, { status: 400 });
   }
 
-  const { id } = await submitUserPhrase(body.text, origin as PhraseOrigin);
+  if (!locale) {
+    return Response.json({ error: "locale doesn't have the correct value" }, { status: 400 });
+  }
+
+  const { id } = await submitUserPhrase(body.text, origin as PhraseOrigin, locale);
 
   // Moderation (and the embedding it gates, see phrases.ts) runs after the response
   // goes out — the person leaving a trace never waits on it.

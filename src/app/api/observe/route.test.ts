@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { orderMock, eqMock, fromMock, inMock, resonanceSelectMock, isResonateEnabledMock } = vi.hoisted(() => {
+const { orderMock, activeEqMock, languageEqMock, fromMock, inMock, resonanceSelectMock, isResonateEnabledMock } = vi.hoisted(() => {
   const orderMock = vi.fn();
-  const eqMock = vi.fn(() => ({ order: orderMock }));
-  const phrasesSelectMock = vi.fn(() => ({ eq: eqMock }));
+  const languageEqMock = vi.fn(() => ({ order: orderMock }));
+  const activeEqMock = vi.fn(() => ({ eq: languageEqMock }));
+  const phrasesSelectMock = vi.fn(() => ({ eq: activeEqMock }));
 
   const inMock = vi.fn();
   const resonanceSelectMock = vi.fn(() => ({ in: inMock }));
@@ -15,7 +16,8 @@ const { orderMock, eqMock, fromMock, inMock, resonanceSelectMock, isResonateEnab
 
   return {
     orderMock,
-    eqMock,
+    activeEqMock,
+    languageEqMock,
     fromMock,
     inMock,
     resonanceSelectMock,
@@ -120,14 +122,27 @@ describe("GET /api/observe", () => {
     expect(body.phrases[0]).not.toHaveProperty("embedding");
   });
 
-  it("queries only active phrases, ordered by created_at ascending", async () => {
+  it("defaults legacy requests to English and filters the corpus", async () => {
     orderMock.mockResolvedValueOnce({ data: [], error: null });
 
     await GET();
 
     expect(fromMock).toHaveBeenCalledWith("phrases");
-    expect(eqMock).toHaveBeenCalledWith("active", true);
+    expect(activeEqMock).toHaveBeenCalledWith("active", true);
+    expect(languageEqMock).toHaveBeenCalledWith("language", "en");
     expect(orderMock).toHaveBeenCalledWith("created_at", { ascending: true });
+  });
+
+  it("filters by an explicit supported locale and rejects unsupported locales", async () => {
+    orderMock.mockResolvedValue({ data: [], error: null });
+
+    const spanish = await GET(new Request("http://localhost/api/observe?locale=es"));
+    const unsupported = await GET(new Request("http://localhost/api/observe?locale=fr"));
+
+    expect(spanish.status).toBe(200);
+    expect(languageEqMock).toHaveBeenCalledWith("language", "es");
+    expect(unsupported.status).toBe(400);
+    expect(orderMock).toHaveBeenCalledTimes(1);
   });
 
   describe("resonanceCount (gated by isResonateEnabled)", () => {

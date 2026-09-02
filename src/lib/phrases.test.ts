@@ -90,6 +90,13 @@ function setUpFetchChain() {
   fetchEqMock.mockReturnValue({ single: fetchSingleMock });
 }
 
+function setUpLanguageThresholdChain(minSimilarity: number) {
+  fromMock.mockReturnValue({ select: fetchSelectMock });
+  fetchSelectMock.mockReturnValue({ eq: fetchEqMock });
+  fetchEqMock.mockReturnValue({ single: fetchSingleMock });
+  fetchSingleMock.mockResolvedValueOnce({ data: { min_similarity: minSimilarity }, error: null });
+}
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -102,7 +109,12 @@ describe("submitUserPhrase", () => {
     await submitUserPhrase("una frase anonima", LEAVE_A_TRACE_ORIGIN);
 
     expect(fromMock).toHaveBeenCalledWith("phrases");
-    expect(insertMock).toHaveBeenCalledWith({ text: "una frase anonima", source: "user", origin: "leave_a_trace" });
+    expect(insertMock).toHaveBeenCalledWith({
+      text: "una frase anonima",
+      source: "user",
+      origin: "leave_a_trace",
+      language: "en",
+    });
   });
 
   it("returns the id of the inserted phrase", async () => {
@@ -287,15 +299,21 @@ describe("rejectPhrase", () => {
 });
 
 describe("findClosestPhrase", () => {
-  it("calls the match_phrase RPC with the given embedding", async () => {
+  it("calls the match_phrase RPC with the language's calibrated threshold", async () => {
+    setUpLanguageThresholdChain(0.4);
     rpcMock.mockResolvedValueOnce(matchPhraseNoneFoundFixture);
 
     await findClosestPhrase([0.1, 0.2, 0.3], "en");
 
-    expect(rpcMock).toHaveBeenCalledWith("match_phrase", { query_embedding: [0.1, 0.2, 0.3], match_language: "en" });
+    expect(rpcMock).toHaveBeenCalledWith("match_phrase", {
+      query_embedding: [0.1, 0.2, 0.3],
+      match_language: "en",
+      min_similarity: 0.4,
+    });
   });
 
   it("returns the closest phrase when a match is found", async () => {
+    setUpLanguageThresholdChain(0.4);
     rpcMock.mockResolvedValueOnce(matchPhraseFoundFixture);
 
     const result = await findClosestPhrase([0.1, 0.2, 0.3], "en");
@@ -304,6 +322,7 @@ describe("findClosestPhrase", () => {
   });
 
   it("returns null when the corpus has no active phrases to match", async () => {
+    setUpLanguageThresholdChain(0.4);
     rpcMock.mockResolvedValueOnce(matchPhraseNoneFoundFixture);
 
     const result = await findClosestPhrase([0.1, 0.2, 0.3], "en");
@@ -312,8 +331,19 @@ describe("findClosestPhrase", () => {
   });
 
   it("throws when the RPC call fails", async () => {
+    setUpLanguageThresholdChain(0.4);
     rpcMock.mockResolvedValueOnce(matchPhraseErrorFixture);
 
     await expect(findClosestPhrase([0.1, 0.2, 0.3], "en")).rejects.toThrow("rpc failed");
+  });
+
+  it("does not call the RPC when the threshold lookup fails", async () => {
+    fromMock.mockReturnValue({ select: fetchSelectMock });
+    fetchSelectMock.mockReturnValue({ eq: fetchEqMock });
+    fetchEqMock.mockReturnValue({ single: fetchSingleMock });
+    fetchSingleMock.mockResolvedValueOnce({ data: null, error: { message: "select failed" } });
+
+    await expect(findClosestPhrase([0.1, 0.2, 0.3], "es")).rejects.toThrow("select failed");
+    expect(rpcMock).not.toHaveBeenCalled();
   });
 });
