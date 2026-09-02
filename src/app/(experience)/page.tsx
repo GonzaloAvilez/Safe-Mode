@@ -3,6 +3,7 @@ import { ScreenHeader } from "./_shared/screen-header";
 import { AmbientGlowBackground } from "./_shared/ambient-glow-background";
 import { LivingPhrasesFeed } from "./_components/living-phrases-feed";
 import { HomeGate } from "./_components/home-gate";
+import { ArrivalPhrase } from "./_components/arrival-phrase";
 
 // Screen 0 — lives at "/" via the (experience) route group so it inherits the shared
 // dark scene layout like every other screen. Deliberately minimal: no principle card,
@@ -30,7 +31,7 @@ export default function HomePage() {
 
       <ScreenHeader tagline="Ecosystem of presences." />
 
-      <HomeGate />
+      <HomeGate introPhrase={<Suspense fallback={null}><ArrivalPhrase /></Suspense>} />
     </>
   );
 }

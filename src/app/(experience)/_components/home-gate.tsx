@@ -1,31 +1,45 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ScreenCta } from "../_shared/screen-cta";
 import { RulesGate } from "./rules-gate";
+import { ArrivalIntro } from "./arrival-intro";
 
 const RULES_ACKNOWLEDGED_KEY = "sm:rulesAcknowledged";
 const RULES_ACKNOWLEDGED_EVENT = "sm:rules-acknowledged";
+const ARRIVAL_INTRO_SEEN_KEY = "sm:arrivalIntroSeen:v3";
+const ARRIVAL_INTRO_SEEN_EVENT = "sm:arrival-intro-seen";
+
+type HomeGateStage = "rules-required" | "intro-required" | "ready";
 
 // localStorage has no same-tab change event (the native "storage" event only fires in
 // *other* tabs), so writes here also dispatch this custom event to wake up
 // useSyncExternalStore's subscription below.
 function subscribe(onStoreChange: () => void) {
   window.addEventListener(RULES_ACKNOWLEDGED_EVENT, onStoreChange);
-  return () => window.removeEventListener(RULES_ACKNOWLEDGED_EVENT, onStoreChange);
+  window.addEventListener(ARRIVAL_INTRO_SEEN_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener(RULES_ACKNOWLEDGED_EVENT, onStoreChange);
+    window.removeEventListener(ARRIVAL_INTRO_SEEN_EVENT, onStoreChange);
+  };
 }
 
-function getSnapshot(): boolean {
-  return localStorage.getItem(RULES_ACKNOWLEDGED_KEY) === "true";
+function getSnapshot(): HomeGateStage {
+  const rulesAcknowledged = localStorage.getItem(RULES_ACKNOWLEDGED_KEY) === "true";
+  if (!rulesAcknowledged) return "rules-required";
+
+  const arrivalIntroSeen = localStorage.getItem(ARRIVAL_INTRO_SEEN_KEY) === "true";
+  if (!arrivalIntroSeen) return "intro-required";
+
+  return "ready";
 }
 
-// Server (and the client's first hydration pass) always sees "not yet acknowledged"
-// — localStorage doesn't exist there. useSyncExternalStore resyncs to the real client
-// value right after hydration on its own, without the hydration-mismatch risk of
-// reading localStorage during a lazy useState initializer or setting state in a plain
-// effect.
-function getServerSnapshot(): boolean {
-  return false;
+// The server cannot read localStorage, so use Refugio's safest initial state:
+// require the rules until hydration finishes and getSnapshot reads the visitor's
+// real stage from the browser.
+function getServerSnapshot(): HomeGateStage {
+  return "rules-required";
 }
 
 // Owns the one piece of client state Home needs: whether the rules modal has been
@@ -33,18 +47,29 @@ function getServerSnapshot(): boolean {
 // visit starts silent, a mood/ambience choice), this is a safety disclosure —
 // re-showing it on every single visit to someone who already read it (or already
 // completed the whole flow) is just friction, not reinforcement.
-export function HomeGate() {
-  const acknowledged = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
+  const router = useRouter();
+  const stage = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   function handleAcknowledge() {
     localStorage.setItem(RULES_ACKNOWLEDGED_KEY, "true");
     window.dispatchEvent(new Event(RULES_ACKNOWLEDGED_EVENT));
   }
 
+  function handleIntroDone() {
+    localStorage.setItem(ARRIVAL_INTRO_SEEN_KEY, "true");
+    window.dispatchEvent(new Event(ARRIVAL_INTRO_SEEN_EVENT));
+    router.push("/arrive");
+  }
+
+  if (stage === "intro-required") {
+    return <ArrivalIntro onDone={handleIntroDone} phrase={introPhrase} />;
+  }
+
   return (
     <>
-      {!acknowledged && <RulesGate onAcknowledge={handleAcknowledge} />}
-      <ScreenCta href="/arrive" label="Enter" accentRgb="200,160,30" disabled={!acknowledged} />
+      {stage === "rules-required" && <RulesGate onAcknowledge={handleAcknowledge} />}
+      <ScreenCta href="/arrive" label="Enter" accentRgb="200,160,30" disabled={stage !== "ready"} />
     </>
   );
 }
