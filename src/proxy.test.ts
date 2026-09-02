@@ -63,6 +63,25 @@ describe("locale routing proxy", () => {
     expect(response.headers.get("x-intl")).toBe("handled");
   });
 
+  it.each([
+    ["/fr", "/en"],
+    ["/FR/observe?from=test", "/en/observe?from=test"],
+  ])("falls back from unsupported locale %s to %s", async (source, destination) => {
+    const response = await proxy(request(source));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`http://localhost${destination}`);
+    expect(intlMiddlewareMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves ordinary unprefixed paths to locale negotiation", async () => {
+    isSitePublicMock.mockResolvedValueOnce(true);
+
+    const response = await proxy(request("/unknown"));
+
+    expect(response.headers.get("x-intl")).toBe("handled");
+  });
+
   it("applies the contribute gate after stripping either locale prefix", async () => {
     isContributeOpenMock.mockResolvedValue(true);
 

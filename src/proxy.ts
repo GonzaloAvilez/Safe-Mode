@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
-import { isLocale } from "@/lib/locale";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/locale";
 import { isContributeOpen, isSitePublic } from "@/lib/settings";
 
 const intlMiddleware = createMiddleware(routing);
@@ -15,6 +15,14 @@ function stripLocalePrefix(pathname: string): string {
 
 function isLocaleIndependentPage(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/closed";
+}
+
+function replaceUnsupportedLocale(pathname: string): string | null {
+  const [, possibleLocale, ...rest] = pathname.split("/");
+  if (!/^[a-z]{2}$/i.test(possibleLocale) || isLocale(possibleLocale)) return null;
+
+  const suffix = rest.length > 0 ? `/${rest.join("/")}` : "";
+  return `/${DEFAULT_LOCALE}${suffix}`;
 }
 
 // Duplicated from admin-session.ts rather than shared: that module calls next/headers'
@@ -49,6 +57,17 @@ function isValidAdminCookie(value: string | undefined): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const fallbackPathname = replaceUnsupportedLocale(pathname);
+
+  // A language-shaped but unsupported first segment is an explicit locale request,
+  // not an unprefixed application path. Fall back to English instead of letting the
+  // intl middleware produce confusing nested paths such as /es/fr.
+  if (fallbackPathname) {
+    const fallbackUrl = request.nextUrl.clone();
+    fallbackUrl.pathname = fallbackPathname;
+    return NextResponse.redirect(fallbackUrl);
+  }
+
   const publicPathname = stripLocalePrefix(pathname);
 
   // Admin and the closed page have one canonical, locale-independent URL. Preserve
