@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
-import { useParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { CONTRIBUTE_ORIGIN } from "@/lib/phrase-origin";
-import type { Locale } from "@/lib/locale";
 
 const MAX_TEXT_LENGTH = 400;
 
@@ -15,7 +14,9 @@ type Status = { type: "error"; message: string } | { type: "saved" } | null;
 // several submissions in one sitting, so a successful submit clears the field and loops
 // back to a blank form instead of resolving to a closing screen.
 export function ContributeForm() {
-  const { locale } = useParams<{ locale: Locale }>();
+  const t = useTranslations("contribute");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
@@ -31,18 +32,18 @@ export function ContributeForm() {
       const res = await fetch("/api/phrases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          text, 
-          honeypot, 
+        body: JSON.stringify({
+          text,
+          honeypot,
           formRenderedAt,
           origin: CONTRIBUTE_ORIGIN,
           locale,
-         }),
+        }),
       });
 
       if (!res.ok) {
         const body = await res.json();
-        setStatus({ type: "error", message: body.error ?? "Something went wrong." });
+        setStatus({ type: "error", message: body.error ?? tc("errors.somethingWrong") });
         setSubmitting(false);
         return;
       }
@@ -52,7 +53,7 @@ export function ContributeForm() {
       setStatus({ type: "saved" });
       setSubmitting(false);
     } catch {
-      setStatus({ type: "error", message: "We couldn't connect. Try again." });
+      setStatus({ type: "error", message: tc("errors.couldntConnect") });
       setSubmitting(false);
     }
   }
@@ -67,7 +68,7 @@ export function ContributeForm() {
           if (status) setStatus(null);
         }}
         maxLength={MAX_TEXT_LENGTH}
-        placeholder="write one, just as it is..."
+        placeholder={t("placeholder")}
         rows={4}
         className="w-full resize-none rounded-lg border border-white/12 bg-white/[0.02] p-4 text-[14px] leading-[1.8] tracking-[.2px] text-white/85 placeholder:text-white/25 outline-none transition-colors duration-300 focus:border-[rgba(200,160,30,0.4)]"
       />
@@ -77,7 +78,7 @@ export function ContributeForm() {
       )}
       {status?.type === "saved" && (
         <p className="text-center text-[14px] leading-[1.6] tracking-[.3px] text-[rgba(200,160,30,0.75)]">
-          Added. Leave another whenever you&rsquo;re ready.
+          {t("saved")}
         </p>
       )}
 
@@ -86,12 +87,12 @@ export function ContributeForm() {
         disabled={submitting || text.trim().length === 0}
         className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
       >
-        {submitting ? "Saving…" : "Add phrase"}
+        {submitting ? tc("saving") : t("submit")}
       </button>
 
       {count > 0 && (
         <p className="text-center text-[13px] tracking-[.3px] text-white/25">
-          {count} {count === 1 ? "phrase" : "phrases"} added so far — thank you.
+          {t("countLabel", { count })}
         </p>
       )}
     </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 
 // Screen positions for where a phrase can appear, spread across most of the viewport
 // instead of one small central cluster — kept away from the header (top-left, ~top-10),
@@ -48,9 +49,9 @@ function prefersReducedMotion(): boolean {
 // "23 minutes ago" instead of an absolute date — a real submission time reads as more
 // alive/recent this way, and it matches how the rest of the app already speaks (English,
 // resolved 2026-07-15).
-function formatRelativeTime(iso: string): string {
+function formatRelativeTime(iso: string, locale: string): string {
   const diffMinutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
   if (Math.abs(diffMinutes) < 60) return rtf.format(-diffMinutes, "minute");
   const diffHours = Math.round(diffMinutes / 60);
@@ -90,6 +91,7 @@ function nextRandomIndex(length: number, current: number): number {
 // time — evidence instead of a description, per the "never presume/explain, just show
 // what's real" principle already established for the rest of this flow.
 export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
+  const locale = useLocale();
   const [index, setIndex] = useState(() => randomStartIndex(phrases.length));
   const [visible, setVisible] = useState(true);
   const reduced = prefersReducedMotion();
@@ -146,7 +148,7 @@ export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
         )}
         {current.createdAt && (
           <p className="mt-1.5 text-right text-[13px] tracking-[.3px] text-white/25">
-            {formatRelativeTime(current.createdAt)}
+            {formatRelativeTime(current.createdAt, locale)}
           </p>
         )}
       </div>

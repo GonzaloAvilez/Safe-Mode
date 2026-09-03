@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AmbientGlowBackground } from "../../_shared/ambient-glow-background";
 import { ScreenHeader } from "../../_shared/screen-header";
 
@@ -22,6 +23,8 @@ export function ObserveMeditation({
   readyToResume: boolean;
   onResume: () => void;
 }) {
+  const t = useTranslations("observe.meditation");
+  const tc = useTranslations("common");
   const [inhaling, setInhaling] = useState(true);
 
   useEffect(() => {
@@ -36,7 +39,7 @@ export function ObserveMeditation({
   return (
     <div className="fixed inset-0 z-30">
       <AmbientGlowBackground />
-      <ScreenHeader tagline="A moment to breathe." />
+      <ScreenHeader tagline={t("tagline")} />
 
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-8 px-8 text-center">
         <div
@@ -50,13 +53,11 @@ export function ObserveMeditation({
         />
 
         <div className="max-w-[300px] text-[16px] leading-[1.8] tracking-[.3px] text-white/45">
-          {inhaling ? "Breathe in..." : "Breathe out..."}
+          {inhaling ? t("breatheIn") : t("breatheOut")}
         </div>
 
         <div className="max-w-[300px] text-[14px] leading-[1.7] tracking-[.3px] text-white/30">
-          {readyToResume
-            ? "Your refuge is ready."
-            : "We're taking longer than usual to connect. Stay here a moment, or come back later."}
+          {readyToResume ? t("ready") : t("stillConnecting")}
         </div>
 
         {readyToResume && (
@@ -65,7 +66,7 @@ export function ObserveMeditation({
             onClick={onResume}
             className="rounded-full border border-[rgba(200,160,30,0.4)] px-6 py-2 text-[13px] tracking-[1px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.7)] hover:text-white/85"
           >
-            Continue
+            {tc("continue")}
           </button>
         )}
       </div>

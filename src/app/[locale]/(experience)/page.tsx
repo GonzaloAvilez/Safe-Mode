@@ -1,4 +1,7 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
+import { isLocale } from "@/lib/locale";
 import { ScreenHeader } from "./_shared/screen-header";
 import { AmbientGlowBackground } from "./_shared/ambient-glow-background";
 import { LivingPhrasesFeed } from "./_components/living-phrases-feed";
@@ -21,17 +24,21 @@ export const dynamic = "force-dynamic";
 // RulesGate modal (inside HomeGate) no longer waits on the phrases query. Only
 // LivingPhrasesFeed's Supabase reads happen inside the Suspense boundary below; see
 // its own file for why that fetch is isolated out of this page.
-export default function HomePage() {
+export default async function HomePage({ params }: PageProps<"/[locale]">) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+  const t = await getTranslations({ locale, namespace: "home" });
+
   return (
     <>
       <AmbientGlowBackground />
       <Suspense fallback={null}>
-        <LivingPhrasesFeed />
+        <LivingPhrasesFeed locale={locale} />
       </Suspense>
 
-      <ScreenHeader tagline="Ecosystem of presences." />
+      <ScreenHeader tagline={t("tagline")} />
 
-      <HomeGate introPhrase={<Suspense fallback={null}><ArrivalPhrase /></Suspense>} />
+      <HomeGate introPhrase={<Suspense fallback={null}><ArrivalPhrase locale={locale} /></Suspense>} />
     </>
   );
 }

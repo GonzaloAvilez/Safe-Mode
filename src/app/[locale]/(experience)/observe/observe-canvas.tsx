@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { SCENE_BG_HEX } from "../_shared/scene";
 import { startAnimationLoop } from "../_shared/animation-loop";
 import { ScreenCta } from "../_shared/screen-cta";
@@ -42,18 +43,6 @@ const TOOLTIP_REVEAL_DELAY_MS = 450;
 // mouse hover or almost every tap misses the small dots entirely.
 const MOUSE_HOVER_RADIUS = 14;
 const TOUCH_HOVER_RADIUS = 28;
-
-// The lead line frames someone else's act, never the viewer's state — it must hold up
-// whether the visitor arrives sleepy, mid-focus, already relaxed, or restless, so it
-// stays short, concrete, and free of any claim about how the viewer feels right now.
-// One is picked per session (not per hover) so a single visit reads as consistent.
-const LEAD_PHRASES = [
-  "someone decided not to hide this",
-  "this existed before you got here",
-  "someone left this, just as it is",
-  "someone decided to share it and let go",
-  "someone decided to share this just as it is",
-];
 
 // Global repulsion (all pairs, falls off with distance) keeps distinct clusters apart —
 // without it, attraction alone collapses the whole corpus toward one blob, since enough
@@ -105,13 +94,6 @@ function repelFromZone(p: Point, zone: Rect, margin: number, strength: number) {
 
 function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
-}
-
-// A 0 isn't evidence of anything, so it renders as nothing rather than "0 others" —
-// the whole point of showing this at all is proof someone else was here, not a stat.
-function resonanceCountLabel(count: number): string {
-  if (count <= 0) return "";
-  return count === 1 ? "1 other felt this too" : `${count} others felt this too`;
 }
 
 class Point {
@@ -244,6 +226,18 @@ export function ObserveCanvas({
   similarities: number[][];
   resonateEnabled?: boolean;
 }) {
+  // Named tObserve, not t — this effect's animation loop already uses a local `let t`
+  // for elapsed time, and since JS closures resolve identifiers lexically regardless of
+  // textual order, a same-named `t` here would silently shadow that one inside every
+  // handler defined in the same effect (confirmed via `tsc`: "Number has no call
+  // signatures" the moment this collided).
+  const tObserve = useTranslations("observe");
+  // The lead line frames someone else's act, never the viewer's state — it must hold
+  // up whether the visitor arrives sleepy, mid-focus, already relaxed, or restless, so
+  // it stays short, concrete, and free of any claim about how the viewer feels right
+  // now. One is picked per session (not per hover) so a single visit reads as
+  // consistent — memoized on `tObserve` (stable per locale) rather than re-read every render.
+  const leadPhrases = useMemo(() => tObserve.raw("leadPhrases") as string[], [tObserve]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const tooltipLeadRef = useRef<HTMLDivElement>(null);
@@ -328,7 +322,7 @@ export function ObserveCanvas({
     // One lead phrase for the whole session, not re-rolled per hover — otherwise the
     // same visit would show a different framing line on every point, which reads as
     // random UI copy rather than a single consistent presence.
-    const leadPhrase = LEAD_PHRASES[Math.floor(Math.random() * LEAD_PHRASES.length)];
+    const leadPhrase = leadPhrases[Math.floor(Math.random() * leadPhrases.length)];
 
     // Which point is currently held under the cursor, and the pending timer that will
     // reveal its phrase — tracked outside handleMouseMove so a reveal in flight can be
@@ -465,10 +459,10 @@ export function ObserveCanvas({
           if (resonateButtonEl && hovered.phraseIndex !== null) {
             const phrase = phrases[hovered.phraseIndex];
             const already = resonatedIds.has(phrase.id);
-            resonateButtonEl.textContent = already ? "💛 this resonated" : "✨ this resonates";
+            resonateButtonEl.textContent = already ? tObserve("resonatedLabel") : tObserve("resonateLabel");
             resonateButtonEl.disabled = already;
             resonateButtonEl.setAttribute("aria-pressed", String(already));
-            if (resonateCountEl) resonateCountEl.textContent = resonanceCountLabel(phrase.resonanceCount ?? 0);
+            if (resonateCountEl) resonateCountEl.textContent = tObserve("resonanceCount", { count: phrase.resonanceCount ?? 0 });
           }
 
           tooltipSize = {
@@ -503,7 +497,7 @@ export function ObserveCanvas({
 
       resonatedIds.add(phraseId);
       if (resonateButtonEl) {
-        resonateButtonEl.textContent = "💛 this resonated";
+        resonateButtonEl.textContent = tObserve("resonatedLabel");
         resonateButtonEl.disabled = true;
         resonateButtonEl.setAttribute("aria-pressed", "true");
       }
@@ -519,7 +513,7 @@ export function ObserveCanvas({
         const currentPhraseId =
           hoverTarget && hoverTarget.phraseIndex !== null ? phrases[hoverTarget.phraseIndex].id : null;
         if (resonateCountEl && currentPhraseId === phraseId) {
-          resonateCountEl.textContent = resonanceCountLabel(phrase.resonanceCount);
+          resonateCountEl.textContent = tObserve("resonanceCount", { count: phrase.resonanceCount });
         }
       }
     }
@@ -711,7 +705,7 @@ export function ObserveCanvas({
       if (revealTimer) clearTimeout(revealTimer);
       if (hoverLossTimer) clearTimeout(hoverLossTimer);
     };
-  }, [phrases, similarities, resonateEnabled]);
+  }, [phrases, similarities, resonateEnabled, leadPhrases, tObserve]);
 
   return (
     <>
@@ -719,16 +713,12 @@ export function ObserveCanvas({
 
       <div
         ref={captionZoneRef}
-        className="fixed top-24 left-12 z-10 max-w-[260px] text-[16px] leading-[1.7] tracking-[.3px] text-white/22 sm:top-auto sm:bottom-12"
+        className="fixed top-24 left-12 z-10 max-w-[260px] whitespace-pre-line text-[16px] leading-[1.7] tracking-[.3px] text-white/22 sm:top-auto sm:bottom-12"
       >
-        Every light you see
-        <br />
-        is someone who dared
-        <br />
-        to show themselves for a moment.
+        {tObserve("caption")}
       </div>
 
-      <ScreenCta ref={buttonZoneRef} href="/remember" label="Enter without doing anything" accentRgb="200,160,30" />
+      <ScreenCta ref={buttonZoneRef} href="/remember" label={tObserve("enterCta")} accentRgb="200,160,30" />
 
       <div
         ref={tooltipRef}

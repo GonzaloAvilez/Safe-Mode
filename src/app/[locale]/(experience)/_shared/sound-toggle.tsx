@@ -1,6 +1,7 @@
 "use client";
 
 import { Music } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { setSoundEnabled } from "./handpan-audio";
 
@@ -10,6 +11,7 @@ import { setSoundEnabled } from "./handpan-audio";
 // underlying AudioContext singleton in handpan-audio.ts) persists across client-side
 // navigation between screens instead of resetting per-page.
 export function SoundToggle() {
+  const t = useTranslations("common");
   const [enabled, setEnabled] = useState(false);
 
   function toggle() {
@@ -23,9 +25,9 @@ export function SoundToggle() {
       type="button"
       onClick={toggle}
       aria-pressed={enabled}
-      aria-label={enabled ? "Turn sound off" : "Turn sound on"}
+      aria-label={enabled ? t("soundOff") : t("soundOn")}
       data-ui-zone="sound-toggle"
-      className={`group fixed top-24 right-12 z-20 flex items-center gap-2 transition-colors duration-300 sm:top-10 ${
+      className={`group fixed top-24 right-12 z-20 flex items-center gap-2 transition-colors duration-300 ${
         enabled ? "text-[rgba(248,230,170,0.95)]" : "text-white/70 hover:text-white"
       }`}
     >

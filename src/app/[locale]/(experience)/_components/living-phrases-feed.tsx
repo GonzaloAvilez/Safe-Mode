@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import type { Locale } from "@/lib/locale";
 import { isPublicNarrativeEnabled } from "@/lib/settings";
 import { excerpt } from "./excerpt";
 import { LivingPhrases, type LivingPhraseItem } from "./living-phrases";
@@ -12,8 +13,12 @@ import { LivingPhrases, type LivingPhraseItem } from "./living-phrases";
 // isn't "when this was felt," it's when whoever wrote it — seed phrases too, real
 // reflections, not placeholder content — dared to share it. Still gated behind this
 // same flag for now, not its own toggle yet.
-async function fetchPhrasesWithNarratives(): Promise<LivingPhraseItem[]> {
-  const { data } = await supabaseAdmin.from("phrases").select("id, text, source, created_at").eq("active", true);
+async function fetchPhrasesWithNarratives(locale: Locale): Promise<LivingPhraseItem[]> {
+  const { data } = await supabaseAdmin
+    .from("phrases")
+    .select("id, text, source, created_at")
+    .eq("active", true)
+    .eq("language", locale);
   const rows = data ?? [];
 
   let narrativesByPhraseId = new Map<string, { public_narrative: string }>();
@@ -42,12 +47,12 @@ async function fetchPhrasesWithNarratives(): Promise<LivingPhraseItem[]> {
 // so the phrases query doesn't block the static shell — RulesGate/HomeGate carry no
 // data dependency of their own and can stream immediately while this resolves. See
 // the Suspense boundary around this component in page.tsx.
-export async function LivingPhrasesFeed() {
+export async function LivingPhrasesFeed({ locale }: { locale: Locale }) {
   const narrativeEnabled = await isPublicNarrativeEnabled();
 
   const phrases = narrativeEnabled
-    ? await fetchPhrasesWithNarratives()
-    : (await supabaseAdmin.from("phrases").select("text").eq("active", true)).data?.map((row) => ({
+    ? await fetchPhrasesWithNarratives(locale)
+    : (await supabaseAdmin.from("phrases").select("text").eq("active", true).eq("language", locale)).data?.map((row) => ({
         text: excerpt(row.text),
       })) ?? [];
 
