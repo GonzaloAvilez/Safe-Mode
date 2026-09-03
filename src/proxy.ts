@@ -64,7 +64,8 @@ function isValidAdminCookie(value: string | undefined): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const localeAlias = resolveLocaleAlias(pathname);
+  const isApiPath = pathname === "/api" || pathname.startsWith("/api/");
+  const localeAlias = isApiPath ? null : resolveLocaleAlias(pathname);
 
   // Normalize BCP 47 aliases such as es-MX to the supported base language. Unknown
   // languages fall back to English. APIs remain strict: a prefixed API is invalid and

@@ -34,6 +34,19 @@ describe("locale routing proxy", () => {
     expect(intlMiddlewareMock).not.toHaveBeenCalled();
   });
 
+  it.each(["/api/observe?locale=es", "/api/entries", "/api/phrases"])(
+    "does not canonicalize the unprefixed API path %s as a locale alias",
+    async (pathname) => {
+      if (pathname !== "/api/phrases") isSitePublicMock.mockResolvedValueOnce(true);
+
+      const response = await proxy(request(pathname));
+
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("x-intl")).toBeNull();
+      expect(intlMiddlewareMock).not.toHaveBeenCalled();
+    }
+  );
+
   it("hands public experience routes to locale negotiation", async () => {
     isSitePublicMock.mockResolvedValueOnce(true);
 
@@ -55,13 +68,17 @@ describe("locale routing proxy", () => {
     expect(intlMiddlewareMock).not.toHaveBeenCalled();
   });
 
-  it("does not canonicalize a locale-prefixed API path", async () => {
-    isSitePublicMock.mockResolvedValueOnce(true);
+  it.each(["/es/api/observe", "/es/api/entries"])(
+    "does not canonicalize the locale-prefixed API path %s into a working API",
+    async (pathname) => {
+      isSitePublicMock.mockResolvedValueOnce(true);
 
-    const response = await proxy(request("/es/api/entries"));
+      const response = await proxy(request(pathname));
 
-    expect(response.headers.get("x-intl")).toBe("handled");
-  });
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("x-intl")).toBe("handled");
+    }
+  );
 
   it.each([
     ["/fr", "/en"],
