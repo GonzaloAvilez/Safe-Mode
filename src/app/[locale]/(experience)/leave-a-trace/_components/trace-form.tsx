@@ -4,6 +4,8 @@ import { useState, type SubmitEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
+import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
+import { useRitualState } from "@/app/_components/experience-state/ritual";
 const MAX_TEXT_LENGTH = 400;
 
 type ErrorOutcome = { message: string } | null;
@@ -22,14 +24,16 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
   const t = useTranslations("leaveATrace");
   const tc = useTranslations("common");
   const locale = useLocale();
-  const [text, setText] = useState("");
+  const { leaveATraceDraft: text, setLeaveATraceDraft: setText } = useRitualState();
+  const { lock: lockLocaleSwitch, unlock: unlockLocaleSwitch } = useLocaleTransition();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<ErrorOutcome>(null);
-  const { honeypot, setHoneypot, formRenderedAt } = useHoneypot();
+  const { honeypot, setHoneypot, formRenderedAt } = useHoneypot("leave-a-trace");
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setSubmitting(true);
+    lockLocaleSwitch();
     setError(null);
 
     try {
@@ -49,13 +53,17 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
         const body = await res.json();
         setError({ message: body.error ?? tc("errors.somethingWrong") });
         setSubmitting(false);
+        unlockLocaleSwitch();
         return;
       }
 
+      setText("");
+      unlockLocaleSwitch();
       onResolved("submitted");
     } catch {
       setError({ message: tc("errors.couldntConnect") });
       setSubmitting(false);
+      unlockLocaleSwitch();
     }
   }
 
@@ -85,7 +93,10 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
         </button>
         <button
           type="button"
-          onClick={() => onResolved("skipped")}
+          onClick={() => {
+            setText("");
+            onResolved("skipped");
+          }}
           disabled={submitting}
           className="text-[13px] tracking-[.5px] text-white/25 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/45 disabled:pointer-events-none disabled:opacity-30"
         >

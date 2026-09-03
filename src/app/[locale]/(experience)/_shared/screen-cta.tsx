@@ -16,12 +16,13 @@ type ScreenCtaProps = {
   // Opt-in only — Home is the one screen that needs to block "entrar" until its
   // rules modal is acknowledged; every other screen leaves this unset.
   disabled?: boolean;
+  onClick?: () => void;
 };
 
 // Forwards its ref to the underlying <a> so Observe's canvas can still measure this
 // button's bounding box for the particle field's UI-exclusion zone.
 export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function ScreenCta(
-  { href, label, accentRgb, disabled = false },
+  { href, label, accentRgb, disabled = false, onClick },
   ref
 ) {
   const { locale } = useParams<{ locale: Locale }>();
@@ -52,7 +53,10 @@ export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function 
     <Link
       ref={ref}
       href={localizedHref}
-      onClick={playTransition}
+      onClick={() => {
+        playTransition();
+        onClick?.();
+      }}
       style={cssVars}
       className="group/enter fixed bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5"
     >

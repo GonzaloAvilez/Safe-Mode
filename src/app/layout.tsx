@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { getLocale } from "next-intl/server";
+import { ExperienceProviders } from "./_components/experience-state/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,7 +31,9 @@ export default async function RootLayout({
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ExperienceProviders>{children}</ExperienceProviders>
+      </body>
     </html>
   );
 }
