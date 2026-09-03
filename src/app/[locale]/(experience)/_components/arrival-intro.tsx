@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { useExperiencePreferences } from "@/app/_components/experience-state/preferences";
 import { AmbientGlowBackground } from "../_shared/ambient-glow-background";
 import { SCENE_BG_CLASS } from "../_shared/scene";
 
@@ -13,7 +14,7 @@ const LAST_BEAT = 2;
 export function ArrivalIntro({ onDone, phrase }: { onDone: () => void; phrase: ReactNode }) {
   const t = useTranslations("arrivalIntro");
   const tc = useTranslations("common");
-  const [beat, setBeat] = useState(0);
+  const { arrivalBeat: beat, setArrivalBeat: setBeat } = useExperiencePreferences();
   const steps = t.raw("steps") as Array<{ title: string; detail: string }>;
 
   function advance() {

@@ -2,7 +2,7 @@
 
 import { Music } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useExperiencePreferences } from "@/app/_components/experience-state/preferences";
 import { setSoundEnabled } from "./handpan-audio";
 
 // Off by default, every fresh load — no autoplay, ever. This is a wellness app that
@@ -12,7 +12,7 @@ import { setSoundEnabled } from "./handpan-audio";
 // navigation between screens instead of resetting per-page.
 export function SoundToggle() {
   const t = useTranslations("common");
-  const [enabled, setEnabled] = useState(false);
+  const { soundEnabled: enabled, setSoundEnabled: setEnabled } = useExperiencePreferences();
 
   function toggle() {
     const next = !enabled;

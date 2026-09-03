@@ -4,6 +4,8 @@ import { useState, type SubmitEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { CONTRIBUTE_ORIGIN } from "@/lib/phrase-origin";
+import { useContributionState } from "@/app/_components/experience-state/contribution";
+import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 
 const MAX_TEXT_LENGTH = 400;
 
@@ -17,16 +19,18 @@ export function ContributeForm() {
   const t = useTranslations("contribute");
   const tc = useTranslations("common");
   const locale = useLocale();
-  const [text, setText] = useState("");
+  const { draft: text, setDraft: setText, count, setCount, saved, setSaved } = useContributionState();
+  const { lock: lockLocaleSwitch, unlock: unlockLocaleSwitch } = useLocaleTransition();
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
-  const [count, setCount] = useState(0);
-  const { honeypot, setHoneypot, formRenderedAt } = useHoneypot();
+  const { honeypot, setHoneypot, formRenderedAt, restartHoneypot } = useHoneypot("contribute");
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setSubmitting(true);
+    lockLocaleSwitch();
     setStatus(null);
+    setSaved(false);
 
     try {
       const res = await fetch("/api/phrases", {
@@ -45,16 +49,21 @@ export function ContributeForm() {
         const body = await res.json();
         setStatus({ type: "error", message: body.error ?? tc("errors.somethingWrong") });
         setSubmitting(false);
+        unlockLocaleSwitch();
         return;
       }
 
       setText("");
       setCount((c) => c + 1);
       setStatus({ type: "saved" });
+      setSaved(true);
+      restartHoneypot();
       setSubmitting(false);
+      unlockLocaleSwitch();
     } catch {
       setStatus({ type: "error", message: tc("errors.couldntConnect") });
       setSubmitting(false);
+      unlockLocaleSwitch();
     }
   }
 
@@ -66,6 +75,7 @@ export function ContributeForm() {
         onChange={(event) => {
           setText(event.target.value);
           if (status) setStatus(null);
+          if (saved) setSaved(false);
         }}
         maxLength={MAX_TEXT_LENGTH}
         placeholder={t("placeholder")}
@@ -76,7 +86,7 @@ export function ContributeForm() {
       {status?.type === "error" && (
         <p className="text-center text-[14px] leading-[1.6] tracking-[.3px] text-white/50">{status.message}</p>
       )}
-      {status?.type === "saved" && (
+      {(status?.type === "saved" || saved) && (
         <p className="text-center text-[14px] leading-[1.6] tracking-[.3px] text-[rgba(200,160,30,0.75)]">
           {t("saved")}
         </p>

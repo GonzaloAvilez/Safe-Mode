@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { ScreenCta } from "../../_shared/screen-cta";
@@ -9,6 +9,8 @@ import { readMirrorHandoff } from "../../_shared/mirror-handoff";
 import { playRandomNote } from "../../_shared/handpan-audio";
 import { MirrorCanvas } from "../mirror-canvas";
 import { QuoteReveal } from "./quote-reveal";
+import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
+import { useRitualState } from "@/app/_components/experience-state/ritual";
 
 // The node kept barely lit rather than gone for no_match — nobody's presence gets
 // erased for not matching, there's just no specific phrase behind it yet.
@@ -42,8 +44,8 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
   const tc = useTranslations("common");
   const router = useRouter();
   const handoff = useSyncExternalStore(subscribeToHandoff, readMirrorHandoff, getServerHandoffSnapshot);
-  const [resonated, setResonated] = useState(false);
-  const [wantsToConnect, setWantsToConnect] = useState(false);
+  const { mirrorInteraction, setMirrorInteraction } = useRitualState();
+  const { unlock: unlockLocaleSwitch } = useLocaleTransition();
 
   // Deliberately not keyed on `handoff` — the hydration resync above commits in two
   // steps (server-matching null, then the real client value), and this effect would
@@ -53,23 +55,29 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
   // client-side and past mount, so the real sessionStorage value is what's read
   // regardless of which render triggered it. Runs once, tied only to mount.
   useEffect(() => {
+    unlockLocaleSwitch();
     if (!readMirrorHandoff()) {
       router.replace("/write");
     }
-  }, [router]);
+  }, [router, unlockLocaleSwitch]);
 
   if (!handoff) {
     return null;
   }
 
   const matched = handoff.outcome === "matched";
+  const interaction =
+    mirrorInteraction.entryId === handoff.entryId
+      ? mirrorInteraction
+      : { entryId: handoff.entryId, resonated: false, wantsToConnect: false };
+  const { resonated, wantsToConnect } = interaction;
 
   // One-shot, not a toggle — same phrase-level signal as Observe's resonate button
   // (see /api/phrases/[id]/resonate), which never offered an undo either. Once tapped,
   // it stays tapped.
   async function handleResonate() {
     if (resonated || handoff!.outcome !== "matched") return;
-    setResonated(true);
+    setMirrorInteraction({ ...interaction, resonated: true });
     playRandomNote();
     try {
       await fetch(`/api/phrases/${handoff!.phraseId}/resonate`, { method: "POST" });
@@ -83,7 +91,7 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
   // would fight the quiet, unforced tone the rest of the flow keeps.
   async function handleConnect() {
     const next = !wantsToConnect;
-    setWantsToConnect(next);
+    setMirrorInteraction({ ...interaction, wantsToConnect: next });
     if (next) playRandomNote();
     if (handoff!.outcome !== "matched") return;
     try {

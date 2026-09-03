@@ -7,18 +7,14 @@ import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import { writeMirrorHandoff } from "../../_shared/mirror-handoff";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { Searching } from "./searching";
+import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
+import { useRitualState, type WriteOutcome } from "@/app/_components/experience-state/ritual";
 
 const MAX_TEXT_LENGTH = 800;
 
-export type Outcome =
-  | { type: "crisis" }
-  | { type: "general_flagged" }
-  | { type: "cap_reached" }
-  | { type: "error"; message: string };
-
 type EntryFormProps = {
-  outcome: Outcome | null;
-  onOutcomeChange: (outcome: Outcome | null) => void;
+  outcome: WriteOutcome | null;
+  onOutcomeChange: (outcome: WriteOutcome | null) => void;
 };
 
 export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
@@ -26,13 +22,15 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
   const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
-  const [text, setText] = useState("");
+  const { writeDraft: text, setWriteDraft: setText } = useRitualState();
+  const { lock: lockLocaleSwitch, unlock: unlockLocaleSwitch } = useLocaleTransition();
   const [submitting, setSubmitting] = useState(false);
-  const { honeypot, setHoneypot, formRenderedAt } = useHoneypot();
+  const { honeypot, setHoneypot, formRenderedAt, restartHoneypot } = useHoneypot("write");
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setSubmitting(true);
+    lockLocaleSwitch();
 
     try {
       const res = await fetch("/api/entries", {
@@ -46,6 +44,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       if (!res.ok) {
         onOutcomeChange({ type: "error", message: body.error ?? tc("errors.somethingWrong") });
         setSubmitting(false);
+        unlockLocaleSwitch();
         return;
       }
 
@@ -56,6 +55,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
           entryId: body.entryId,
           phraseId: body.phrase.id,
         });
+        setText("");
         router.push("/mirror");
         // Leave submitting=true — Searching stays on screen through the route swap
         // instead of the form flashing back for a frame first.
@@ -66,21 +66,25 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         // No phrase to mirror back, but the visitor still passes through Mirror
         // rather than dead-ending here — see MirrorPage's no_match rendering.
         writeMirrorHandoff({ outcome: "no_match", entryId: body.entryId });
+        setText("");
         router.push("/mirror");
         return;
       }
 
       onOutcomeChange({ type: body.type });
       setSubmitting(false);
+      unlockLocaleSwitch();
     } catch {
       onOutcomeChange({ type: "error", message: tc("errors.couldntConnect") });
       setSubmitting(false);
+      unlockLocaleSwitch();
     }
   }
 
   function reset() {
     setText("");
     onOutcomeChange(null);
+    restartHoneypot();
   }
 
   if (submitting) {
@@ -125,7 +129,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
   );
 }
 
-function OutcomeMessage({ outcome }: { outcome: Outcome }) {
+function OutcomeMessage({ outcome }: { outcome: WriteOutcome }) {
   const t = useTranslations("write.outcome");
 
   switch (outcome.type) {

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRitualState } from "@/app/_components/experience-state/ritual";
 import { ScreenHeader } from "../_shared/screen-header";
 import { ScreenPrompt } from "../_shared/screen-prompt";
-import { EntryForm, type Outcome } from "./_components/entry-form";
+import { EntryForm } from "./_components/entry-form";
 
 export default function WritePage() {
   const t = useTranslations("write");
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const { writeOutcome: outcome, setWriteOutcome: setOutcome } = useRitualState();
 
   return (
     <>

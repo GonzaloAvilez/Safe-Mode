@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import type { Locale } from "@/lib/locale";
+import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 
 const OPTIONS: Array<{ locale: Locale; shortLabel: string; messageKey: "english" | "spanish" }> = [
   { locale: "en", shortLabel: "EN", messageKey: "english" },
@@ -15,14 +16,19 @@ export function replaceLocaleInPathname(pathname: string, locale: Locale): strin
   return segments.join("/") || `/${locale}`;
 }
 
+export function canSwitchLocale(currentLocale: string, nextLocale: Locale, locked: boolean): boolean {
+  return currentLocale !== nextLocale && !locked;
+}
+
 export function LanguageSelector() {
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations("languageSelector");
+  const { locked, isLocked } = useLocaleTransition();
 
   function switchLocale(nextLocale: Locale) {
-    if (nextLocale === locale) return;
+    if (!canSwitchLocale(locale, nextLocale, isLocked())) return;
 
     const nextPathname = replaceLocaleInPathname(pathname, nextLocale);
     router.replace(`${nextPathname}${window.location.search}`);
@@ -42,8 +48,9 @@ export function LanguageSelector() {
             type="button"
             aria-label={t(option.messageKey)}
             aria-pressed={selected}
+            disabled={locked}
             onClick={() => switchLocale(option.locale)}
-            className={`rounded-full px-2.5 py-1.5 transition-colors duration-300 ${
+            className={`rounded-full px-2.5 py-1.5 transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-35 ${
               selected
                 ? "bg-white/10 text-white/85"
                 : "text-white/35 hover:bg-white/[0.06] hover:text-white/65"
