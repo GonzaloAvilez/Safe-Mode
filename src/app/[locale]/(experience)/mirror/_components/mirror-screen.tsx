@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { useParams, useRouter } from "next/navigation";
-import type { Locale } from "@/lib/locale";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { ScreenCta } from "../../_shared/screen-cta";
 import { ScreenHeader } from "../../_shared/screen-header";
 import { readMirrorHandoff } from "../../_shared/mirror-handoff";
@@ -38,7 +38,8 @@ function getServerHandoffSnapshot() {
 // than dead-ending in Write). Write stashes which one in sessionStorage before
 // navigating; a direct visit has nothing to read, so it bounces back to Write.
 export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) {
-  const { locale } = useParams<{ locale: Locale }>();
+  const t = useTranslations("mirror");
+  const tc = useTranslations("common");
   const router = useRouter();
   const handoff = useSyncExternalStore(subscribeToHandoff, readMirrorHandoff, getServerHandoffSnapshot);
   const [resonated, setResonated] = useState(false);
@@ -53,9 +54,9 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
   // regardless of which render triggered it. Runs once, tied only to mount.
   useEffect(() => {
     if (!readMirrorHandoff()) {
-      router.replace(`/${locale}/write`);
+      router.replace("/write");
     }
-  }, [locale, router]);
+  }, [router]);
 
   if (!handoff) {
     return null;
@@ -100,7 +101,7 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
     <>
       <MirrorCanvas otherIntensity={matched ? 1 : NO_MATCH_OTHER_INTENSITY} />
 
-      <ScreenHeader tagline={matched ? "Someone was already here." : "Your presence stayed here."} />
+      <ScreenHeader tagline={matched ? t("taglineMatched") : t("taglineNoMatch")} />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center">
         <div
@@ -126,7 +127,7 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
                 <QuoteReveal text={handoff.text} />
               </p>
               <div className="mt-3 text-[length:var(--text-quote-secondary)] tracking-[.5px] text-white/25">
-                — someone in this place
+                {t("attribution")}
               </div>
 
               {resonateEnabled && (
@@ -141,7 +142,7 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
                       : "border-[rgba(165,125,220,0.3)] text-[rgba(165,125,220,0.6)] hover:border-[rgba(165,125,220,0.5)]"
                   }`}
                 >
-                  {resonated ? "💛" : "✨"} This resonated with me
+                  {resonated ? "💛" : "✨"} {t("resonateButton")}
                 </button>
               )}
             </>
@@ -149,16 +150,14 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
             <>
               <div className="font-serif text-[26px] leading-none text-[rgba(165,125,220,0.25)]">·</div>
               <p className="mt-1 text-[length:var(--text-quote-primary)] leading-[1.8] tracking-[.3px] text-white/45">
-                <QuoteReveal text="The system is quiet, but you are not the first in this void." />
+                <QuoteReveal text={t("noMatchQuote")} />
               </p>
             </>
           )}
         </div>
 
         <div className="mt-6 max-w-[280px] text-[14px] leading-[1.7] tracking-[.3px] text-white/45">
-          {matched
-            ? "Their words were already here, waiting."
-            : "Nothing echoed back this time. Not every feeling finds its match here — that's the corpus's limit, not yours."}
+          {matched ? t("subcopyMatched") : t("subcopyNoMatch")}
         </div>
 
         {matched && (
@@ -172,12 +171,12 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
                 : "border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] text-[rgba(200,160,30,0.75)] hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)]"
             }`}
           >
-            {wantsToConnect ? "💛" : "🤍"} I would love to connect
+            {wantsToConnect ? "💛" : "🤍"} {t("connectButton")}
           </button>
         )}
       </div>
 
-      <ScreenCta href="/gratitude" label="Continue" accentRgb="170,130,230" />
+      <ScreenCta href="/gratitude" label={tc("continue")} accentRgb="170,130,230" />
     </>
   );
 }

@@ -1,0 +1,138 @@
+{
+  "common": {
+    "continue": "Seguir",
+    "saving": "Guardando…",
+    "soundOn": "Activar sonido",
+    "soundOff": "Desactivar sonido",
+    "errors": {
+      "somethingWrong": "Algo salió mal.",
+      "couldntConnect": "No pudimos conectar. Intenta de nuevo."
+    }
+  },
+  "metadata": {
+    "title": "Refugio",
+    "description": "Un intercambio sereno de presencia humana y honesta."
+  },
+  "languageSelector": {
+    "label": "Elegir idioma",
+    "english": "English",
+    "spanish": "Español"
+  },
+  "home": {
+    "tagline": "Ecosistema de presencias.",
+    "enterCta": "Entrar"
+  },
+  "arrivalIntro": {
+    "progress": "Introducción, paso {step} de {total}",
+    "skip": "Omitir introducción",
+    "welcomeEyebrow": "Te damos la bienvenida a Refugio",
+    "welcomeHeadline": "Un intercambio sereno\nentre personas desconocidas.",
+    "welcomeBody": "No necesitas encontrar las palabras correctas. Solo un momento de honestidad.",
+    "howEyebrow": "Cómo funciona",
+    "howHeadline": "Algo real entra.\nAlgo humano responde con un eco.",
+    "steps": [
+      {"title": "Escribe", "detail": "En privado"},
+      {"title": "Refugio", "detail": "Encuentra sentido"},
+      {"title": "Recibe", "detail": "Una frase humana"}
+    ],
+    "privacy": "Refugio compara significados en privado. Nunca escribe una respuesta ni muestra tu texto a otra persona.",
+    "presenceEyebrow": "Una presencia real",
+    "presenceHeadline": "Alguien estuvo aquí antes que tú.",
+    "phraseLabel": "Eligió dejar esto",
+    "presenceBody": "Solo una frase que elijas dejar al final puede convertirse en parte de Refugio... y en el reflejo de alguien más.",
+    "enter": "Entrar a Refugio"
+  },
+  "rulesGate": {
+    "title": "ANTES DE ENTRAR",
+    "p1": "Es anónimo — no pedimos cuentas, nombres ni fotos. Aquí, ser honesto cuesta menos que esconderse.",
+    "p2": "No es un chat — nadie te responde directamente. Lo que ves aquí es real, humano, de alguien más.",
+    "p3": "No reemplaza ayuda profesional — si necesitas hablar con alguien ahora, hay ayuda real en <link>{url}</link>.",
+    "close": "Entendido"
+  },
+  "arrive": {
+    "tagline": "No tienes que demostrar nada.",
+    "welcome": "Bienvenido.",
+    "subcopy": "Este es un lugar seguro\npara ser quien realmente eres.",
+    "enterCta": "Entrar"
+  },
+  "remember": {
+    "tagline": "Un instante para ti.",
+    "headline": "Antes de seguir, un momento a solas.",
+    "subcopy": "¿Hay algún momento —reciente o lejano— en que fuiste completamente tú, sin esperar nada a cambio?"
+  },
+  "write": {
+    "tagline": "Este momento es solo tuyo.",
+    "headline": "¿Qué te gustaría que alguien más pudiera entender de ti?",
+    "subcopy": "Puede ser una emoción, una duda o algo que aún no sabes nombrar. No necesitas contar toda la historia. Escribe solo lo que hoy puedas dejar aquí y soltarlo.",
+    "placeholder": "Hay algo que no he sabido cómo decir...",
+    "send": "Buscar un reflejo",
+    "writeAgain": "Escribir otra vez",
+    "searching": "tu esencia está viajando",
+    "outcome": {
+      "crisisIntro": "No estás solo. Si sientes que necesitas hablar con alguien ahora, aquí hay ayuda:",
+      "generalFlagged": "Tu texto no pudo ser publicado esta vez.",
+      "capReached": "Ya usamos todo el espacio de hoy, vuelve mañana."
+    }
+  },
+  "observe": {
+    "tagline": "Ecosistema de presencias",
+    "caption": "Cada luz que ves\nes alguien que se atrevió\na mostrarse por un instante.",
+    "enterCta": "Entra sin hacer nada",
+    "leadPhrases": [
+      "alguien decidió no esconder esto",
+      "esto existía antes de que llegaras",
+      "alguien lo dejó, tal como es",
+      "alguien decidió compartirlo y soltarlo",
+      "alguien decidió compartir esto tal como es"
+    ],
+    "resonateLabel": "✨ esto resuena",
+    "resonatedLabel": "💛 esto resonó",
+    "resonanceCount": "{count, plural, =0 {} =1 {otra persona sintió esto también} other {# personas sintieron esto también}}",
+    "meditation": {
+      "tagline": "Un momento para respirar.",
+      "breatheIn": "Inhala...",
+      "breatheOut": "Exhala...",
+      "ready": "Tu refugio ya está listo.",
+      "stillConnecting": "Estamos tardando más de lo normal en conectar. Quédate un momento aquí, o vuelve más tarde."
+    },
+    "transitionCaption": "un instante para encontrarnos"
+  },
+  "mirror": {
+    "taglineMatched": "Alguien ya había estado aquí.",
+    "taglineNoMatch": "Tu presencia quedó aquí.",
+    "attribution": "— alguien en este lugar",
+    "noMatchQuote": "El sistema está en silencio, pero no eres el primero en este vacío.",
+    "resonateButton": "Esto resonó conmigo",
+    "subcopyMatched": "Sus palabras ya estaban aquí, esperando.",
+    "subcopyNoMatch": "Nada hizo eco esta vez. No todos los sentimientos encuentran su par aquí — ese es el límite del corpus, no el tuyo.",
+    "connectButton": "Me encantaría conectar"
+  },
+  "gratitude": {
+    "tagline": "Algo es diferente ahora.",
+    "headline": "Gracias por permitirte estar aquí."
+  },
+  "leaveATrace": {
+    "writingTagline": "Tu presencia también puede transformar este lugar.",
+    "writingHeadline": "Deja algo para quien llegue después.",
+    "writingSubcopy": "No tiene que ser profundo. Puede ser una frase que te habría gustado encontrar al llegar. Quizá acompañe a alguien más.",
+    "placeholder": "Deja una frase, si quieres...",
+    "submit": "Dejar una huella",
+    "skip": "Prefiero no dejar nada",
+    "doneTagline": "El ciclo cierra.",
+    "doneHeadline": "Tu presencia ahora\ntambién forma parte\nde este ecosistema.",
+    "skippedSubcopy": "Y no dejar nada también es una forma de estar aquí.",
+    "backToStart": "Volver al inicio"
+  },
+  "contribute": {
+    "tagline": "Un aporte rápido.",
+    "headline": "Deja una frase para el muro de Refugio.",
+    "subcopyIntro": "Esto no es un chat, y no reemplaza ayuda profesional — si necesitas hablar con alguien ahora, hay ayuda real en <link>{url}</link>.",
+    "subcopyBody1": "Refugio es un lugar para dejar —y encontrar— un reflejo de nosotros mismos en otros. Como un muro de notas anónimas, no un diario ni una app de terapia. Quien llega debería sentir que hubo gente real antes que él, no leer algo escrito solo para llenar espacio.",
+    "subcopyBody2": "Sin etiquetas, sin firmas, sin necesidad de sonar de cierta forma. Un pensamiento completo, un fragmento, una idea a medio formar — todo cuenta. Lo que realmente sientas es suficiente, no hace falta buscar variedad. Puedes dejar más de una.",
+    "hint": "Si ayuda: quizás algo de hoy — la frustración de un prompt bloqueado, el cansancio a la hora seis, el momento en que algo finalmente hizo clic.",
+    "placeholder": "escribe una, tal como es...",
+    "saved": "Agregada. Deja otra cuando quieras.",
+    "submit": "Agregar frase",
+    "countLabel": "{count, plural, =1 {# frase} other {# frases}} agregadas hasta ahora — gracias."
+  }
+}

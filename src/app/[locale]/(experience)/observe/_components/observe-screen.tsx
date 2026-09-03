@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import type { Locale } from "@/lib/locale";
+import { useLocale, useTranslations } from "next-intl";
 import { ScreenHeader } from "../../_shared/screen-header";
 import { ObserveCanvas } from "../observe-canvas";
 import { ObserveTransition } from "./observe-transition";
@@ -22,7 +21,8 @@ const RETRY_INTERVAL_MS = 6000;
 // of a dead end, retried silently in the background; see observe-meditation.tsx for
 // how a recovery mid-meditation is offered rather than forced.
 export function ObserveScreen({ resonateEnabled }: { resonateEnabled: boolean }) {
-  const { locale } = useParams<{ locale: Locale }>();
+  const t = useTranslations("observe");
+  const locale = useLocale();
   const [animationDone, setAnimationDone] = useState(false);
   const [fetchState, setFetchState] = useState<FetchState>("loading");
   const [data, setData] = useState<ObserveData | null>(null);
@@ -104,7 +104,7 @@ export function ObserveScreen({ resonateEnabled }: { resonateEnabled: boolean })
     return (
       <>
         <ObserveCanvas phrases={data.phrases} similarities={data.similarities} resonateEnabled={resonateEnabled} />
-        <ScreenHeader tagline="Ecosystem of presences" />
+        <ScreenHeader tagline={t("tagline")} />
       </>
     );
   }

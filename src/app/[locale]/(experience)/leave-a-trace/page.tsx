@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ScreenCta } from "../_shared/screen-cta";
 import { ScreenHeader } from "../_shared/screen-header";
 import { ScreenPrompt } from "../_shared/screen-prompt";
@@ -17,32 +18,35 @@ type Phase = "writing" | "submitted" | "skipped";
 // ecosystem now includes you" copy — which the first pass of this screen skipped
 // in favor of a bare text swap.
 export default function LeaveATracePage() {
+  const t = useTranslations("leaveATrace");
   const [phase, setPhase] = useState<Phase>("writing");
 
   if (phase !== "writing") {
+    const doneHeadlineLines = t("doneHeadline").split("\n");
+
     return (
       <>
         <GratitudeCanvas />
 
-        <ScreenHeader tagline="The circle closes." />
+        <ScreenHeader tagline={t("doneTagline")} />
 
         <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
           <ScreenPrompt
             className="translate-y-[6vh]"
             headline={
               <>
-                Your presence is now
+                {doneHeadlineLines[0]}
                 <br />
-                also part
+                {doneHeadlineLines[1]}
                 <br />
-                of this ecosystem.
+                {doneHeadlineLines[2]}
               </>
             }
-            subcopy={phase === "skipped" ? "And leaving nothing is also a way of being here." : undefined}
+            subcopy={phase === "skipped" ? t("skippedSubcopy") : undefined}
           />
         </div>
 
-        <ScreenCta href="/" label="Back to start" accentRgb="210,158,32" />
+        <ScreenCta href="/" label={t("backToStart")} accentRgb="210,158,32" />
       </>
     );
   }
@@ -53,12 +57,12 @@ export default function LeaveATracePage() {
         <div className="h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(210,158,32,0.05)_0%,rgba(210,158,32,0)_70%)]" />
       </div>
 
-      <ScreenHeader tagline="Your presence also transforms this place." />
+      <ScreenHeader tagline={t("writingTagline")} />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-8 py-24">
         <ScreenPrompt
-          headline="Leave something for whoever arrives next."
-          subcopy="It doesn't have to be deep. Someone else will find it, just like you found someone else's."
+          headline={t("writingHeadline")}
+          subcopy={t("writingSubcopy")}
         />
 
         <TraceForm onResolved={setPhase} />

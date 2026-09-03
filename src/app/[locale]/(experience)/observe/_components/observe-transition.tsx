@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { SCENE_BG_HEX } from "../../_shared/scene";
 import { startAnimationLoop } from "../../_shared/animation-loop";
 
@@ -59,6 +60,7 @@ function easeOutCubic(t: number): number {
 // the fetch takes, then holds on this arrival frame in an idle loop. The parent decides
 // what replaces it once both the animation and the fetch are ready — see observe-screen.tsx.
 export function ObserveTransition({ onComplete }: { onComplete: () => void }) {
+  const t = useTranslations("observe");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -211,7 +213,7 @@ export function ObserveTransition({ onComplete }: { onComplete: () => void }) {
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
         <div className="flex translate-y-[16vh] flex-col gap-2">
           <span className="text-[14px] tracking-[1.5px] text-white/35">
-            {"a moment to find each other"}
+            {t("transitionCaption")}
           </span>
           <span className="text-[13px] tracking-[2px] text-white/20">· · ·</span>
         </div>

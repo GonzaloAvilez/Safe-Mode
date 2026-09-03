@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
-import { useParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
-import type { Locale } from "@/lib/locale";
 const MAX_TEXT_LENGTH = 400;
 
 type ErrorOutcome = { message: string } | null;
@@ -20,7 +19,9 @@ type ErrorOutcome = { message: string } | null;
 // Gratitude-style canvas + closing copy), so it just reports back which way this
 // resolved.
 export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "skipped") => void }) {
-  const { locale } = useParams<{ locale: Locale }>();
+  const t = useTranslations("leaveATrace");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<ErrorOutcome>(null);
@@ -35,10 +36,10 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
       const res = await fetch("/api/phrases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          text, 
-          honeypot, 
-          formRenderedAt, 
+        body: JSON.stringify({
+          text,
+          honeypot,
+          formRenderedAt,
           origin: LEAVE_A_TRACE_ORIGIN,
           locale,
         }),
@@ -46,14 +47,14 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
 
       if (!res.ok) {
         const body = await res.json();
-        setError({ message: body.error ?? "Something went wrong." });
+        setError({ message: body.error ?? tc("errors.somethingWrong") });
         setSubmitting(false);
         return;
       }
 
       onResolved("submitted");
     } catch {
-      setError({ message: "We couldn't connect. Try again." });
+      setError({ message: tc("errors.couldntConnect") });
       setSubmitting(false);
     }
   }
@@ -65,7 +66,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
         value={text}
         onChange={(event) => setText(event.target.value)}
         maxLength={MAX_TEXT_LENGTH}
-        placeholder="leave something, if you want..."
+        placeholder={t("placeholder")}
         rows={4}
         className="w-full resize-none rounded-lg border border-white/12 bg-white/[0.02] p-4 text-[14px] leading-[1.8] tracking-[.2px] text-white/85 placeholder:text-white/25 outline-none transition-colors duration-300 focus:border-[rgba(200,160,30,0.4)]"
       />
@@ -80,7 +81,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
           disabled={submitting || text.trim().length === 0}
           className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
         >
-          {submitting ? "Saving…" : "Leave a trace"}
+          {submitting ? tc("saving") : t("submit")}
         </button>
         <button
           type="button"
@@ -88,7 +89,7 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
           disabled={submitting}
           className="text-[13px] tracking-[.5px] text-white/25 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/45 disabled:pointer-events-none disabled:opacity-30"
         >
-          I&rsquo;d rather not leave anything
+          {t("skip")}
         </button>
       </div>
     </form>

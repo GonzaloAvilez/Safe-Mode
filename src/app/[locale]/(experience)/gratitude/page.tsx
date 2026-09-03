@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { ScreenCta } from "../_shared/screen-cta";
 import { ScreenHeader } from "../_shared/screen-header";
 import { ScreenPrompt } from "../_shared/screen-prompt";
@@ -10,21 +11,24 @@ import { GratitudeCanvas } from "./gratitude-canvas";
 // even once they do, it isn't part of the public corpus until a human approves it
 // (see admin-audit-not-gate-model). The actual "circle closes" beat lives in
 // leave-a-trace/page.tsx's own post-submit state, after the ecosystem-completing act.
-export default function GratitudePage() {
+export default async function GratitudePage() {
+  const t = await getTranslations("gratitude");
+  const tc = await getTranslations("common");
+
   return (
     <>
       <GratitudeCanvas />
 
-      <ScreenHeader tagline="Something is different now." />
+      <ScreenHeader tagline={t("tagline")} />
 
       <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
         <ScreenPrompt
           className="translate-y-[22vh]"
-          headline="Thank you for letting yourself be here."
+          headline={t("headline")}
         />
       </div>
 
-      <ScreenCta href="/leave-a-trace" label="Continue" accentRgb="210,158,32" />
+      <ScreenCta href="/leave-a-trace" label={tc("continue")} accentRgb="210,158,32" />
     </>
   );
 }

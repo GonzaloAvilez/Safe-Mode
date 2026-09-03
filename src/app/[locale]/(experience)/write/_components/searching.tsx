@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { SCENE_BG_HEX } from "../../_shared/scene";
 import { startAnimationLoop } from "../../_shared/animation-loop";
 
@@ -36,6 +37,7 @@ function buildParticles(): Particle[] {
 // Full-screen ritualized loading state shown while the real entry submission is in
 // flight — not a route, mounted directly by EntryForm in place of the form.
 export function Searching() {
+  const t = useTranslations("write");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -151,7 +153,7 @@ export function Searching() {
       <canvas ref={canvasRef} className="h-full w-full" />
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
         <div className="flex translate-y-[16vh] flex-col gap-2">
-          <span className="text-[14px] tracking-[1.5px] text-white/35">your essence is traveling</span>
+          <span className="text-[14px] tracking-[1.5px] text-white/35">{t("searching")}</span>
           <span className="text-[13px] tracking-[2px] text-white/20">· · ·</span>
         </div>
       </div>

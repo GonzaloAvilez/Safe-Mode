@@ -6,7 +6,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale: isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE,
-    // Message catalogs are intentionally introduced in the next concern.
-    messages: {},
+    messages: (await import(`../../messages/${isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE}.json`))
+      .default,
   };
 });

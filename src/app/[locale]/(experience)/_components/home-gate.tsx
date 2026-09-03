@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { Locale } from "@/lib/locale";
 import { ScreenCta } from "../_shared/screen-cta";
 import { RulesGate } from "./rules-gate";
@@ -49,6 +50,7 @@ function getServerSnapshot(): HomeGateStage {
 // re-showing it on every single visit to someone who already read it (or already
 // completed the whole flow) is just friction, not reinforcement.
 export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
+  const t = useTranslations("home");
   const { locale } = useParams<{ locale: Locale }>();
   const router = useRouter();
   const stage = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
@@ -71,7 +73,7 @@ export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
   return (
     <>
       {stage === "rules-required" && <RulesGate onAcknowledge={handleAcknowledge} />}
-      <ScreenCta href="/arrive" label="Enter" accentRgb="200,160,30" disabled={stage !== "ready"} />
+      <ScreenCta href="/arrive" label={t("enterCta")} accentRgb="200,160,30" disabled={stage !== "ready"} />
     </>
   );
 }

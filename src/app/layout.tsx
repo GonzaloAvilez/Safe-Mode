@@ -15,7 +15,6 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Refugio",
-  description: "How human authenticity impacts between each other",
   icons: { icon: "/icon.png" },
 };
 

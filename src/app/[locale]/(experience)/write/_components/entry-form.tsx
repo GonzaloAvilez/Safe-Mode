@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
-import { useParams, useRouter } from "next/navigation";
-import type { Locale } from "@/lib/locale";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import { writeMirrorHandoff } from "../../_shared/mirror-handoff";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
@@ -22,7 +22,9 @@ type EntryFormProps = {
 };
 
 export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
-  const { locale } = useParams<{ locale: Locale }>();
+  const t = useTranslations("write");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +44,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
       const body = await res.json();
 
       if (!res.ok) {
-        onOutcomeChange({ type: "error", message: body.error ?? "Something went wrong." });
+        onOutcomeChange({ type: "error", message: body.error ?? tc("errors.somethingWrong") });
         setSubmitting(false);
         return;
       }
@@ -54,7 +56,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
           entryId: body.entryId,
           phraseId: body.phrase.id,
         });
-        router.push(`/${locale}/mirror`);
+        router.push("/mirror");
         // Leave submitting=true — Searching stays on screen through the route swap
         // instead of the form flashing back for a frame first.
         return;
@@ -64,14 +66,14 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         // No phrase to mirror back, but the visitor still passes through Mirror
         // rather than dead-ending here — see MirrorPage's no_match rendering.
         writeMirrorHandoff({ outcome: "no_match", entryId: body.entryId });
-        router.push(`/${locale}/mirror`);
+        router.push("/mirror");
         return;
       }
 
       onOutcomeChange({ type: body.type });
       setSubmitting(false);
     } catch {
-      onOutcomeChange({ type: "error", message: "We couldn't connect. Try again." });
+      onOutcomeChange({ type: "error", message: tc("errors.couldntConnect") });
       setSubmitting(false);
     }
   }
@@ -94,7 +96,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
           onClick={reset}
           className="rounded-full border border-white/20 px-6 py-2 text-[13px] tracking-[1px] text-white/50 transition-colors duration-300 hover:border-[rgba(200,160,30,0.5)] hover:text-white/75"
         >
-          Write again
+          {t("writeAgain")}
         </button>
       </div>
     );
@@ -107,7 +109,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         value={text}
         onChange={(event) => setText(event.target.value)}
         maxLength={MAX_TEXT_LENGTH}
-        placeholder="write here, just as it is..."
+        placeholder={t("placeholder")}
         rows={7}
         required
         className="w-full resize-none rounded-lg border border-white/12 bg-white/[0.02] p-4 text-[14px] leading-[1.8] tracking-[.2px] text-white/85 placeholder:text-white/25 outline-none transition-colors duration-300 focus:border-[rgba(200,160,30,0.4)]"
@@ -117,18 +119,20 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
         disabled={text.trim().length === 0}
         className="self-center rounded-full border border-white/20 px-8 py-2.5 text-[13px] tracking-[1px] text-white/60 transition-colors duration-300 hover:border-[rgba(200,160,30,0.6)] hover:text-white/85 disabled:pointer-events-none disabled:opacity-30"
       >
-        Send
+        {t("send")}
       </button>
     </form>
   );
 }
 
 function OutcomeMessage({ outcome }: { outcome: Outcome }) {
+  const t = useTranslations("write.outcome");
+
   switch (outcome.type) {
     case "crisis":
       return (
         <div className="flex flex-col gap-3 text-[16px] leading-[1.8] tracking-[.3px] text-white/55">
-          <p>You&rsquo;re not alone. If you feel like you need to talk to someone right now, here&rsquo;s help:</p>
+          <p>{t("crisisIntro")}</p>
           <a
             href={CRISIS_RESOURCE_URL}
             target="_blank"
@@ -142,13 +146,13 @@ function OutcomeMessage({ outcome }: { outcome: Outcome }) {
     case "general_flagged":
       return (
         <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/55">
-          Your text couldn&rsquo;t be published this time.
+          {t("generalFlagged")}
         </p>
       );
     case "cap_reached":
       return (
         <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/55">
-          We&rsquo;ve used up today&rsquo;s space, come back tomorrow.
+          {t("capReached")}
         </p>
       );
     case "error":
