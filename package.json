@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:integration": "bash scripts/run-integration-tests.sh"
+    "test:integration": "bash scripts/run-integration-tests.sh",
+    "seed:phrases:local": "tsx --conditions=react-server --env-file=.env.development.local scripts/seed-phrases.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -41,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }
