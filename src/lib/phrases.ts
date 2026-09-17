@@ -13,6 +13,13 @@ export type PhraseMatch = {
   similarity: number;
 };
 
+// Narrative and resonance rows are removed atomically by their ON DELETE CASCADE
+// foreign keys. Repeating a deletion of an already-removed phrase is a no-op.
+export async function deletePhrase(id: string): Promise<void> {
+  const { error } = await supabaseAdmin.from("phrases").delete().eq("id", id);
+  unwrap(null, error);
+}
+
 async function getLanguageThreshold(language: Locale): Promise<number> {
   const { data, error } = await supabaseAdmin
     .from("language_thresholds")

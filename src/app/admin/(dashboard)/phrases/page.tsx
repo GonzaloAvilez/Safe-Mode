@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import { AdminCard } from "../../_components/admin-card";
+import { DeletePhraseForm } from "./delete-phrase-form";
 import {
   approvePhraseAction,
   rejectPhraseAction,
@@ -212,7 +213,7 @@ export default async function AdminPhrasesPage({
         <h1 className="text-lg font-medium">Phrases (semilla + usuarios)</h1>
         <p className="mt-1 text-sm text-white/40">
           {totalCount} frase{totalCount === 1 ? "" : "s"} en total — semilla y enviadas por usuarios juntas.
-          Esto es una herramienta de aprobación: puedes revisar, aprobar, rechazar, activar o desactivar cualquier frase.
+          Puedes revisar, aprobar, rechazar, activar, desactivar o eliminar definitivamente cualquier frase.
         </p>
       </div>
 
@@ -265,13 +266,13 @@ export default async function AdminPhrasesPage({
                   </span>
                 </p>
               )}
-              <div className="mt-3 flex items-center justify-between gap-4">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
                 <span className="text-[11px] text-white/35">
                   {new Date(phrase.created_at).toLocaleString()} · {phrase.active ? "activa en el corpus" : "no activa"}
                   {resonanceCountByPhraseId.has(phrase.id) &&
                     ` · ${resonanceCountByPhraseId.get(phrase.id)} resonate (visible en Observe)`}
                 </span>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {phrase.moderation_status !== "approved" && (
                     <ActionButton action={approvePhraseAction} id={phrase.id} label="Aprobar" tone="positive" />
                   )}
@@ -291,6 +292,7 @@ export default async function AdminPhrasesPage({
                   />
                 </div>
               </div>
+              <DeletePhraseForm id={phrase.id} text={phrase.text} />
             </AdminCard>
           ))}
         </ul>
