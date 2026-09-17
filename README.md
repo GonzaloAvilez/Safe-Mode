@@ -17,7 +17,7 @@ the foundation the whole experience is built on.
 
 ## Status
 
-Built as a 4-week guided workshop project. Full build status, decisions, and what's still open
+Full build status, decisions, and what's still open
 live in [ROADMAP.md](./ROADMAP.md) — that file, not this one, is the source of truth for what's
 actually shipped.
 
