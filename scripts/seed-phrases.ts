@@ -1,12 +1,14 @@
 // Language-scoped corpus tool. Dry-run is the default; mutation requires --write.
 // Local dry run: npm run seed:phrases:local -- --locale=es
 // Local write: npm run seed:phrases:local -- --locale=es --write
+// Spread new seed display dates: add --spread-days=30 to either command.
+// This deliberately backdates curated seeds; existing rows and user dates are untouched.
 //
 // Translated to English 2026-07-15 (workshop's shared language — see ROADMAP.md's
 // language decision). Transcreated, not translated literally, same as the UI copy pass:
 // permission to deviate from the original Spanish structure for naturalness.
 import { supabaseAdmin } from "@/lib/supabase";
-import { parseSeedOptions, planSeedPhrases, type SeedLocale, type SeedPhrase } from "./seed-phrases-plan";
+import { parseSeedOptions, planSeedPhrases, seedCreatedAt, type SeedLocale, type SeedPhrase } from "./seed-phrases-plan";
 
 const englishSeedPhrases: SeedPhrase[] = [
   // Loneliness / feeling misunderstood
@@ -158,6 +160,11 @@ const corpusByLocale: Record<SeedLocale, SeedPhrase[]> = {
 async function main() {
   const options = parseSeedOptions(process.argv.slice(2));
   const corpus = corpusByLocale[options.locale];
+  const now = new Date();
+  const createdAtByText = new Map(corpus.map((phrase, index) => [
+    phrase.text,
+    options.spreadDays === undefined ? undefined : seedCreatedAt(index, corpus.length, options.spreadDays, now),
+  ]));
   const { data, error } = await supabaseAdmin
     .from("phrases")
     .select("text")
@@ -168,6 +175,12 @@ async function main() {
 
   const plan = planSeedPhrases(corpus, (data ?? []).map(({ text }) => text));
   console.log(`${options.locale}: ${plan.existing.length} existing, ${plan.missing.length} missing.`);
+  if (options.spreadDays !== undefined) {
+    console.log(`Synthetic seed dates spread across the past ${options.spreadDays} days; existing rows stay unchanged.`);
+    for (const phrase of plan.missing) {
+      console.log(`${createdAtByText.get(phrase.text)} — ${phrase.text}`);
+    }
+  }
 
   if (!options.write) {
     console.log("Dry run only. Add --write to generate embeddings and insert missing phrases.");
@@ -202,6 +215,7 @@ async function main() {
         source: "seed",
         active: true,
         moderation_status: "approved",
+        ...(options.spreadDays === undefined ? {} : { created_at: createdAtByText.get(phrase.text) }),
       });
 
       if (error) throw error;
