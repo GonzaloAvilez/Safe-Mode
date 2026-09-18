@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isLocale, SUPPORTED_LOCALES, type Locale } from "@/lib/locale";
 import { AdminCard } from "../../_components/admin-card";
 import { DeletePhraseForm } from "./delete-phrase-form";
+import { phraseLanguage } from "./phrase-language";
 import {
   approvePhraseAction,
   rejectPhraseAction,
@@ -17,6 +19,7 @@ type PhraseRow = {
   moderation_status: "pending" | "approved" | "rejected";
   active: boolean;
   created_at: string;
+  language?: string | null;
 };
 
 type PhraseNarrativeRow = {
@@ -52,8 +55,18 @@ const TABS = [
 ] as const;
 
 type Tab = (typeof TABS)[number]["key"];
+type LanguageFilter = "all" | Locale;
 
-function isValidTab(value: string | undefined): value is Tab {
+const LANGUAGE_FILTERS: readonly LanguageFilter[] = ["all", ...SUPPORTED_LOCALES];
+const adminLanguageNames = new Intl.DisplayNames(["es"], { type: "language" });
+
+function phrasesHref(tab: Tab, language: LanguageFilter): string {
+  const query = new URLSearchParams({ tab });
+  if (language !== "all") query.set("language", language);
+  return `/admin/phrases?${query}`;
+}
+
+function isValidTab(value: string | string[] | undefined): value is Tab {
   return TABS.some((tab) => tab.key === value);
 }
 
@@ -63,11 +76,12 @@ function isValidTab(value: string | undefined): value is Tab {
 // differently-shaped .select() calls without hitting "type instantiation is
 // excessively deep." Each function below stays concretely typed instead, no generics,
 // no casts.
-function fullPhrasesQueryForTab(tab: Tab, unclassifiedIds: string[]) {
+function fullPhrasesQueryForTab(tab: Tab, unclassifiedIds: string[], language: LanguageFilter) {
   const base = supabaseAdmin
     .from("phrases")
-    .select("id, text, source, moderation_status, active, created_at", { count: "exact" })
+    .select("id, text, source, moderation_status, active, created_at, language", { count: "exact" })
     .order("created_at", { ascending: false });
+  if (language !== "all") base.eq("language", language);
   switch (tab) {
     case "pending":
       return base.eq("moderation_status", "pending");
@@ -82,8 +96,9 @@ function fullPhrasesQueryForTab(tab: Tab, unclassifiedIds: string[]) {
   }
 }
 
-function countPhrasesQueryForTab(tab: Tab, unclassifiedIds: string[]) {
+function countPhrasesQueryForTab(tab: Tab, unclassifiedIds: string[], language: LanguageFilter) {
   const base = supabaseAdmin.from("phrases").select("id", { count: "exact", head: true });
+  if (language !== "all") base.eq("language", language);
   switch (tab) {
     case "pending":
       return base.eq("moderation_status", "pending");
@@ -127,10 +142,11 @@ function ActionButton({
 export default async function AdminPhrasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string | string[]; language?: string | string[] }>;
 }) {
-  const { tab: tabParam } = await searchParams;
+  const { tab: tabParam, language: languageParam } = await searchParams;
   const selectedTab: Tab = isValidTab(tabParam) ? tabParam : "pending";
+  const selectedLanguage: LanguageFilter = isLocale(languageParam) ? languageParam : "all";
   const otherTabs = TABS.filter((tab) => tab.key !== selectedTab);
 
   // Needed regardless of which tab is open — the "Sin clasificar" nav badge always
@@ -148,8 +164,8 @@ export default async function AdminPhrasesPage({
   // The tabs not currently open only need a count (head: true — no rows over the
   // wire); the open tab gets both its rows and its count in the same request.
   const [selectedResult, ...otherResults] = await Promise.all([
-    fullPhrasesQueryForTab(selectedTab, classifiedIds),
-    ...otherTabs.map((tab) => countPhrasesQueryForTab(tab.key, classifiedIds)),
+    fullPhrasesQueryForTab(selectedTab, classifiedIds, selectedLanguage),
+    ...otherTabs.map((tab) => countPhrasesQueryForTab(tab.key, classifiedIds, selectedLanguage)),
   ]);
 
   if (selectedResult.error) throw selectedResult.error;
@@ -212,18 +228,35 @@ export default async function AdminPhrasesPage({
       <div>
         <h1 className="text-lg font-medium">Phrases (semilla + usuarios)</h1>
         <p className="mt-1 text-sm text-white/40">
-          {totalCount} frase{totalCount === 1 ? "" : "s"} en total — semilla y enviadas por usuarios juntas.
+          {totalCount} frase{totalCount === 1 ? "" : "s"}{selectedLanguage === "all" ? " en total" : ` en ${adminLanguageNames.of(selectedLanguage)}`} — semilla y enviadas por usuarios juntas.{" "}
           Puedes revisar, aprobar, rechazar, activar, desactivar o eliminar definitivamente cualquier frase.
         </p>
       </div>
 
-      <nav className="flex flex-wrap gap-5 border-b border-white/10 pb-3 text-sm">
+      <nav aria-label="Idioma de las frases" className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="mr-1 text-white/50">Idioma:</span>
+        {LANGUAGE_FILTERS.map((language) => (
+          <Link
+            key={language}
+            href={phrasesHref(selectedTab, language)}
+            aria-current={selectedLanguage === language ? "page" : undefined}
+            className={`rounded-full border px-3 py-1.5 ${selectedLanguage === language
+              ? "border-white/40 bg-white/10 text-white"
+              : "border-white/15 text-white/50 hover:bg-white/5 hover:text-white/80"}`}
+          >
+            {language === "all" ? "Todos" : phraseLanguage(language).label}
+          </Link>
+        ))}
+      </nav>
+
+      <nav aria-label="Estado de las frases" className="flex flex-wrap gap-5 border-b border-white/10 pb-3 text-sm">
         {TABS.map((tab) => {
           const isActive = tab.key === selectedTab;
           return (
             <Link
               key={tab.key}
-              href={`/admin/phrases?tab=${tab.key}`}
+              href={phrasesHref(tab.key, selectedLanguage)}
+              aria-current={isActive ? "page" : undefined}
               className={`pb-1 ${
                 isActive
                   ? "border-b-2 border-white text-white"
@@ -237,14 +270,22 @@ export default async function AdminPhrasesPage({
       </nav>
 
       {phrases.length === 0 ? (
-        <p className="text-sm text-white/40">No hay frases en esta pestaña.</p>
+        <p className="text-sm text-white/40">
+          {selectedLanguage === "all" ? "No hay frases en esta pestaña." : `No hay frases en ${adminLanguageNames.of(selectedLanguage)} en esta pestaña.`}
+        </p>
       ) : (
         <ul className="flex flex-col gap-3">
           {phrases.map((phrase) => (
             <AdminCard as="li" key={phrase.id} className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <p className="text-sm leading-relaxed text-white/85">{phrase.text}</p>
-                <div className="flex shrink-0 gap-1.5">
+              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
+                <p className="min-w-0 break-words text-sm leading-relaxed text-white/85">{phrase.text}</p>
+                <div className="flex shrink-0 flex-wrap gap-1.5">
+                  <span
+                    aria-label={`Idioma: ${phraseLanguage(phrase.language).label}`}
+                    className="rounded-full border border-white/25 px-2 py-0.5 text-[11px] tracking-wide text-white/70 uppercase"
+                  >
+                    {phraseLanguage(phrase.language).code}
+                  </span>
                   <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] tracking-wide text-white/40 uppercase">
                     {phrase.source}
                   </span>
