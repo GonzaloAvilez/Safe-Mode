@@ -6,7 +6,7 @@
 // submitEntry) exercise this end-to-end wiring — see [[test-coverage-boundary-reasoning]].
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { benignModerationCheckFixture } from "@/test/fixtures/moderation-check";
+import { benignModerationCheckFixture, concerningModerationCheckFixture, generalFlaggedModerationCheckFixture, selfHarmOnlyModerationCheckFixture } from "@/test/fixtures/moderation-check";
 import { realPhraseFixtures } from "@/test/fixtures/real-phrase-embeddings";
 
 const { moderateTextMock, getEmbeddingMock } = vi.hoisted(() => ({
@@ -78,5 +78,37 @@ describe("submitEntry (integration, real match_phrase wiring)", () => {
     }
     expect(englishOutcome.phrase.text).toBe(realPhraseFixtures[0].text);
     expect(spanishOutcome.phrase.text).toBe("A veces estoy rodeado de gente y aun así me siento completamente solo.");
+  });
+});
+
+// These cases verify our routing/storage against controlled provider responses.
+// They do not measure the live model's understanding of Spanish or English.
+describe.each(["es", "en"] as const)("moderation persistence in %s", (language) => {
+  it.each([
+    { outcome: "crisis", moderation: concerningModerationCheckFixture },
+    { outcome: "crisis", moderation: selfHarmOnlyModerationCheckFixture },
+    { outcome: "general_flagged", moderation: generalFlaggedModerationCheckFixture },
+  ])("stores $outcome safely without an embedding", async ({ outcome, moderation }) => {
+    const text = language === "es" ? "Entrada sintética para verificar moderación" : "Synthetic entry for moderation verification";
+    moderateTextMock.mockResolvedValueOnce(moderation);
+    const result = await submitEntry(text, randomUUID(), undefined, language);
+    insertedEntryIds.push(result.entryId);
+    expect(result.type).toBe(outcome);
+    expect(moderateTextMock).toHaveBeenCalledWith(text);
+    expect(getEmbeddingMock).not.toHaveBeenCalled();
+    const { data: entry, error } = await supabaseAdmin.from("entries")
+      .select("text, embedding, flagged_crisis, flagged_general, outcome").eq("id", result.entryId).single();
+    if (error) throw error;
+    const crisis = outcome === "crisis";
+    expect(entry).toMatchObject({ text: crisis ? null : text, embedding: null, flagged_crisis: crisis, outcome });
+    if (!crisis) expect(entry.flagged_general).toBe(true);
+    const { data: isolated, error: isolatedError } = await supabaseAdmin.from("crisis_entries")
+      .select("text").eq("entry_id", result.entryId);
+    if (isolatedError) throw isolatedError;
+    expect(isolated).toEqual(crisis ? [{ text }] : []);
+    const { data: responses, error: responseError } = await supabaseAdmin.from("responses")
+      .select("id").eq("entry_id", result.entryId);
+    if (responseError) throw responseError;
+    expect(responses).toEqual([]);
   });
 });
