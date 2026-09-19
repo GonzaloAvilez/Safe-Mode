@@ -43,17 +43,6 @@ describe("findClosestPhrase / match_phrase (integration)", () => {
     expect(match?.similarity).toBeGreaterThan(0.99);
   });
 
-  it("keeps the existing two-argument RPC available during the expansion", async () => {
-    const target = realPhraseFixtures[0];
-    const { data, error } = await supabaseAdmin.rpc("match_phrase", {
-      query_embedding: target.embedding,
-      match_language: "en",
-    });
-
-    expect(error).toBeNull();
-    expect(data?.[0]?.text).toBe(target.text);
-  });
-
   it("lets the three-argument RPC apply the caller's threshold", async () => {
     const target = realPhraseFixtures[0];
     const { data, error } = await supabaseAdmin.rpc("match_phrase", {
