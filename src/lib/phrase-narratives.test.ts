@@ -60,9 +60,30 @@ afterEach(() => {
 });
 
 describe("classifyPhraseNarrative", () => {
+  it.each(["es", "en"])("passes the stored %s language to the classifier", async (language) => {
+    setUpChains();
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase", language }, error: null });
+    canSpendTodayMock.mockResolvedValueOnce(true);
+    classifyPhraseMock.mockResolvedValueOnce(rawClassification);
+    upsertMock.mockResolvedValueOnce({ error: null });
+    await classifyPhraseNarrative("phrase-1");
+    expect(selectMock).toHaveBeenCalledWith("text, language");
+    expect(classifyPhraseMock).toHaveBeenCalledExactlyOnceWith("una frase", language);
+  });
+
+  it.each([null, undefined, "", " ", "fr", "ES", 42])("rejects invalid stored language without spending or overwriting a narrative: %j", async (language) => {
+    setUpChains();
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase", language }, error: null });
+    await expect(classifyPhraseNarrative("phrase-1")).rejects.toThrow("idioma compatible");
+    expect(canSpendTodayMock).not.toHaveBeenCalled();
+    expect(classifyPhraseMock).not.toHaveBeenCalled();
+    expect(recordClassificationSpendMock).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
+  });
+
   it("throws instead of classifying when the daily spend cap is reached", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase", language: "es" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(false);
 
     await expect(classifyPhraseNarrative("phrase-1")).rejects.toThrow("Daily spend cap reached — try again later.");
@@ -71,7 +92,7 @@ describe("classifyPhraseNarrative", () => {
 
   it("classifies, records spend, and upserts the sanitized result — no source restriction", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase", language: "es" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(true);
     classifyPhraseMock.mockResolvedValueOnce(rawClassification);
     upsertMock.mockResolvedValueOnce({ error: null });
@@ -93,7 +114,7 @@ describe("classifyPhraseNarrative", () => {
 
   it("clamps an out-of-range confidence before upserting", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase", language: "es" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(true);
     classifyPhraseMock.mockResolvedValueOnce({ ...rawClassification, confidence: 1.5 });
     upsertMock.mockResolvedValueOnce({ error: null });
@@ -112,7 +133,7 @@ describe("classifyPhraseNarrative", () => {
 
   it("throws when the upsert fails", async () => {
     setUpChains();
-    singleMock.mockResolvedValueOnce({ data: { text: "una frase" }, error: null });
+    singleMock.mockResolvedValueOnce({ data: { text: "una frase", language: "es" }, error: null });
     canSpendTodayMock.mockResolvedValueOnce(true);
     classifyPhraseMock.mockResolvedValueOnce(rawClassification);
     upsertMock.mockResolvedValueOnce({ error: new Error("upsert failed") });
