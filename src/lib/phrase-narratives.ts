@@ -4,6 +4,7 @@ import { classifyPhrase } from "@/lib/openai";
 import { sanitizeClassification } from "@/lib/safety/phrase-classification";
 import { estimateClassificationCostUsd } from "@/lib/safety/classification-cost";
 import { canSpendToday, recordClassificationSpend } from "@/lib/spend";
+import { isLocale } from "@/lib/locale";
 
 export type PhraseNarrative = {
   phraseId: string;
@@ -22,13 +23,16 @@ export type PhraseNarrative = {
 // reflections, deliberately shared by seeding them into the corpus, not placeholder
 // content. Revised 2026-08-02, same call already made for showing their real date.
 export async function classifyPhraseNarrative(phraseId: string): Promise<void> {
-  const { data, error: fetchError } = await supabaseAdmin.from("phrases").select("text").eq("id", phraseId).single();
+  const { data, error: fetchError } = await supabaseAdmin.from("phrases").select("text, language").eq("id", phraseId).single();
   const phrase = unwrap(data, fetchError);
+  if (!isLocale(phrase.language)) {
+    throw new Error("La frase no tiene un idioma compatible. Corrige su idioma antes de clasificarla.");
+  }
 
   const withinDailyCap = await canSpendToday(estimateClassificationCostUsd(phrase.text.length));
   if (!withinDailyCap) throw new Error("Daily spend cap reached — try again later.");
 
-  const classification = sanitizeClassification(await classifyPhrase(phrase.text));
+  const classification = sanitizeClassification(await classifyPhrase(phrase.text, phrase.language));
   await recordClassificationSpend(classification.totalTokens);
 
   const { error } = await supabaseAdmin.from("phrase_narratives").upsert({
