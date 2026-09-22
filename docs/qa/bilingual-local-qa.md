@@ -1,7 +1,7 @@
 # Bilingual local QA — 2026-09-19
 
 Branch: `test/i18n-bilingual-qa`, based on `515d1ab` (PR #190).
-Tracking: GitHub issue #178. Status: live moderation batch passed; remaining full-journey coverage is listed below.
+Tracking: GitHub issue #178. Status: live moderation batch and the local journey checks listed below passed. Production verification remains with the founder.
 
 ## Completed without live provider calls
 
@@ -35,11 +35,36 @@ The founder explicitly approved six moderation requests and at most two embeddin
 - Production build passed using placeholder credentials. Redis credentials are absent in this local setup, so its fail-open behavior was exercised; rate limiting was not validated end to end.
 - Provider proxy stopped after the batch. Temporary SDK changes were restored. The preview retains a placeholder OpenAI key.
 
+## Local journey follow-up — 2026-09-19 (America/Merida)
+
+Branch: `test/complete-local-bilingual-qa`, based on `df2da9a`. Chrome exercised the local preview on port 3001 against local Supabase. Runtime source and messages matched this revision; the isolated preview's integration test file differed, but was not executed in this walkthrough.
+
+- Loaded six English fixture phrases with their existing 1536-dimensional embeddings, approved and active, with distinct dates within the previous 30 days. These six remain available locally.
+- After restarting Supabase from its local backup, there were no active Spanish candidates. A temporary Spanish phrase reused an English fixture vector to make language filtering deterministic. This checks application behavior, not Spanish embedding quality; the temporary phrase was deleted afterward.
+- In both languages, submitted Write through the browser and verified a positive match to the expected same-language phrase, then continued through Mirror → Gratitude → Leave a Trace.
+- Toggled Mirror's connect action on → off → on and checked each persisted `responses.wants_reply` value. Resonance persisted once, disabled its button, and remained selected alongside connect after switching to the other language and back.
+- Submitted Leave a Trace and Contribute in both languages. Each submission returned HTTP 200 and persisted the correct language and origin. Simulated moderation approved the phrases; they remained inactive without embeddings, as expected before admin activation.
+- After switching language and back, Leave a Trace retained its completed screen without reopening the form; Contribute retained its saved confirmation and empty input.
+- Observe loaded its canvas and received the expected local corpus through its API: six English phrases and one temporary Spanish phrase during the test.
+- The successful batch used **six simulated moderation responses and two simulated embedding responses**, with zero unexpected provider endpoints. The localhost stub had no upstream forwarding and reported zero token usage. No real OpenAI requests were made.
+- An initial stub-format failure was corrected: the SDK requested base64 embeddings, so the stub needed to return base64 rather than a numeric array. This was a QA harness issue, not an application change.
+- Temporary entries, submitted phrases, the Spanish candidate and resonance rows were removed. Local feature flags and the preview environment were restored; the stub stopped. The six seeded English phrases remain.
+
+## Live Redis follow-up — 2026-09-22 (America/Merida)
+
+- Confirmed development environment loading with the installed Next.js `@next/env` loader: `.env.development.local` supplies local Supabase settings and `.env.local` supplies Redis credentials. No credentials needed duplicating or changing. The earlier isolated preview's missing Redis configuration does not describe this workspace's current configuration.
+- Authenticated against real Upstash Redis and received `PONG`. The sandboxed connection attempt failed; the approved network-enabled rerun passed.
+- Exercised the actual `rateLimitGuard` with unique synthetic identifiers: ten calls allowed and the eleventh returned a Response with status 429 and `{ "error": "too many requests" }`. Verified IP limits with a different session per call and session limits with a different IP per call.
+- Exercised the actual resonance limiter: fourteen calls allowed, fifteenth blocked. The same identifiers could still use the independent entries budget.
+- No Redis exceptions or fail-open paths occurred in the successful run. Test counters expire automatically. No Supabase or OpenAI calls were made; no credentials were printed.
+- All 37 focused unit tests passed across the limiters, submission guards, entries, phrases and resonance routes. Command: `npm test -- --exclude '.claude/**' src/lib/rate-limit.test.ts src/lib/public-submission-guards.test.ts src/app/api/entries/route.test.ts src/app/api/phrases/route.test.ts 'src/app/api/phrases/[id]/resonate/route.test.ts'`. An initial run also discovered a nested project copy under `.claude/` and failed on that copy; the scoped rerun excluded it.
+- Scope: real Redis plus application limiter/guard execution, and mocked route unit tests. This did not exercise HTTP through a running Next.js server, proxy IP extraction, browser cookies, window recovery, or production deployment.
+
 ## Remaining before closing the full QA gate
 
-- Exercise positive English matching and a nonempty English Observe constellation through the UI; the current local English corpus has no active embedded phrases.
-- Validate submitted Leave a Trace / Contribute outcomes, Mirror response actions and state preservation after submissions. Draft preservation and the skip journey have passed, but they are not substitutes for submission coverage.
+- The founder owns final production verification. This local follow-up does not certify deployed behavior.
 - These six samples validate observed model behavior, not broad moderation accuracy or calibration.
+- The September 19 follow-up uses deterministic provider responses; it adds application-flow coverage, not live model accuracy evidence. The September 22 follow-up validates real Redis limits at the application guard level; full HTTP/browser rate-limit coverage remains unverified.
 - Any additional provider calls need a new explicit approval. Any production Supabase access (including reads) also needs approval. Do not mark the whole bilingual QA item complete based solely on this batch.
 
 Production Supabase was not accessed during this QA task.
