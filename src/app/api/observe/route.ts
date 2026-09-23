@@ -21,8 +21,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
 // Fetched client-side by ObserveScreen so the ritual transition can run independently
 // of how long this takes — see observe-screen.tsx. Previously this ran inline in
 // observe/page.tsx as a blocking Server Component; moved here unchanged otherwise.
-export async function GET(request: Request) {
-  const locale = resolveLocale(new URL(request.url).searchParams.get("locale"));
+export async function GET(request?: Request) {
+  const locale = resolveLocale(request ? new URL(request.url).searchParams.get("locale") : undefined);
   if (!locale) {
     return Response.json({ error: "locale doesn't have the correct value" }, { status: 400 });
   }

@@ -38,7 +38,7 @@ describe("GET /api/observe", () => {
   it("returns 500 with the error message when the query fails", async () => {
     orderMock.mockResolvedValueOnce({ data: null, error: { message: "connection refused" } });
 
-    const response = await GET(new Request("http://localhost/api/observe"));
+    const response = await GET();
     const body = await response.json();
 
     expect(response.status).toBe(500);
@@ -54,7 +54,7 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET(new Request("http://localhost/api/observe"));
+    const response = await GET();
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -71,7 +71,7 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET(new Request("http://localhost/api/observe"));
+    const response = await GET();
     const body = await response.json();
 
     // Identical vectors in either form -> cosine similarity 1.
@@ -89,7 +89,7 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET(new Request("http://localhost/api/observe"));
+    const response = await GET();
     const body = await response.json();
 
     expect(body.similarities[0][0]).toBe(0);
@@ -109,7 +109,7 @@ describe("GET /api/observe", () => {
       error: null,
     });
 
-    const response = await GET(new Request("http://localhost/api/observe"));
+    const response = await GET();
     const body = await response.json();
 
     expect(body.phrases[0]).toEqual({ id: "1", text: "some phrase", resonanceCount: 0 });
@@ -119,7 +119,7 @@ describe("GET /api/observe", () => {
   it("defaults legacy requests to English and filters the corpus", async () => {
     orderMock.mockResolvedValueOnce({ data: [], error: null });
 
-    await GET(new Request("http://localhost/api/observe"));
+    await GET();
 
     expect(fromMock).toHaveBeenCalledWith("phrases");
     expect(activeEqMock).toHaveBeenCalledWith("active", true);
@@ -153,7 +153,7 @@ describe("GET /api/observe", () => {
         error: null,
       });
 
-      const response = await GET(new Request("http://localhost/api/observe"));
+      const response = await GET();
       const body = await response.json();
 
       expect(inMock).toHaveBeenCalledWith("phrase_id", ["1", "2"]);
@@ -166,7 +166,7 @@ describe("GET /api/observe", () => {
     it("skips the phrase_resonances query entirely when there are no active phrases", async () => {
       orderMock.mockResolvedValueOnce({ data: [], error: null });
 
-      await GET(new Request("http://localhost/api/observe"));
+      await GET();
 
       expect(resonanceSelectMock).not.toHaveBeenCalled();
     });
