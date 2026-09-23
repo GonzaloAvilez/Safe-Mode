@@ -1,19 +1,5 @@
 # Project: Safe Mode
 
-## Historical adoption snapshot
-
-This document records the July 2026 adoption assessment, including the learner’s
-starting point. Statements such as “I haven’t written a line” and the original MVP
-backlog below describe that time, not the current project or learner.
-
-**Current status (2026-09-22):** soft launch, human approval before publication, Mirror/
-Gratitude copy fixes, and English/Spanish support have shipped. Bilingual issue #178
-is closed after founder rollout verification. Matching thresholds are now per language
-(defaults: English 0.40, Spanish 0.50). See [ROADMAP.md](../ROADMAP.md) for current
-product status and [plan.md](./plan.md) / [knowledge-graph.md](./knowledge-graph.md)
-for recorded learning evidence; this documentation refresh adds no learning claims.
-
-
 ## About me
 
 I'm building this app, but I haven't written a line of its code yet. Claude Code has

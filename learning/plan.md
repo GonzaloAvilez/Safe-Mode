@@ -1,16 +1,5 @@
 # Plan
 
-## How to read this plan now
-
-This is the dated learning plan and session record from July 2026. Opening statements
-such as “none of this is built yet” describe the starting point of their section;
-completion notes later in each section record the learning work that followed.
-They are not the current product backlog. See [ROADMAP.md](../ROADMAP.md) for the
-2026-09-22 reconciliation: bilingual delivery is complete, and the before/after scale
-remains deliberately paused. No lesson or understanding status is changed by this
-product documentation update.
-
-
 Built 2026-07-20, resuming Phase 3 of `/adopt-project` on a project already adopted
 (`project.md`, `file-map.md`, `knowledge-graph.md` already existed and were verified
 against the real repo in this same session — `project.md` had two stale claims about
