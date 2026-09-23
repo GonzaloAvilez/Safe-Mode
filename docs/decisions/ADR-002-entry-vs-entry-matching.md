@@ -4,7 +4,7 @@
 **Date:** 2026-08-07
 **Context owner:** product/eng
 
-## Context at decision time (2026-08-07)
+## Context
 
 `match_phrase` (see `src/lib/phrases.ts`) matches a visitor's `entry` (from Write) against the
 `phrases` corpus — never against another visitor's `entry`. Phrases are permanent, curated,
@@ -49,10 +49,10 @@ entry's actual text in Mirror.
 
 **Rejected outright.** Breaks RulesGate's explicit, recently-added privacy guarantee ("what you
 write stays private, only ever compared against what others have left, echoing back or not" —
-added 2026-08-03 specifically because a real visitor didn't understand the mechanism).
-Entries are checked by moderation before embedding and matching, but that safety check
-does not grant consent to publish private text. Surfacing an entry to a stranger,
-even mediated, would require a separate publication/consent design that does not exist today.
+added 2026-08-03 specifically because a real visitor didn't understand the mechanism). Entries
+are never moderated before creation, because they were never designed to be shown to anyone but
+their own author — surfacing one to a stranger, even mediated, would require a parallel
+moderation/consent pipeline that doesn't exist today.
 
 ### Option C — Entry-vs-entry matching, phrase-mediated (never show raw entry text)
 
@@ -93,14 +93,6 @@ anonymity-preserving redesign exists for it — a hard gate, not a someday-maybe
   even phrase-mediated.
 
 **What actually addresses today's diagnosed problem instead:** deliberate emotional diversity in
-new phrases (seed and Contribute-sourced), not just volume. D24-25 ("100+ seed phrases") needs
-to explicitly target this as a goal, not just hit a count. Cheaper, already roadmapped,
-zero conflict with any established principle.
-
-## Status reconciliation — 2026-09-22
-
-The September rollout adds English/Spanish corpus partitioning and seed tooling; it
-still matches entries against phrases, never entries against entries. The deferral
-above remains. The earlier traffic/corpus observations are historical, not a fresh
-production inventory. Corpus volume and emotional diversity per language remain
-validation work in [ROADMAP.md](../../ROADMAP.md).
+new phrases (seed and Contribute-sourced), not just volume. D24-25 ("100+ seed phrases," not yet
+started) needs to explicitly target this as a goal, not just hit a count. Cheaper, already
+roadmapped, zero conflict with any established principle.

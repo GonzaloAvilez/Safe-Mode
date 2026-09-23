@@ -13,9 +13,9 @@ Ask the model to follow steps 1-5 in Section B, in order, without skipping any.
 
 ---
 
-## SECTION A — What Refugio is (context reconciled 2026-09-22)
+## SECTION A — What Refugio is (fixed context, does not change)
 
-Anonymous digital space for processing burnout/emotional transition. The user writes something (`entries`) → semantic matching via embeddings against a corpus of anonymous phrases (`phrases`) → receives a human-authored "mirror" only if a phrase in the selected language clears its configured threshold; otherwise the no-match flow applies. Zero AI-generated responses. Radical anonymity.
+Anonymous digital space for processing burnout/emotional transition. The user writes something (`entries`) → semantic matching via embeddings against a corpus of anonymous phrases (`phrases`) → receives the closest "mirror," written by another real person. Zero AI-generated responses. Radical anonymity.
 
 **Core thesis:** see → feel safe → remember → dare → act. Never tell the user how to feel — only show evidence and let them arrive at their own conclusion. The goal is not directed catharsis or retention — it's genuine recognition, regardless of whether the user comes back or not.
 
@@ -37,7 +37,7 @@ Before proposing any change, check whether the feedback pushes toward something 
 - Never AI-generated responses
 - Never persistent usernames or profiles
 - Never public counters visible in Mirror (allowed in Observe, never at the moment of highest vulnerability)
-- Matching thresholds are per language (`language_thresholds`): migration defaults are English 0.40 and Spanish 0.50. Recalibrate only with quantitative evidence from the relevant corpus; do not treat these defaults as a fresh reading of live settings.
+- Matching threshold at 0.40 — recalibrate only with new quantitative evidence from the live corpus
 
 If the feedback conflicts with any of these, flag it explicitly as **tension with existing decision**, not as an action to execute automatically.
 
@@ -70,9 +70,9 @@ Expected model output:
 
 ---
 
-## SECTION D — Recorded convergence state (update after each analysis round)
+## SECTION D — Current convergence state (update after each analysis round)
 
-_The counts below are carried forward from the prior analysis, not recounted during the 2026-09-22 documentation reconciliation. Bilingual functional QA does not validate product hypotheses or emotional outcomes. Update with new source evidence before drawing new conclusions._
+_Paste the most recent topic/source/status table here before analyzing new feedback, so the model compares against real history instead of starting from zero._
 
 | Topic | Sources (verified distinct people) | Status |
 |---|---|---|

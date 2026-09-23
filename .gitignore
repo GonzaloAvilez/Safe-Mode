@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local-only reference docs
+docs/screens-map.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

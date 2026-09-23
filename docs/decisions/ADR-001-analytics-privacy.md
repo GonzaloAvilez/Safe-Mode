@@ -4,17 +4,13 @@
 **Date:** 2026-08-01
 **Context owner:** product/eng
 
-## Context at decision time (2026-08-01)
+## Context
 
 Vercel's built-in analytics does not provide funnel-level visibility. We need to know, per
-screen (`Home → Arrive → Observe → Remember → Write → Searching → Mirror → Gratitude →
-Leave a Trace`), where users drop off. Current traffic is near zero, making this diagnosis urgent.
+screen (`Home → Arrive → Observe → Remember → Write → Searching → Mirror → Leave a Trace →
+Gratitude`), where users drop off. Current traffic is near zero, making this diagnosis urgent.
 
 ## Options considered
-
-The comparisons and configuration example below are the August decision record, not
-a current vendor capability/pricing guide. Re-verify them before selecting or configuring
-a provider. No analytics integration was added as part of the September bilingual rollout.
 
 | Tool | Free tier | Data location | Funnel support |
 |---|---|---|---|
