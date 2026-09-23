@@ -1,7 +1,7 @@
 # Bilingual local QA — 2026-09-19
 
 Branch: `test/i18n-bilingual-qa`, based on `515d1ab` (PR #190).
-Tracking: GitHub issue #178. Status: live moderation batch and the local journey checks listed below passed. Production verification remains with the founder.
+Tracking: GitHub issue #178. Status: live moderation batch and the local journey checks listed below passed. The founder has since completed final live review and closed issue #178 (see closure below).
 
 ## Completed without live provider calls
 
@@ -60,11 +60,15 @@ Branch: `test/complete-local-bilingual-qa`, based on `df2da9a`. Chrome exercised
 - All 37 focused unit tests passed across the limiters, submission guards, entries, phrases and resonance routes. Command: `npm test -- --exclude '.claude/**' src/lib/rate-limit.test.ts src/lib/public-submission-guards.test.ts src/app/api/entries/route.test.ts src/app/api/phrases/route.test.ts 'src/app/api/phrases/[id]/resonate/route.test.ts'`. An initial run also discovered a nested project copy under `.claude/` and failed on that copy; the scoped rerun excluded it.
 - Scope: real Redis plus application limiter/guard execution, and mocked route unit tests. This did not exercise HTTP through a running Next.js server, proxy IP extraction, browser cookies, window recovery, or production deployment.
 
-## Remaining before closing the full QA gate
+## Rollout closure — 2026-09-22
 
-- The founder owns final production verification. This local follow-up does not certify deployed behavior.
+The founder reported completing final live review and updating issue #178. The issue is closed with all delivery items checked, including final rollout verification. PR #194, containing the local journey and Redis follow-ups, is merged to `master`. This is founder-reported rollout acceptance, not an additional production test performed by the local QA harness.
+
+## Evidence limits and follow-up coverage
+
+- Local test results above retain their original scope; founder rollout acceptance is recorded separately above.
 - These six samples validate observed model behavior, not broad moderation accuracy or calibration.
 - The September 19 follow-up uses deterministic provider responses; it adds application-flow coverage, not live model accuracy evidence. The September 22 follow-up validates real Redis limits at the application guard level; full HTTP/browser rate-limit coverage remains unverified.
-- Any additional provider calls need a new explicit approval. Any production Supabase access (including reads) also needs approval. Do not mark the whole bilingual QA item complete based solely on this batch.
+- Any additional provider calls need a new explicit approval. Any production Supabase access (including reads) also needs approval. The local batch alone did not close the rollout gate; closure also required the founder’s final live review.
 
 Production Supabase was not accessed during this QA task.

@@ -1,5 +1,28 @@
 # File Map
 
+## Current locations and historical learning evidence
+
+Paths and current behavior were reconciled on 2026-09-22. The `known`/`parked` labels
+and dated explanations below remain evidence from the original learning sessions;
+they do not assert understanding of subsequent changes.
+
+Newer areas not yet assessed in those sessions:
+
+- `src/i18n/`, `messages/en.json`, `messages/es.json`, `src/lib/locale.ts` — locale
+  routing/navigation, catalogs and backend locale contracts. **parked**.
+- `src/app/_components/experience-state/` — state above `[locale]` preserving drafts,
+  choices and contribution progress across language changes. **parked**.
+- `src/lib/phrase-resonances.ts`, `src/lib/phrase-narratives.ts`,
+  `src/lib/safety/phrase-classification.ts` — resonance and optional narrative metadata.
+  **parked**.
+- September migrations — per-language thresholds, three-argument matching RPC and
+  obsolete-overload removal. **parked**; the earlier expand/contract learning evidence
+  below does not claim these particular migrations were taught.
+
+See [the screens map](../docs/screens-map.md) for current screen states and
+[ROADMAP.md](../ROADMAP.md) for delivery status.
+
+
 Status legend: `known` (explained in conversation, evidence in knowledge-graph.md) ·
 `generated` (machine-made, never hand-edit, always rebuildable) · `parked` (not yet
 explained — an honest gap, not a failure, with a note on when it comes due).
@@ -63,7 +86,7 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
 
 ## `supabase/` — the database
 
-- `supabase/migrations/*.sql` (16 files, 2026-07-07 → 2026-07-20) — the real schema:
+- `supabase/migrations/*.sql` (ordered SQL migrations, including the September bilingual rollout) — the real schema:
   table creation, RLS policies, the `match_phrase` RPC, indexes, spend-tracking RPCs, all
   as ordered, timestamped SQL → [[supabase-migrations-workflow]]. Specific files
   walked directly:
@@ -93,8 +116,8 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
 - `src/lib/supabase.ts` — the `supabaseAdmin` service-role client → [[rls-service-role-bypass]]. **known, seed status** — explained with the wrong mechanism (see knowledge-graph). Top reclaim priority.
 - `src/lib/entries.ts` — `submitEntry`: the full moderate → embed → match → store
   orchestration → [[moderation-gate-ordering]], [[crisis-text-isolation]]. known (partial —
-  order and crisis-storage gaps still parked). Section 2 Task 3: now threads a hardcoded
-  `"en"` language into its `findClosestPhrase` call. Needed a live correction on the call
+  order and crisis-storage gaps still parked). Historically, Section 2 Task 3 threaded a hardcoded
+  `"en"` language into its `findClosestPhrase` call; the current implementation accepts the routed locale. Needed a live correction on the call
   order itself (initially described `findClosestPhrase` as a separate later step rather
   than a nested call `submitEntry` waits on mid-execution) — resolved in chat, not yet
   re-tested on a later day, so not graph evidence. Section 4 Task 2: `insertEntry` now
@@ -103,7 +126,7 @@ Installed dependencies and build output. Never hand-edited, always rebuildable v
   after `findClosestPhrase` resolves → [[sql-update-without-where-is-dangerous]]. First
   draft of that function had a real bug (no `.eq()` filter, `id` inside the update
   payload) — explained, then correctly fixed.
-- `src/lib/openai.ts` — the only file that calls OpenAI directly (embeddings + moderation) → [[embedding-generation]]. known
+- `src/lib/openai.ts` — the OpenAI client for embeddings, moderation and narrative classification (`safety/phrase-classification.ts` sanitizes classification output) → [[embedding-generation]]. known
 - `src/lib/phrases.ts` — reads/writes the `phrases` corpus, calls `match_phrase` via RPC,
   and the user-submitted-phrase moderation pipeline (`finalizeUserPhraseModeration`,
   `approvePhrase`/`rejectPhrase`) → [[admin-audit-not-gate-model]]. known for the matching
@@ -153,7 +176,7 @@ two visibility flags before any route renders → [[site-visibility-flags]],
 
 - `src/app/api/entries/route.ts` — `POST /api/entries`, the entry point for the whole
   matching flow probed in Q1. known (partial, see [[moderation-gate-ordering]])
-- `src/app/api/entries/[id]/resonate/route.ts` — Mirror's "this resonated with me" toggle.
+- `src/app/api/entries/[id]/connect/route.ts` — Mirror’s connection-intent toggle (renamed from the former entry-level resonate route).
   **known** (Section 5 side quest): validates `body.value` is a boolean, then calls
   `setWantsReply`. → [[sql-update-without-where-is-dangerous]]
 - `src/app/api/observe/route.ts` — precomputes Observe's pairwise similarity matrix → [[observe-pairwise-similarity]]. parked
@@ -165,7 +188,7 @@ two visibility flags before any route renders → [[site-visibility-flags]],
   `route.test.ts` (its unit test, previously un-inventoried here) updated to match.
 - `src/app/api/cron/anonymize-crisis-entries/route.ts` — the scheduled job behind [[crisis-anonymization-cron]]. parked (the job's existence and purpose is known from Q3; the route file itself wasn't opened together)
 
-## `src/app/(experience)/` — the 9-screen public flow
+## `src/app/[locale]/(experience)/` — the 9-screen public flow
 
 One entry per screen folder; all `parked` except where noted, since only the matching
 mechanics (not the screens themselves) were probed today. Each screen folder = route +
@@ -188,10 +211,10 @@ its own canvas/animation component + local `_components/`.
   submission was, via `searching.tsx` below)
   - `write/_components/searching.tsx` — the ritualized loading state. **known** → [[ritualized-loading-ux]]
 - `mirror/` — screen 6, shows the matched phrase or a dimmed no-match state.
-  `page.tsx` — **known** (Section 7): reads a `sessionStorage` handoff Write stashed before
+  `page.tsx` / `_components/mirror-screen.tsx` — **known** (Section 7 historical walkthrough): reads a `sessionStorage` handoff Write stashed before
   navigating (`readMirrorHandoff`, no handoff bounces back to `/write`), renders the
-  matched quote or a no-match message, and a reversible "this resonated with me" toggle
-  that POSTs to `/api/entries/:id/resonate`. Fixed the same design-principle violation as
+  matched quote or a no-match message, and, at the time of that walkthrough, a reversible "this resonated with me" toggle
+  that historically posted to `/api/entries/:id/resonate`. Current behavior splits a one-shot phrase resonance (`/api/phrases/:id/resonate`) from connection intent (`/api/entries/:id/connect`); this split is not new learning evidence. Fixed the same design-principle violation as
   Gratitude: the matched-branch tagline and subcopy presumed the visitor's own emotional
   state → [[never-presume-visitor-emotional-state]]. `mirror-canvas.tsx` — **known**: two
   pulsing canvas nodes (violet "other," gold "self") joined by a curve; on `no_match` the
@@ -246,7 +269,10 @@ its own canvas/animation component + local `_components/`.
 
 ## `src/app/closed/page.tsx` — top-level redirect target when `site_public` is off. parked
 
-## `src/app/layout.tsx` — root shell + site `metadata`
+## `src/app/layout.tsx` — root shell and experience-state providers
+
+Current localized metadata lives in `src/app/[locale]/layout.tsx`. The evidence below
+records the earlier root-metadata edit.
 **known** (Section 5 side quest, 2026-07-27): `metadata.title`/`metadata.description` were
 still create-next-app's literal scaffolding defaults right up to soft launch — replaced
 directly in the file (one self-caught syntax slip: a missing comma between object
@@ -255,7 +281,7 @@ properties, fixed unprompted after being asked to predict the failure).
 ## `src/app/icon.png` — real favicon, Next.js file-convention (**known**, 2026-07-27)
 Replaces `src/app/favicon.ico` (deleted — Next's default logo, and having both risked two
 competing `<link rel="icon">` tags). 256×256, supplied by the user, verified square before
-use. On `fix/site-metadata-favicon` (branched off `master`, PR not yet opened).
+use. The original walkthrough was on `fix/site-metadata-favicon`; the icon is now tracked on `master`.
 
 ## `src/components/ui/button.tsx` — shadcn-generated base component. parked
 

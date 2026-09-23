@@ -68,11 +68,12 @@ don't stress over getting the type exactly right.
 
 ```bash
 npm run lint
+npx next typegen       # generate PageProps/RouteContext on a fresh checkout
 npx tsc --noEmit
 npm test
 ```
 
-If your change touches `supabase/migrations/**`, `src/lib/entries.ts`, or `src/lib/phrases.ts`,
+If your change touches `supabase/migrations/**`, `src/lib/entries.ts`, `src/lib/phrases.ts`, or the integration test files,
 also run:
 
 ```bash
@@ -92,3 +93,14 @@ unrelated app code.
 
 Look for the [`good first issue`](https://github.com/GonzaloAvilez/Safe-Mode/labels/good%20first%20issue)
 label. Comment on the issue before starting so it doesn't get worked on twice.
+
+## Documentation and local test scope
+
+Keep [ROADMAP.md](./ROADMAP.md) aligned with shipped behavior and link dated QA evidence
+rather than converting local checks into claims about production. `learning/` records
+historical learning evidence; shipping code does not establish that a concept was learned.
+
+Run checks from a clean checkout. An untracked nested project (for example under `.claude/`)
+can be picked up by test/lint/typecheck discovery. The September QA used a clean copy of
+tracked files for the full checks; `--exclude '.claude/**'` only scopes Vitest and does not
+solve lint or TypeScript discovery. Keep such reference copies outside the checkout.

@@ -2,13 +2,14 @@
 
 A quiet space for people who feel alone in what they're going through.
 
-Users write something real — no pressure, no perfect words — and receive an anonymous phrase from someone else who felt something similar. No chat, no profiles, no engagement loops — just proof that someone else already put a similar feeling into words.
+Users write something real — no pressure, no perfect words — and, when a same-language phrase meets the similarity threshold, receive an anonymous phrase written by someone else. No chat, no profiles, no engagement loops — just proof that someone else already put a similar feeling into words.
 
-Built with Next.js, Supabase (pgvector), and OpenAI embeddings for semantic matching between entries.
+Built with Next.js, Supabase (pgvector), and OpenAI embeddings for semantic matching from private entries to the human-authored phrase corpus.
 
-AI's role is deliberately narrow: it only matches a visitor's entry against real, anonymous human
-phrases by meaning (embeddings). It never generates a response, a reply, or anything shown to a
-visitor as if it were human — the goal is human interaction, not an AI conversation.
+AI moderates submissions and matches private entries to human-authored phrases using embeddings.
+An optional, admin-triggered experiment also derives narrative metadata for public phrases.
+Mirror never presents an AI-generated reply as someone’s words. User-submitted phrases require
+human activation before joining the public corpus.
 
 The flow is nine screens: Home → Arrive → Observe → Remember → Write → Searching → Mirror →
 Gratitude → Leave a Trace. Nothing is ever attributed to a name — anonymity isn't a setting, it's
@@ -16,6 +17,9 @@ the foundation the whole experience is built on.
 
 
 ## Status
+
+The public experience supports English (`/en/*`) and Spanish (`/es/*`), including
+same-language matching and Observe. Bilingual rollout is complete ([issue #178](https://github.com/GonzaloAvilez/Safe-Mode/issues/178)).
 
 Full build status, decisions, and what's still open
 live in [ROADMAP.md](./ROADMAP.md) — that file, not this one, is the source of truth for what's
@@ -42,8 +46,15 @@ npm run dev
 ```
 
 `npm run dev` boots a local Supabase/Postgres stack automatically (`scripts/dev-local-setup.sh`)
-— it never touches the real shared project. Use `npm run dev:cloud` instead if you need to point
-at the real database.
+and regenerates `.env.development.local` with local Supabase settings. Next.js also loads
+`.env.local`: OpenAI, Redis and session/admin secrets still come from there unless overridden.
+Redis uses `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`; copying them into the
+generated file is unnecessary and would be overwritten on the next start. Local development
+still calls configured external providers when those features are exercised.
+
+Use `npm run dev:cloud` only when deliberately targeting the shared database. One-off scripts
+must explicitly load the intended environment; they do not inherit Next.js environment-file
+precedence automatically. Never commit `.env.local` or credentials.
 
 ### Tests
 
@@ -51,3 +62,6 @@ at the real database.
 npm test                 # fast unit tests, fully mocked
 npm run test:integration # real local Postgres, via scripts/run-integration-tests.sh
 ```
+
+For routing and state ownership, see [the screens map](./docs/screens-map.md). Recorded
+bilingual and Redis checks, with their coverage limits, live in [the QA report](./docs/qa/bilingual-local-qa.md).

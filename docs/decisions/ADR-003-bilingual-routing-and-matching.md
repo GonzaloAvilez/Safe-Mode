@@ -1,10 +1,11 @@
 # ADR-003: Bilingual routing and language-partitioned matching
 
-**Status:** Accepted — implementation planned in issue #178
+**Status:** Accepted and implemented — issue #178 closed; final rollout verified by the founder
+**Status reconciled:** 2026-09-22
 **Date:** 2026-09-02
 **Context owner:** product/eng
 
-## Context
+## Context at decision time (2026-09-02)
 
 Refugio's public experience has been English-only since 2026-07-15, while the next
 in-person outreach audience is primarily Spanish-speaking. Replacing the English copy
@@ -82,3 +83,13 @@ the system, but doing so remains a separate product and safety decision.
 
 Implementation order, validation gates, and linked PRs are tracked in GitHub issue
 [#178](https://github.com/GonzaloAvilez/Safe-Mode/issues/178).
+
+## Implementation outcome — 2026-09-22
+
+All delivery items in issue #178 are checked, including final rollout verification.
+The obsolete two-argument RPC was removed in migration
+`20260919120000_drop_match_phrase_two_arg_overload.sql` (PR #192); current consumers use
+three arguments. Local bilingual journeys and live Redis checks are recorded in
+[the QA report](../qa/bilingual-local-qa.md), merged via PR #194. The founder reported the
+final live review complete; that closes the rollout gate without expanding the scope of
+the recorded automated or local tests.

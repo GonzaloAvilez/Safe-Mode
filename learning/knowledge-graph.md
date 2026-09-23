@@ -1,5 +1,12 @@
 # Knowledge Graph
 
+This graph records demonstrated understanding at the dates shown. It is not a current
+architecture specification: later shipped changes do not automatically advance learning
+statuses. For current behavior see [ROADMAP.md](../ROADMAP.md) and
+[the screens map](../docs/screens-map.md). Historical examples below retain their
+original context (documentation reconciliation: 2026-09-22).
+
+
 Statuses: `seed` (named, not yet explained) → `introduced` (explained once, gaps remain) →
 `practicing` (applied/debugged once) → `understood` (explained correctly, unprompted).
 Set only from what I demonstrate in conversation — never from self-report or from files
