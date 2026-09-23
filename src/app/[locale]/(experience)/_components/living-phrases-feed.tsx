@@ -1,18 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Locale } from "@/lib/locale";
-import { isPublicNarrativeEnabled } from "@/lib/settings";
 import { excerpt } from "./excerpt";
 import { LivingPhrases, type LivingPhraseItem } from "./living-phrases";
 
-// Part of the public-narrative experiment (see docs/workshop-updates) — off by
-// default, so this always returns the exact plain-text behavior unless an admin
-// has explicitly turned the flag on. Narrative is shown for any active phrase that
-// has actually been classified, seed included as of 2026-08-04 (see
-// docs/workshop-updates) — seed phrases are already public, team-authored content,
-// same consent posture as their date already had. Same as the date: created_at
-// isn't "when this was felt," it's when whoever wrote it — seed phrases too, real
-// reflections, not placeholder content — dared to share it. Still gated behind this
-// same flag for now, not its own toggle yet.
+// Display existing narrative metadata for active phrases in the selected language.
+// Classification remains an explicit admin action; rendering never generates text.
+// A phrase without classification still appears with its text and submission date.
 async function fetchPhrasesWithNarratives(locale: Locale): Promise<LivingPhraseItem[]> {
   const { data } = await supabaseAdmin
     .from("phrases")
@@ -48,13 +41,7 @@ async function fetchPhrasesWithNarratives(locale: Locale): Promise<LivingPhraseI
 // data dependency of their own and can stream immediately while this resolves. See
 // the Suspense boundary around this component in page.tsx.
 export async function LivingPhrasesFeed({ locale }: { locale: Locale }) {
-  const narrativeEnabled = await isPublicNarrativeEnabled();
-
-  const phrases = narrativeEnabled
-    ? await fetchPhrasesWithNarratives(locale)
-    : (await supabaseAdmin.from("phrases").select("text").eq("active", true).eq("language", locale)).data?.map((row) => ({
-        text: excerpt(row.text),
-      })) ?? [];
+  const phrases = await fetchPhrasesWithNarratives(locale);
 
   return <LivingPhrases phrases={phrases} />;
 }

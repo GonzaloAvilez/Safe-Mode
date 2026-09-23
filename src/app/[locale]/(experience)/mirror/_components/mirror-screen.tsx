@@ -39,7 +39,7 @@ function getServerHandoffSnapshot() {
 // "matched" (a phrase to show) and "no_match" (still passes through here rather
 // than dead-ending in Write). Write stashes which one in sessionStorage before
 // navigating; a direct visit has nothing to read, so it bounces back to Write.
-export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) {
+export function MirrorScreen() {
   const t = useTranslations("mirror");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -138,21 +138,19 @@ export function MirrorScreen({ resonateEnabled }: { resonateEnabled: boolean }) 
                 {t("attribution")}
               </div>
 
-              {resonateEnabled && (
-                <button
-                  type="button"
-                  onClick={handleResonate}
-                  disabled={resonated}
-                  aria-pressed={resonated}
-                  className={`mt-4 rounded-full border px-5 py-1.5 text-[13px] tracking-[.5px] transition-colors duration-500 ${
-                    resonated
-                      ? "border-[rgba(165,125,220,0.55)] text-[rgba(200,175,255,0.85)]"
-                      : "border-[rgba(165,125,220,0.3)] text-[rgba(165,125,220,0.6)] hover:border-[rgba(165,125,220,0.5)]"
-                  }`}
-                >
-                  {resonated ? "💛" : "✨"} {t("resonateButton")}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleResonate}
+                disabled={resonated}
+                aria-pressed={resonated}
+                className={`mt-4 rounded-full border px-5 py-1.5 text-[13px] tracking-[.5px] transition-colors duration-500 ${
+                  resonated
+                    ? "border-[rgba(165,125,220,0.55)] text-[rgba(200,175,255,0.85)]"
+                    : "border-[rgba(165,125,220,0.3)] text-[rgba(165,125,220,0.6)] hover:border-[rgba(165,125,220,0.5)]"
+                }`}
+              >
+                {resonated ? "💛" : "✨"} {t("resonateButton")}
+              </button>
             </>
           ) : (
             <>

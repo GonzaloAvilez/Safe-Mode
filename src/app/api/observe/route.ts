@@ -1,5 +1,4 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { isResonateEnabled } from "@/lib/settings";
 import { resolveLocale } from "@/lib/locale";
 
 // pgvector returns embeddings either as a real array or a "[0.1,0.2,...]" string, depending on driver path.
@@ -22,8 +21,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
 // Fetched client-side by ObserveScreen so the ritual transition can run independently
 // of how long this takes — see observe-screen.tsx. Previously this ran inline in
 // observe/page.tsx as a blocking Server Component; moved here unchanged otherwise.
-export async function GET(request?: Request) {
-  const locale = resolveLocale(request ? new URL(request.url).searchParams.get("locale") : undefined);
+export async function GET(request: Request) {
+  const locale = resolveLocale(new URL(request.url).searchParams.get("locale"));
   if (!locale) {
     return Response.json({ error: "locale doesn't have the correct value" }, { status: 400 });
   }
@@ -59,11 +58,8 @@ export async function GET(request?: Request) {
 
   // Public per-phrase resonate count — deliberate risk-accepted decision 2026-08-02
   // (see docs/workshop-updates/2026-08-02-resonate-public-counter-risk-accepted.md).
-  // Gated the same as the button itself: no extra query, no field on the response,
-  // when the flag is off.
-  const resonateEnabled = await isResonateEnabled();
   const resonanceCountByPhraseId = new Map<string, number>();
-  if (resonateEnabled && rows.length > 0) {
+  if (rows.length > 0) {
     const { data: resonanceRows } = await supabaseAdmin
       .from("phrase_resonances")
       .select("phrase_id")
@@ -79,7 +75,7 @@ export async function GET(request?: Request) {
   const phrases = rows.map((row) => ({
     id: row.id,
     text: row.text,
-    resonanceCount: resonateEnabled ? (resonanceCountByPhraseId.get(row.id) ?? 0) : undefined,
+    resonanceCount: resonanceCountByPhraseId.get(row.id) ?? 0,
   }));
 
   return Response.json({ phrases, similarities });

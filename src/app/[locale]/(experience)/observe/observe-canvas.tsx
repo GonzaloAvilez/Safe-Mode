@@ -220,11 +220,9 @@ class Point {
 export function ObserveCanvas({
   phrases,
   similarities,
-  resonateEnabled = false,
 }: {
   phrases: Phrase[];
   similarities: number[][];
-  resonateEnabled?: boolean;
 }) {
   // Named tObserve, not t — this effect's animation loop already uses a local `let t`
   // for elapsed time, and since JS closures resolve identifiers lexically regardless of
@@ -252,9 +250,6 @@ export function ObserveCanvas({
     const tooltip = tooltipRef.current;
     const tooltipLead = tooltipLeadRef.current;
     const tooltipText = tooltipTextRef.current;
-    // Not part of the guard below on purpose: when resonateEnabled is false this button
-    // doesn't exist in the DOM at all, so the ref is legitimately null — the rest of the
-    // canvas (points, tooltip) must still work. Null-checked individually at each use site.
     const resonateCountEl = resonateCountRef.current;
     const resonateButtonEl = resonateButtonRef.current;
     const buttonZoneEl = buttonZoneRef.current;
@@ -428,10 +423,8 @@ export function ObserveCanvas({
         // Once revealed, freeze position rather than continuing to hug the cursor on
         // every tick — with a button inside, that turns "move toward it" into a moving
         // target (each micro-movement drags the button the same direction). Only frozen
-        // once actually visible, and only when resonateEnabled — during the pre-reveal
-        // dwell, and whenever there's no button to reach for, follow the cursor exactly
-        // as before.
-        const alreadyRevealed = resonateEnabled && tooltip!.classList.contains("visible");
+        // once actually visible — during the pre-reveal dwell, follow the cursor.
+        const alreadyRevealed = tooltip!.classList.contains("visible");
         if (hoverTarget && !alreadyRevealed) positionTooltip(clientX, clientY);
         return;
       }
@@ -532,7 +525,7 @@ export function ObserveCanvas({
 
       // Cursor is over the tooltip itself right now — leave hoverTarget alone
       // regardless of distance from the point (see isOverTooltipRect above).
-      if (resonateEnabled && hoverTarget && isOverTooltipRect(e.clientX, e.clientY)) {
+      if (hoverTarget && isOverTooltipRect(e.clientX, e.clientY)) {
         if (hoverLossTimer) {
           clearTimeout(hoverLossTimer);
           hoverLossTimer = null;
@@ -551,7 +544,7 @@ export function ObserveCanvas({
         return;
       }
 
-      if (resonateEnabled && hoverTarget) {
+      if (hoverTarget) {
         // Not over a point or the tooltip right now, but could just be mid-transit
         // between them — give it a brief grace window before actually closing,
         // instead of hiding on this first missed tick.
@@ -705,7 +698,7 @@ export function ObserveCanvas({
       if (revealTimer) clearTimeout(revealTimer);
       if (hoverLossTimer) clearTimeout(hoverLossTimer);
     };
-  }, [phrases, similarities, resonateEnabled, leadPhrases, tObserve]);
+  }, [phrases, similarities, leadPhrases, tObserve]);
 
   return (
     <>
@@ -729,16 +722,12 @@ export function ObserveCanvas({
           ref={tooltipTextRef}
           className="mt-1.5 text-[length:var(--text-quote-primary)] leading-[1.5] tracking-[.3px] text-white/60"
         />
-        {resonateEnabled && (
-          <div ref={resonateCountRef} className="mt-2 text-[length:var(--text-quote-secondary)] tracking-[.2px] text-white/35" />
-        )}
-        {resonateEnabled && (
-          <button
-            ref={resonateButtonRef}
-            type="button"
-            className="pointer-events-auto mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] px-3 py-1.5 text-[13px] tracking-[.2px] text-white/60 transition-all duration-300 hover:scale-105 hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)] active:scale-95 disabled:hover:scale-100"
-          />
-        )}
+        <div ref={resonateCountRef} className="mt-2 text-[length:var(--text-quote-secondary)] tracking-[.2px] text-white/35" />
+        <button
+          ref={resonateButtonRef}
+          type="button"
+          className="pointer-events-auto mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] px-3 py-1.5 text-[13px] tracking-[.2px] text-white/60 transition-all duration-300 hover:scale-105 hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)] active:scale-95 disabled:hover:scale-100"
+        />
       </div>
     </>
   );

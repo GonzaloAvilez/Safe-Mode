@@ -61,12 +61,8 @@ function formatRelativeTime(iso: string, locale: string): string {
 
 export type LivingPhraseItem = {
   text: string;
-  // Set independently, both by the public-narrative experiment (see
-  // docs/workshop-updates) when its flag is on — absent otherwise, in which case this
-  // renders exactly as before: just the phrase text. publicNarrative and createdAt are
-  // both shown for any active, classified phrase regardless of source (seed included
-  // as of 2026-08-04) — it's the date whoever wrote it dared to share it, not a
-  // synthetic placeholder that needs hiding.
+  // Existing classification is optional; unclassified phrases still show their date.
+  // Both seed and user phrases can carry metadata. Rendering never generates it.
   publicNarrative?: string;
   createdAt?: string;
 };
