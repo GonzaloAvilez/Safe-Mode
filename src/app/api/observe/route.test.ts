@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { orderMock, activeEqMock, languageEqMock, fromMock, inMock, resonanceSelectMock, isResonateEnabledMock } = vi.hoisted(() => {
+const { orderMock, activeEqMock, languageEqMock, fromMock, inMock, resonanceSelectMock } = vi.hoisted(() => {
   const orderMock = vi.fn();
   const languageEqMock = vi.fn(() => ({ order: orderMock }));
   const activeEqMock = vi.fn(() => ({ eq: languageEqMock }));
   const phrasesSelectMock = vi.fn(() => ({ eq: activeEqMock }));
 
-  const inMock = vi.fn();
+  const inMock = vi.fn().mockResolvedValue({ data: [], error: null });
   const resonanceSelectMock = vi.fn(() => ({ in: inMock }));
 
   const fromMock = vi.fn((table: string) => {
@@ -21,7 +21,6 @@ const { orderMock, activeEqMock, languageEqMock, fromMock, inMock, resonanceSele
     fromMock,
     inMock,
     resonanceSelectMock,
-    isResonateEnabledMock: vi.fn().mockResolvedValue(false),
   };
 });
 
@@ -29,15 +28,10 @@ vi.mock("@/lib/supabase", () => ({
   supabaseAdmin: { from: fromMock },
 }));
 
-vi.mock("@/lib/settings", () => ({
-  isResonateEnabled: isResonateEnabledMock,
-}));
-
 const { GET } = await import("@/app/api/observe/route");
 
 afterEach(() => {
   vi.clearAllMocks();
-  isResonateEnabledMock.mockResolvedValue(false);
 });
 
 describe("GET /api/observe", () => {
@@ -64,7 +58,7 @@ describe("GET /api/observe", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.phrases).toEqual([{ id: "1", text: "has embedding" }]);
+    expect(body.phrases).toEqual([{ id: "1", text: "has embedding", resonanceCount: 0 }]);
     expect(body.similarities).toEqual([[0]]);
   });
 
@@ -109,7 +103,7 @@ describe("GET /api/observe", () => {
     expect(body.similarities[2][0]).toBeCloseTo(1);
   });
 
-  it("never sends embeddings back to the client, only id/text", async () => {
+  it("never sends embeddings back to the client, only id/text and resonance count", async () => {
     orderMock.mockResolvedValueOnce({
       data: [{ id: "1", text: "some phrase", embedding: [1, 0] }],
       error: null,
@@ -118,7 +112,7 @@ describe("GET /api/observe", () => {
     const response = await GET();
     const body = await response.json();
 
-    expect(body.phrases[0]).toEqual({ id: "1", text: "some phrase" });
+    expect(body.phrases[0]).toEqual({ id: "1", text: "some phrase", resonanceCount: 0 });
     expect(body.phrases[0]).not.toHaveProperty("embedding");
   });
 
@@ -145,23 +139,8 @@ describe("GET /api/observe", () => {
     expect(orderMock).toHaveBeenCalledTimes(1);
   });
 
-  describe("resonanceCount (gated by isResonateEnabled)", () => {
-    it("never queries phrase_resonances and omits resonanceCount when the flag is off", async () => {
-      isResonateEnabledMock.mockResolvedValueOnce(false);
-      orderMock.mockResolvedValueOnce({
-        data: [{ id: "1", text: "some phrase", embedding: [1, 0] }],
-        error: null,
-      });
-
-      const response = await GET();
-      const body = await response.json();
-
-      expect(resonanceSelectMock).not.toHaveBeenCalled();
-      expect(body.phrases[0]).not.toHaveProperty("resonanceCount");
-    });
-
-    it("attaches the real count per phrase when the flag is on", async () => {
-      isResonateEnabledMock.mockResolvedValueOnce(true);
+  describe("resonanceCount", () => {
+    it("always attaches the real count per phrase", async () => {
       orderMock.mockResolvedValueOnce({
         data: [
           { id: "1", text: "resonated twice", embedding: [1, 0] },
@@ -185,7 +164,6 @@ describe("GET /api/observe", () => {
     });
 
     it("skips the phrase_resonances query entirely when there are no active phrases", async () => {
-      isResonateEnabledMock.mockResolvedValueOnce(true);
       orderMock.mockResolvedValueOnce({ data: [], error: null });
 
       await GET();
