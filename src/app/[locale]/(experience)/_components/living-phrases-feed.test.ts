@@ -14,7 +14,7 @@ const { fromMock, activeEqMock, languageEqMock, narrativeInMock } = vi.hoisted((
 });
 
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: fromMock } }));
-vi.mock("./living-phrases", () => ({ LivingPhrases: () => null }));
+vi.mock("./living-phrases", () => ({ LivingPhrases: () => null, randomStartIndex: () => 0 }));
 
 const { LivingPhrasesFeed } = await import("./living-phrases-feed");
 

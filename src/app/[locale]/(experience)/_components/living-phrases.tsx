@@ -67,7 +67,11 @@ export type LivingPhraseItem = {
   createdAt?: string;
 };
 
-function randomStartIndex(length: number): number {
+// Exported so the server component picks the start index once, server-side, and passes
+// it down as `initialIndex` — computing it again inside this client component's
+// `useState` initializer ran `Math.random()` separately on the server and on client
+// hydration, producing two different indexes and a hydration mismatch on every load.
+export function randomStartIndex(length: number): number {
   return length > 0 ? Math.floor(Math.random() * length) : 0;
 }
 
@@ -86,9 +90,15 @@ function nextRandomIndex(length: number, current: number): number {
 // the actual corpus (same table Observe reads from), appearing and fading one at a
 // time — evidence instead of a description, per the "never presume/explain, just show
 // what's real" principle already established for the rest of this flow.
-export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
+export function LivingPhrases({
+  phrases,
+  initialIndex,
+}: {
+  phrases: LivingPhraseItem[];
+  initialIndex: number;
+}) {
   const locale = useLocale();
-  const [index, setIndex] = useState(() => randomStartIndex(phrases.length));
+  const [index, setIndex] = useState(initialIndex);
   const [visible, setVisible] = useState(true);
   const reduced = prefersReducedMotion();
 
