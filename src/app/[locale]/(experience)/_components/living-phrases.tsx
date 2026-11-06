@@ -67,10 +67,6 @@ export type LivingPhraseItem = {
   createdAt?: string;
 };
 
-function randomStartIndex(length: number): number {
-  return length > 0 ? Math.floor(Math.random() * length) : 0;
-}
-
 // Picks a fresh random phrase on every transition (never repeating the one just
 // shown) rather than a fixed sequential order or a once-shuffled one — real feedback
 // (2026-08-02) was that the same order every visit read as a repetitive pattern, and
@@ -86,9 +82,15 @@ function nextRandomIndex(length: number, current: number): number {
 // the actual corpus (same table Observe reads from), appearing and fading one at a
 // time — evidence instead of a description, per the "never presume/explain, just show
 // what's real" principle already established for the rest of this flow.
-export function LivingPhrases({ phrases }: { phrases: LivingPhraseItem[] }) {
+export function LivingPhrases({
+  phrases,
+  initialIndex,
+}: {
+  phrases: LivingPhraseItem[];
+  initialIndex: number;
+}) {
   const locale = useLocale();
-  const [index, setIndex] = useState(() => randomStartIndex(phrases.length));
+  const [index, setIndex] = useState(initialIndex);
   const [visible, setVisible] = useState(true);
   const reduced = prefersReducedMotion();
 

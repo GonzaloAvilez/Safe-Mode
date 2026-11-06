@@ -1,7 +1,7 @@
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { fromMock, activeEqMock, languageEqMock, narrativeInMock } = vi.hoisted(() => {
+const { fromMock, activeEqMock, languageEqMock, narrativeInMock, randomStartIndexMock } = vi.hoisted(() => {
   const languageEqMock = vi.fn();
   const activeEqMock = vi.fn(() => ({ eq: languageEqMock }));
   const narrativeInMock = vi.fn();
@@ -10,11 +10,16 @@ const { fromMock, activeEqMock, languageEqMock, narrativeInMock } = vi.hoisted((
     if (table === "phrase_narratives") return { select: () => ({ in: narrativeInMock }) };
     throw new Error(`Unexpected table: ${table}`);
   });
-  return { fromMock, activeEqMock, languageEqMock, narrativeInMock };
+  // Returns a sentinel unrelated to the input, so a passing test proves the feed
+  // forwards whatever randomStartIndex actually produced for the real phrase count —
+  // not a coincidence (e.g. both happening to be 0).
+  const randomStartIndexMock = vi.fn(() => 42);
+  return { fromMock, activeEqMock, languageEqMock, narrativeInMock, randomStartIndexMock };
 });
 
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: fromMock } }));
 vi.mock("./living-phrases", () => ({ LivingPhrases: () => null }));
+vi.mock("./random-start-index", () => ({ randomStartIndex: randomStartIndexMock }));
 
 const { LivingPhrasesFeed } = await import("./living-phrases-feed");
 
@@ -70,5 +75,21 @@ describe("Home phrase feed", () => {
 
     expect(result.props.phrases).toEqual([]);
     expect(narrativeInMock).not.toHaveBeenCalled();
+  });
+
+  it("passes the server-picked random start index down as a plain client prop", async () => {
+    // Regression test for the hydration-mismatch bug: the random index must be
+    // computed once here, server-side, from the real phrase count, and forwarded
+    // unchanged — never recomputed inside the client component itself.
+    languageEqMock.mockResolvedValueOnce({ data: [
+      { id: "1", text: "A", created_at: "2026-09-01T00:00:00Z" },
+      { id: "2", text: "B", created_at: "2026-09-01T00:00:00Z" },
+    ] });
+    narrativeInMock.mockResolvedValueOnce({ data: [] });
+
+    const result = await LivingPhrasesFeed({ locale: "en" });
+
+    expect(randomStartIndexMock).toHaveBeenCalledWith(2);
+    expect(result.props.initialIndex).toBe(42);
   });
 });
