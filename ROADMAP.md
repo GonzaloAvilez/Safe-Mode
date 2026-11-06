@@ -2,7 +2,7 @@
 
 Status tracker for Safe-Mode, following the original 4-week workshop plan (D1–D30).
 
-**Last reconciled: 2026-09-22.** Based on merged code, the closed bilingual issue #178, and the founder’s final live review. Runtime flags and live corpus counts were not re-queried for this documentation update.
+**Last reconciled: 2026-11-06.** Based on a full docs-vs-code audit against `git log`, live feature flags in `src/lib/settings.ts`, and GitHub issue state — confirmed the 2026-09-23 resonance/narrative release (PR #196) was merged, and corrected a stale issue-#6 citation. Runtime flags and live corpus counts were not re-queried for this documentation update.
 
 **Status:** `[x]` delivered/completed · `[~]` partially complete or validation still open · `[ ]` not delivered (paused items are called out explicitly). These markers describe work status, not deployment branches.
 
@@ -12,7 +12,7 @@ The real UX evolved past the original day-by-day spec in places — see "Added s
 
 - English and Spanish are delivered at `/en/*` and `/es/*`. [Issue #178](https://github.com/GonzaloAvilez/Safe-Mode/issues/178) is closed with all delivery and rollout checks complete. [PR #194](https://github.com/GonzaloAvilez/Safe-Mode/pull/194) records the local bilingual journey and live Redis checks.
 - Soft launch happened on 2026-07-27; the custom domain was connected on 2026-08-15. Visibility remains admin-controlled, so these milestones do not assert the current flag value.
-- The only open GitHub issue at reconciliation is [#6](https://github.com/GonzaloAvilez/Safe-Mode/issues/6): the before/after scale is deliberately paused pending feedback. Reply intent is already implemented separately from resonance.
+- No open GitHub issues remain as of 2026-11-06. [Issue #6](https://github.com/GonzaloAvilez/Safe-Mode/issues/6) ("New transition Flow design," about reordering Observe before Write) closed 2026-11-06; that reordering already matches the shipped flow. Earlier versions of this doc mis-cited #6 as covering the D15 before/after scale — it never did; see that item below for the scale's actual status. Reply intent is already implemented separately from resonance.
 - Next product work: evaluate the cold-arrival introduction with people who arrive without context, review remaining feedback, and assess corpus diversity in each language. These are open validation/decision tasks, not an approved new feature scope.
 - See [the feedback protocol](./docs/feedback-convergence-protocol.md) for the recorded experiment state and [the QA report](./docs/qa/bilingual-local-qa.md) for test evidence and its limits.
 
@@ -86,7 +86,7 @@ Cross-language matching and a third public language remain deferred. Locale foll
 
 ## Week 3 — Real users (partially complete)
 
-- [ ] **D15 Before/after scale — deliberately paused.** Schema exists (`scale_before`/`scale_after`), but no UI control. [Issue #6](https://github.com/GonzaloAvilez/Safe-Mode/issues/6) records the concern that quantifying emotions may conflict with the experience; revisit with interview evidence rather than treating this as the next automatic coding task.
+- [ ] **D15 Before/after scale — deliberately paused.** Schema exists (`scale_before`/`scale_after`), but no UI control, pending the concern that quantifying emotions may conflict with the experience; revisit with interview evidence rather than treating this as the next automatic coding task. No GitHub issue currently tracks this specifically — earlier versions of this doc cited issue #6, but that issue was actually about flow reordering (closed 2026-11-06) and unrelated to this item.
 - [x] **D16 Fake door — reply** — covered, though it took until 2026-08-02 to actually match the original design. Mirror's single toggle used to write "this resonated with me" taps into `wants_reply`, conflating a phrase-level resonance signal with a person-level reply intent. Split into two controls: resonance moved to `phrase_resonances` (see the Resonate entry below), freeing `wants_reply` to back its own dedicated "I would love to connect" toggle — the "I want to reply" intent D16 originally specced, now actually wired to the right button.
   **Confirmed 2026-07-27, still true post-split:** `wants_reply` is write-only — nothing reads it anywhere (`grep` across `src/`, no admin view, no dashboard). Decision: keep the write path and the toggle (near-zero cost, and it gives the visitor a real interaction moment independent of whether anyone ever looks at the data) — same reasoning as the D27-28 completion-rate descope, no dashboard is worth building for a ~10-user MVP; query `responses.wants_reply` directly by SQL if the number is ever needed for demo day or interviews.
 - [x] **D17 Leave a phrase** — "Leave a Trace", screen 09 of 9 (counting Home), the last in the sequence. `/leave-a-trace`, optional (400 chars as of 2026-08-02 — raised from 120, which was cutting off real submissions mid-thought; PR #144 — explicit "I'd rather not leave anything" skip), submits via `POST /api/phrases`.
@@ -105,15 +105,16 @@ Cross-language matching and a third public language remain deferred. Locale foll
 
 ## Additional delivered work and deferred questions
 
-**Release prepared 2026-09-23 (not yet merged):** the `feat/release-resonance-narrative`
-branch removes `resonate_enabled` and `public_narrative_enabled` from application code
-and admin controls. After deployment, resonance is always available in Observe and
-matched Mirror results; public counts remain in Observe only. Home always loads existing
-narrative metadata and dates for the selected language. Classification remains manual,
-and phrases without a narrative remain visible. Only `site_public` and `contribute_open`
+**Released 2026-09-23 (PR #196, merge commit `d09a540`):** the `feat/release-resonance-narrative`
+branch removed `resonate_enabled` and `public_narrative_enabled` from application code
+and admin controls. Resonance is now always available in Observe and matched Mirror
+results; public counts remain in Observe only. Home always loads existing narrative
+metadata and dates for the selected language. Classification remains manual, and
+phrases without a narrative remain visible. Only `site_public` and `contribute_open`
 remain as application feature flags. Existing retired settings rows are inert; this
-change does not delete database rows or add a migration. Flag descriptions in the dated
-delivery notes below describe the pre-release implementation.
+change did not delete database rows or add a migration. Flag descriptions in the dated
+delivery notes below describe the pre-release implementation, which no longer reflects
+live code.
 
 - [x] **Public-narrative experiment on `phrases`** — built 2026-08-01, merged to `master` 2026-08-02 (PR #133 schema, PR #134 app code), directly testing the 2026-07-30 feedback that questioned the "seeing is enough" thesis. Shows an LLM-derived theme/need/transition/one-sentence narrative on Home, alongside the real submission date (never `entries` — see `docs/workshop-updates/2026-08-01-public-narrative-experiment.md` for why). **Scope widened 2026-08-02**: the date now shows for every active phrase, seed included (`docs/workshop-updates/2026-08-02-narrative-classification-all-sources.md`'s sibling change), and classification itself is no longer restricted to `source='user'` — seed phrases are real reflections, not placeholder content, same consent already granted by choosing to seed them. Explicitly provisional: gated behind `public_narrative_enabled` (off by default, same fails-closed pattern as `contribute_open`), classification is manual/one-at-a-time from `/admin/phrases`, and the derived data lives in its own `phrase_narratives` table so the whole thing is a single `drop table` away from fully gone. Next step is watching it with real visitors before any decision about extending the idea to `entries`.
 - [x] **"Resonate" tap-reaction, with a public per-phrase count** — built and merged to `master` 2026-08-02 (PRs #135 schema, #136 app code, #138 tooltip/CTA overlap fix). A visitor taps "this resonates" on a node's tooltip in Observe; recorded in `phrase_resonances` (composite-key dedup, no counter column). **Public since 2026-08-02, a deliberate risk-accepted reversal of the original private-only design** — the count now renders on the tooltip itself ("N others felt this too") so a skeptical visitor can see evidence other people have been here, not just an aggregate in `/admin/phrases`. The risk (visible validation reinforcing self-harm-adjacent content — real coronial/peer-reviewed evidence) was named explicitly before deciding, and a lower-risk global-count alternative was offered and not taken — see `docs/workshop-updates/2026-08-02-resonate-public-counter-risk-accepted.md`. Originally built on Home, moved to Observe first (see `docs/workshop-updates/2026-08-02-resonate-observe-pivot.md`) — that pivot's reasoning still holds, only the visibility decision changed. Gated behind `resonate_enabled` (off by default) — off removes the button, the count, and the extra `/api/observe` query together. Rate limit (14 requests/60s) unchanged, still no real usage data to justify moving it. **Extended to Mirror 2026-08-02**: the same "this resonated with me" phrase-level tap is now also reachable from Mirror (the phrase that matched your own entry), writing to the same `phrase_resonances` row — one signal, two entry points, still deduped per session by the composite key. See the D16 entry above for what that freed up on Mirror's other button.
