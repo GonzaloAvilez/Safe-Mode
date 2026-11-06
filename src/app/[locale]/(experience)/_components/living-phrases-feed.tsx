@@ -1,7 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Locale } from "@/lib/locale";
 import { excerpt } from "./excerpt";
-import { LivingPhrases, randomStartIndex, type LivingPhraseItem } from "./living-phrases";
+import { LivingPhrases, type LivingPhraseItem } from "./living-phrases";
+import { randomStartIndex } from "./random-start-index";
 
 // Display existing narrative metadata for active phrases in the selected language.
 // Classification remains an explicit admin action; rendering never generates text.
@@ -44,6 +45,6 @@ export async function LivingPhrasesFeed({ locale }: { locale: Locale }) {
   const phrases = await fetchPhrasesWithNarratives(locale);
 
   // Picked once here, server-side, and passed down rather than computed inside
-  // LivingPhrases' own useState initializer — see randomStartIndex's comment.
+  // LivingPhrases' own useState initializer — see ./random-start-index.ts's comment.
   return <LivingPhrases phrases={phrases} initialIndex={randomStartIndex(phrases.length)} />;
 }

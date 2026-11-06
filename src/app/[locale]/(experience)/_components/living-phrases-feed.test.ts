@@ -18,7 +18,8 @@ const { fromMock, activeEqMock, languageEqMock, narrativeInMock, randomStartInde
 });
 
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: fromMock } }));
-vi.mock("./living-phrases", () => ({ LivingPhrases: () => null, randomStartIndex: randomStartIndexMock }));
+vi.mock("./living-phrases", () => ({ LivingPhrases: () => null }));
+vi.mock("./random-start-index", () => ({ randomStartIndex: randomStartIndexMock }));
 
 const { LivingPhrasesFeed } = await import("./living-phrases-feed");
 

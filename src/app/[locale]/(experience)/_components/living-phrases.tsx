@@ -67,14 +67,6 @@ export type LivingPhraseItem = {
   createdAt?: string;
 };
 
-// Exported so the server component picks the start index once, server-side, and passes
-// it down as `initialIndex` — computing it again inside this client component's
-// `useState` initializer ran `Math.random()` separately on the server and on client
-// hydration, producing two different indexes and a hydration mismatch on every load.
-export function randomStartIndex(length: number): number {
-  return length > 0 ? Math.floor(Math.random() * length) : 0;
-}
-
 // Picks a fresh random phrase on every transition (never repeating the one just
 // shown) rather than a fixed sequential order or a once-shuffled one — real feedback
 // (2026-08-02) was that the same order every visit read as a repetitive pattern, and
