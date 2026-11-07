@@ -77,17 +77,25 @@ _Paste the most recent topic/source/status table here before analyzing new feedb
 | Topic | Sources (verified distinct people) | Status |
 |---|---|---|
 | Font size | 4 | Resolved 2026-08-19 — fluid clamp()-based sizing shipped to master (PR #170) |
-| Entry confusion | 5+ | Guided cold-arrival intro built in PR #177 — pending validation |
-| Genuine reflective connection | 4+ | Strongly validated — do not touch |
+| Entry confusion | 6+ | Guided cold-arrival intro built in PR #177 — pending validation. Latest source (2026-11-06) distinguished two sub-types that likely need different fixes: navigational ("what's the step-by-step") vs. performance-anxiety ("am I doing this wrong, is there a right way"). Part of that source's reported disorientation was also confounded by an external interruption (family present), not purely product design — don't over-attribute to the product. |
+| Genuine reflective connection | 5+ | Strongly validated — do not touch. Latest source (2026-11-06) gave unprompted, specific reflective-level evidence: described Observe with her own metaphor ("a galaxy") and reported directly feeling another person's emotion through a matched phrase — the core "genuine recognition" thesis working as designed. |
 | Small corpus (bottleneck) | Own quantitative data (not a feedback source — different category) | Pending — high priority, non-technical |
 | Segmenting audience | 1 | Noted, not acted on — conflicts with universality thesis, but single-source, not triangulated |
-| Is one encounter enough? | 1 | Unresolved — founder decision, not code. Needs more independent sources before treating as confirmed pattern |
+| Is one encounter enough? / what to do after the feeling | 2 | Emerging pattern (2-3 sources, Step 3) — worth a low-risk fix. A second independent source (2026-11-06) explicitly asked how to keep growing with the feeling after a match, echoing the first source's open question. Still a founder decision, not a code task on its own. |
+| Need for a private/distraction-free space to engage | 1 | New 2026-11-06. Noted, not acted on — single source; the experience itself (sound, visuals) read as calming, but a noisy/interrupted environment broke the continuity. Not something the product can directly control, but may be worth a single pre-entry framing line (e.g. suggesting a quiet moment) if it recurs. |
 | Own domain (vs. vercel.app) | Internal analysis (not a feedback source — different category) | Resolved 2026-08-15 — production now serves from refugiospace.com |
+| Mutual connection with the matched stranger | Founder-originated idea (not a feedback source — different category) | Flagged 2026-11-06, not logged as converged feedback per protocol. Conflicts directly with the radical-anonymity thesis (Section A) and ADR-002 (entry-vs-entry/mutual-connection explicitly deferred pending an anonymity redesign). Also a live expectations gap: `wants_reply` is currently write-only in the app (nothing reads it, no real connection mechanism exists) — described to a real visitor as something achievable, which isn't yet true of the shipped product. Needs an explicit founder decision before being promised again. |
 
 **Cold-arrival experiment:** PR #177 introduces a three-part, visitor-paced
 orientation: promise → mechanism → human evidence. It has no automatic reading
 timers and appears once per browser. Do not mark entry confusion as resolved until
-it has been tested with people who arrived without prior context.
+it has been tested with people who arrived without prior context. As of 2026-11-06,
+still unconfirmed whether the latest entry-confusion source had prior context or
+actually saw this intro — resolve that before concluding the intro itself failed.
+The lowest-risk candidate action out of this round is a single reassurance line near
+Write ("there's no wrong way to do this") addressing the performance-anxiety
+sub-type specifically — distinct from, and lower-risk than, re-attempting the
+step-by-step/mechanism-explanation direction already tried and reverted in RulesGate.
 
 ---
 
