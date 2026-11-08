@@ -16,6 +16,7 @@ type InsertEntryParams = {
   flaggedGeneral: boolean;
   embedding: number[] | null;
   outcome: EntryOutcome["type"] | null;
+  matchedPhraseId: string | null;
 };
 
 async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
@@ -28,6 +29,7 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
       flagged_general: params.flaggedGeneral,
       embedding: params.embedding,
       outcome: params.outcome,
+      matched_phrase_id: params.matchedPhraseId,
     })
     .select("id")
     .single();
@@ -41,8 +43,18 @@ async function insertEntry(params: InsertEntryParams): Promise<{ id: string }> {
 }
 
 
-export async function updateEntryOutcome(id: string, outcome: EntryOutcome["type"]): Promise<void> {
-  const { error } = await supabaseAdmin.from("entries").update({ outcome: outcome }).eq("id", id);
+// matchedPhraseId must come from match_phrase's own result (see submitEntry), never
+// from client input — a client-sent id could point a connection request (#202) at any
+// phrase.
+export async function updateEntryOutcome(
+  id: string,
+  outcome: EntryOutcome["type"],
+  matchedPhraseId: string | null
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("entries")
+    .update({ outcome: outcome, matched_phrase_id: matchedPhraseId })
+    .eq("id", id);
   unwrap(null, error);
 }
   
@@ -78,6 +90,7 @@ export async function submitEntry(
       flaggedGeneral: flags.flaggedGeneral,
       embedding: null,
       outcome: route,
+      matchedPhraseId: null,
     });
     return { type: route, entryId: entry.id };
   }
@@ -91,14 +104,15 @@ export async function submitEntry(
     flaggedGeneral: false,
     outcome: null,
     embedding,
+    matchedPhraseId: null,
   });
 
   await createResponse(entry.id, sessionId, scaleBefore);
 
   const match = await findClosestPhrase(embedding, language);
-  
+
   const outcome = match ? "matched" : "no_match";
-  await updateEntryOutcome(entry.id, outcome)
+  await updateEntryOutcome(entry.id, outcome, match?.id ?? null)
 
   return match ? { type: "matched", entryId: entry.id, phrase: match } : { type: "no_match", entryId: entry.id };
 }
