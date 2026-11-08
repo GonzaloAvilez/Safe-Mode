@@ -15,17 +15,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned instead of "latest" — the 2026-11-08 run on this exact command failed
+      # because CLI v3 made every db command local-by-default (confirmed against
+      # Supabase's own v3 changelog/migration guide: "Database commands target your
+      # local stack by default... unless you pass --remote"). Pinning stops this
+      # class of surprise; bump deliberately, not implicitly.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.0.0
 
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      # v3's own migration guide gives "supabase db push --yes --remote" as the exact
+      # v2-equivalent command: --remote targets the linked project instead of a local
+      # stack, and --yes is required for any hosted mutation running unattended (CI) —
+      # without it the command fails closed with HostedMutationConsentRequiredError
+      # rather than hanging on a prompt nothing can answer.
       - name: Push migrations
-        run: supabase db push
+        run: supabase db push --yes --remote
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
