@@ -1,6 +1,6 @@
 # ADR-004: Asynchronous letters between strangers
 
-**Status:** Proposed. Direction accepted 2026-11-07. Step 0 shipped (#202, PR #203/#204).
+**Status:** Proposed. Direction accepted 2026-11-07. Step 0 shipped (#202, PR #203/#204). Identity model revised 2026-11-08 (see [Identity model](#identity-model)).
 **Related:** [ADR-002](./ADR-002-entry-vs-entry-matching.md), `docs/feedback-convergence-protocol.md`
 **Tracking:** live status in [tracking issue #216](https://github.com/GonzaloAvilez/Safe-Mode/issues/216) and [milestone #1](https://github.com/GonzaloAvilez/Safe-Mode/milestone/1) — not duplicated here.
 
@@ -29,8 +29,8 @@ minimization**, **explicit double opt-in**, **defense in depth**.
 |---|---|---|---|
 | 0 ✅ | **Data (persistence)** | `entries.matched_phrase_id`, set server-side at match time | Server-authoritative state. Never trust client input |
 | 1 | **Presentation (UI)** | Author opt-in checkbox in Leave a Trace (off by default). Rewritten RulesGate/Mirror copy | Explicit consent, honest affordance (no promise the system can't keep) |
-| 2 | **Data** | `phrases.reply_key_hash`, `connection_requests`, `connection_messages`. Deny-by-default RLS. Retention TTL | Least privilege, data minimization, hashed capability secrets |
-| 3 | **Identity / access (cross-cutting)** | One-time anonymous return key for the author (shown once, stored hashed) | **Capability URL / bearer token** instead of accounts. No PII |
+| 2 | **Data** | `identities`, `identity_keys` (hashed), `phrases.identity_id`, `connection_requests`, `connection_messages`. Deny-by-default RLS. Retention TTL | Least privilege, data minimization, hashed capability secrets |
+| 3 | **Identity / access (cross-cutting)** | Anonymous identity that owns content. First credential: a return key for the author (shown once, stored hashed) | **Capability URL / bearer token** instead of accounts. Content owned by identity, not credential. No PII |
 | 4 | **Application (API / route handlers)** | `POST /connect` creates a request from `matched_phrase_id`. `POST /letters`, `GET /mailbox` (authorized by return key) | Thin controllers. Idempotent writes. Rate limiting |
 | 5 | **Domain (business rules, `src/lib`)** | Letter lifecycle: `draft → moderating → held/rejected → delivered → answered → closed` | **Finite state machine**. Domain rules isolated from transport |
 | 6 | **Safety pipeline (cross-cutting)** | Every letter goes through `moderateText` + crisis flow. Contact info (email/phone/URL/@handle) is blocked. Optional human review queue in `/admin` | **Defense in depth**, fail-closed moderation, reuse of existing gate |
@@ -39,6 +39,41 @@ minimization**, **explicit double opt-in**, **defense in depth**.
 
 Order: 0 → 2 → 3 → 5/6 → 4 → 1 → 7 → 8. Data and rules come before UI, and the UI copy ships last
 so it never promises something that isn't built.
+
+## Identity model
+
+Revised 2026-11-08, before any layer-2 code. New evidence: accounts are now likely in the
+future (saved phrases, preference profiles), so the original one-key-per-phrase design
+would force a migration later.
+
+**Rule: content is owned by an identity, never by a credential.**
+
+```
+identities (id)          ← owns phrases, letters (later: resonances, saved phrases)
+  └── identity_keys      ← credentials that prove "I am this identity"
+        ├── return key           (now: random, shown once, stored hashed)
+        ├── device session       (later, if needed: link sm_session)
+        └── email / OAuth        (later, with accounts: e.g. Supabase Auth user id)
+```
+
+- Adding accounts later means adding a credential type, not moving data. A person signs in
+  with their key, links an email, and keeps everything.
+- One key can own many phrases. Losing it loses everything tied to it, same as before: the key
+  can't be recovered (only its hash is stored). Recovery stays the person's choice. **Anonymous**
+  means they hold the key and loss is final. **Recoverable** (only with future accounts) means
+  they link an email themselves and can reset.
+- **Entries are never linked to an identity, even with accounts.** They hold crisis-moment
+  writing, the most sensitive data in the system. A breach must never expose "this email wrote
+  this entry". Only phrases, letters, and opt-in preferences get an owner.
+- Phrases created before this exists stay ownerless forever (`identity_id` null). That's the
+  anonymity promise working, not a defect (see open decision 5).
+
+**Alternatives considered:**
+
+| Option | Why not |
+|---|---|
+| `phrases.reply_key_hash` (one key per phrase, original design) | Future accounts would need every phrase claimed with its own key, one by one |
+| Supabase Auth `signInAnonymously()` now | Session lives in browser storage, so it doesn't work across devices either. No portable key. It would replace `sm_session` across the entries/phrases/resonate routes and need CAPTCHA plus manual cleanup. Its real strength (anonymous → linked email) can be added later as a credential |
 
 ## Future (out of scope): contact outside Refugio
 
