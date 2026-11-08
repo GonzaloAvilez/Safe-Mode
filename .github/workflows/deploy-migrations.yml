@@ -6,6 +6,13 @@ on:
       - master
     paths:
       - "supabase/migrations/**"
+  # Lets this be fired manually (Actions tab "Run workflow", or `gh workflow run`)
+  # without needing a new migrations-path push — needed this exact day: re-running
+  # the OLD failed run would just replay the broken YAML from its own commit (GitHub
+  # re-runs a workflow using the file version from the run's original commit, not the
+  # current master), and merging this fix alone doesn't touch supabase/migrations/**
+  # so it wouldn't self-trigger either.
+  workflow_dispatch: {}
 
 jobs:
   deploy:
