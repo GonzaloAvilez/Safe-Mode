@@ -89,13 +89,7 @@ _Paste the most recent topic/source/status table here before analyzing new feedb
 **Cold-arrival experiment:** PR #177 introduces a three-part, visitor-paced
 orientation: promise → mechanism → human evidence. It has no automatic reading
 timers and appears once per browser. Do not mark entry confusion as resolved until
-it has been tested with people who arrived without prior context. As of 2026-11-06,
-still unconfirmed whether the latest entry-confusion source had prior context or
-actually saw this intro — resolve that before concluding the intro itself failed.
-The lowest-risk candidate action out of this round is a single reassurance line near
-Write ("there's no wrong way to do this") addressing the performance-anxiety
-sub-type specifically — distinct from, and lower-risk than, re-attempting the
-step-by-step/mechanism-explanation direction already tried and reverted in RulesGate.
+it has been tested with people who arrived without prior context.
 
 ---
 
