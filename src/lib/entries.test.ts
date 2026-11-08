@@ -95,6 +95,7 @@ describe("submitEntry — crisis route", () => {
       flagged_general: false,
       embedding: null,
       outcome: "crisis",
+      matched_phrase_id: null,
     });
     expect(insertCrisisContentMock).toHaveBeenCalledWith(
       insertEntrySuccessFixture.data.id,
@@ -127,6 +128,7 @@ describe("submitEntry — general_flagged route", () => {
       flagged_general: true,
       embedding: null,
       outcome: "general_flagged",
+      matched_phrase_id: null,
     });
     expect(getEmbeddingMock).not.toHaveBeenCalled();
   });
@@ -164,6 +166,7 @@ describe("submitEntry — proceed route", () => {
       flagged_general: false,
       embedding: embeddingResultFixture.embedding,
       outcome: null,
+      matched_phrase_id: null,
     });
     expect(findClosestPhraseMock).toHaveBeenCalledWith(embeddingResultFixture.embedding, "en");
   });
@@ -202,6 +205,23 @@ describe("submitEntry — proceed route", () => {
     });
   });
 
+  it("records matched_phrase_id from match_phrase's own result when matched (#202)", async () => {
+    setUpInsertChain();
+    moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(true);
+    getEmbeddingMock.mockResolvedValueOnce(embeddingResultFixture);
+    findClosestPhraseMock.mockResolvedValueOnce(phraseMatchFixture);
+    createResponseMock.mockResolvedValueOnce({ id: "response-1" });
+
+    await submitEntry("un dia normal", TEST_SESSION_ID);
+
+    expect(updateMock).toHaveBeenCalledWith({
+      outcome: "matched",
+      matched_phrase_id: phraseMatchFixture.id,
+    });
+    expect(eqMock).toHaveBeenCalledWith("id", insertEntrySuccessFixture.data.id);
+  });
+
   it("returns 'no_match' when the corpus has no active phrases yet", async () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
@@ -213,6 +233,22 @@ describe("submitEntry — proceed route", () => {
     const result = await submitEntry("un dia normal", TEST_SESSION_ID);
 
     expect(result).toEqual({ type: "no_match", entryId: insertEntrySuccessFixture.data.id });
+  });
+
+  it("records a null matched_phrase_id when there's no match", async () => {
+    setUpInsertChain();
+    moderateTextMock.mockResolvedValueOnce(benignModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(true);
+    getEmbeddingMock.mockResolvedValueOnce(embeddingResultFixture);
+    findClosestPhraseMock.mockResolvedValueOnce(null);
+    createResponseMock.mockResolvedValueOnce({ id: "response-1" });
+
+    await submitEntry("un dia normal", TEST_SESSION_ID);
+
+    expect(updateMock).toHaveBeenCalledWith({
+      outcome: "no_match",
+      matched_phrase_id: null,
+    });
   });
 });
 
