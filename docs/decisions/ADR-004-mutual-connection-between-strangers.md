@@ -2,6 +2,7 @@
 
 **Status:** Proposed. Direction accepted 2026-11-07. Step 0 shipped (#202, PR #203/#204).
 **Related:** [ADR-002](./ADR-002-entry-vs-entry-matching.md), `docs/feedback-convergence-protocol.md`
+**Tracking:** live status in [tracking issue #216](https://github.com/GonzaloAvilez/Safe-Mode/issues/216) and [milestone #1](https://github.com/GonzaloAvilez/Safe-Mode/milestone/1) — not duplicated here.
 
 ## Decision
 
