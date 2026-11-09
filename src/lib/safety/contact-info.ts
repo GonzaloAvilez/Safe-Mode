@@ -7,13 +7,13 @@
 //   - URLs and bare domains
 //   - phone numbers (7+ digits)
 //   - @handles
-//
 //   - a platform name followed by a username-looking token ("IG: juanito_99")
 //
 // Deliberately NOT detected: platform names on their own ("borré instagram", "I quit
 // WhatsApp"), or followed by a plain word ("mi insta es juanito"). In emotional writing
 // platform names are usually part of the story, not an invitation, so blocking them would
-// reject honest letters. Spelled-out digits ("cinco cinco...") are also out of scope. Both gaps are what moderation and the optional human review exist for.
+// reject honest letters. Spelled-out digits ("cinco cinco...") are also out of scope.
+// Both gaps are what moderation and human review exist for.
 
 export type ContactInfoKind = "email" | "url" | "phone" | "handle";
 
@@ -23,7 +23,7 @@ export type ContactInfoResult = {
 };
 
 // Zero-width characters someone could insert to split an identifier past a regex.
-const ZERO_WIDTH = /[​-‍⁠﻿]/g;
+const ZERO_WIDTH = /[\u200B-\u200D\u2060\uFEFF]/g;
 
 // Tolerates spaces around "@" and ".", a common way to slip past a strict pattern:
 // "juan @ gmail . com".
