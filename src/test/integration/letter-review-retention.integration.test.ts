@@ -17,7 +17,7 @@ afterEach(async () => {
   identityIds = [];
 });
 
-async function createRequest(): Promise<string> {
+async function createCorrespondence(): Promise<string> {
   const identity = await supabaseAdmin.from("identities").insert({}).select("id").single();
   if (identity.error) throw identity.error;
   identityIds.push(identity.data.id);
@@ -37,71 +37,71 @@ async function createRequest(): Promise<string> {
   if (phrase.error) throw phrase.error;
   phraseIds.push(phrase.data.id);
 
-  const request = await supabaseAdmin
-    .from("connection_requests")
-    .insert({ phrase_id: phrase.data.id, requester_identity_id: identity.data.id })
+  const correspondence = await supabaseAdmin
+    .from("correspondences")
+    .insert({ phrase_id: phrase.data.id, visitor_identity_id: identity.data.id })
     .select("id")
     .single();
-  if (request.error) throw request.error;
-  return request.data.id;
+  if (correspondence.error) throw correspondence.error;
+  return correspondence.data.id;
 }
 
-type MessageFields = {
+type LetterFields = {
   body: string | null;
   status: string;
   rejection_reason?: string | null;
   anonymized_at?: string | null;
 };
 
-async function insertMessage(requestId: string, fields: MessageFields) {
+async function insertLetter(correspondenceId: string, fields: LetterFields) {
   return supabaseAdmin
-    .from("connection_messages")
-    .insert({ request_id: requestId, sender: "visitor", ...fields })
+    .from("letters")
+    .insert({ correspondence_id: correspondenceId, sender: "visitor", ...fields })
     .select("id")
     .single();
 }
 
-describe("connection_messages letter rules (integration)", () => {
-  it.each<[string, MessageFields, string]>([
+describe("letters: review and retention rules (integration)", () => {
+  it.each<[string, LetterFields, string]>([
     [
       "a rejected letter without a reason",
       { body: "hola", status: "rejected" },
-      "connection_messages_rejection_reason_matches_status",
+      "letters_rejection_reason_matches_status",
     ],
     [
       "a reason on a letter that isn't rejected",
       { body: "hola", status: "held", rejection_reason: "crisis" },
-      "connection_messages_rejection_reason_matches_status",
+      "letters_rejection_reason_matches_status",
     ],
     [
       "an unknown rejection reason",
       { body: "hola", status: "rejected", rejection_reason: "spam" },
-      "connection_messages_rejection_reason_check",
+      "letters_rejection_reason_check",
     ],
     [
       "a contact-info rejection that keeps its text",
       { body: "llámame al 55 1234 5678", status: "rejected", rejection_reason: "contact_info" },
-      "connection_messages_contact_info_body_not_stored",
+      "letters_contact_info_body_not_stored",
     ],
     [
       // The three-valued-logic case: rejection_reason is null here, so a plain "=" in the
       // constraint would yield null and let this through.
       "a missing text with no explanation",
       { body: null, status: "held" },
-      "connection_messages_body_null_explained",
+      "letters_body_null_explained",
     ],
     [
       "a missing text on a review rejection",
       { body: null, status: "rejected", rejection_reason: "review" },
-      "connection_messages_body_null_explained",
+      "letters_body_null_explained",
     ],
   ])("rejects %s", async (_label, fields, constraint) => {
-    const { error } = await insertMessage(await createRequest(), fields);
+    const { error } = await insertLetter(await createCorrespondence(), fields);
 
     expect(error?.message).toContain(constraint);
   });
 
-  it.each<[string, MessageFields]>([
+  it.each<[string, LetterFields]>([
     ["a held letter with text", { body: "hola", status: "held" }],
     ["a crisis rejection with text (kept 30 days)", { body: "hola", status: "rejected", rejection_reason: "crisis" }],
     ["a moderation rejection with text", { body: "hola", status: "rejected", rejection_reason: "moderation" }],
@@ -109,17 +109,17 @@ describe("connection_messages letter rules (integration)", () => {
     ["a contact-info rejection without text", { body: null, status: "rejected", rejection_reason: "contact_info" }],
     ["an anonymized delivered letter", { body: null, status: "delivered", anonymized_at: new Date().toISOString() }],
   ])("accepts %s", async (_label, fields) => {
-    const { error } = await insertMessage(await createRequest(), fields);
+    const { error } = await insertLetter(await createCorrespondence(), fields);
 
     expect(error).toBeNull();
   });
 
   it("lets the retention job anonymize an existing letter", async () => {
-    const { data, error } = await insertMessage(await createRequest(), { body: "hola", status: "delivered" });
+    const { data, error } = await insertLetter(await createCorrespondence(), { body: "hola", status: "delivered" });
     if (error) throw error;
 
     const update = await supabaseAdmin
-      .from("connection_messages")
+      .from("letters")
       .update({ body: null, anonymized_at: new Date().toISOString() })
       .eq("id", data.id);
 
@@ -127,14 +127,14 @@ describe("connection_messages letter rules (integration)", () => {
   });
 
   it("won't let a held letter be rejected for contact info without erasing its text", async () => {
-    const { data, error } = await insertMessage(await createRequest(), { body: "mi insta es juanito_99", status: "held" });
+    const { data, error } = await insertLetter(await createCorrespondence(), { body: "mi insta es juanito_99", status: "held" });
     if (error) throw error;
 
     const update = await supabaseAdmin
-      .from("connection_messages")
+      .from("letters")
       .update({ status: "rejected", rejection_reason: "contact_info" })
       .eq("id", data.id);
 
-    expect(update.error?.message).toContain("connection_messages_contact_info_body_not_stored");
+    expect(update.error?.message).toContain("letters_contact_info_body_not_stored");
   });
 });

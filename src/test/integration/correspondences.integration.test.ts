@@ -1,5 +1,5 @@
 // Runs against a real local Postgres (npm run test:integration). The guarantees of the
-// ADR-004 letter tables (one request per visitor per phrase, allowed sender/status values,
+// ADR-004 letter tables (one correspondence per visitor per phrase, allowed sender/status values,
 // cascades) live in the database itself, so only a real database can prove them.
 import { afterEach, describe, expect, it } from "vitest";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -41,59 +41,59 @@ async function createPhrase(): Promise<string> {
   return data.id;
 }
 
-async function createRequest(phraseId: string, requesterIdentityId: string): Promise<string> {
+async function createCorrespondence(phraseId: string, visitorIdentityId: string): Promise<string> {
   const { data, error } = await supabaseAdmin
-    .from("connection_requests")
-    .insert({ phrase_id: phraseId, requester_identity_id: requesterIdentityId })
+    .from("correspondences")
+    .insert({ phrase_id: phraseId, visitor_identity_id: visitorIdentityId })
     .select("id")
     .single();
   if (error) throw error;
   return data.id;
 }
 
-describe("connection_requests (integration)", () => {
-  it("rejects a second request from the same visitor to the same phrase", async () => {
+describe("correspondences (integration)", () => {
+  it("rejects a second correspondence from the same visitor to the same phrase", async () => {
     const phraseId = await createPhrase();
     const visitorId = await createIdentity();
-    await createRequest(phraseId, visitorId);
+    await createCorrespondence(phraseId, visitorId);
 
     const { error } = await supabaseAdmin
-      .from("connection_requests")
-      .insert({ phrase_id: phraseId, requester_identity_id: visitorId });
+      .from("correspondences")
+      .insert({ phrase_id: phraseId, visitor_identity_id: visitorId });
     expect(error).not.toBeNull();
   });
 
-  it("deleting the phrase removes its requests and their messages", async () => {
+  it("deleting the phrase removes its correspondences and their letters", async () => {
     const phraseId = await createPhrase();
-    const requestId = await createRequest(phraseId, await createIdentity());
-    await supabaseAdmin.from("connection_messages").insert({ request_id: requestId, sender: "visitor", body: "hola" });
+    const correspondenceId = await createCorrespondence(phraseId, await createIdentity());
+    await supabaseAdmin.from("letters").insert({ correspondence_id: correspondenceId, sender: "visitor", body: "hola" });
 
     await supabaseAdmin.from("phrases").delete().eq("id", phraseId);
 
-    const { data: requests } = await supabaseAdmin.from("connection_requests").select("id").eq("id", requestId);
-    const { data: messages } = await supabaseAdmin.from("connection_messages").select("id").eq("request_id", requestId);
-    expect(requests).toEqual([]);
-    expect(messages).toEqual([]);
+    const { data: correspondences } = await supabaseAdmin.from("correspondences").select("id").eq("id", correspondenceId);
+    const { data: letters } = await supabaseAdmin.from("letters").select("id").eq("correspondence_id", correspondenceId);
+    expect(correspondences).toEqual([]);
+    expect(letters).toEqual([]);
   });
 
-  it("deleting the visitor's identity removes their requests", async () => {
+  it("deleting the visitor's identity removes their correspondences", async () => {
     const visitorId = await createIdentity();
-    const requestId = await createRequest(await createPhrase(), visitorId);
+    const correspondenceId = await createCorrespondence(await createPhrase(), visitorId);
 
     await supabaseAdmin.from("identities").delete().eq("id", visitorId);
 
-    const { data: requests } = await supabaseAdmin.from("connection_requests").select("id").eq("id", requestId);
-    expect(requests).toEqual([]);
+    const { data: correspondences } = await supabaseAdmin.from("correspondences").select("id").eq("id", correspondenceId);
+    expect(correspondences).toEqual([]);
   });
 });
 
-describe("connection_messages (integration)", () => {
-  it("defaults a new message to draft", async () => {
-    const requestId = await createRequest(await createPhrase(), await createIdentity());
+describe("letters (integration)", () => {
+  it("defaults a new letter to draft", async () => {
+    const correspondenceId = await createCorrespondence(await createPhrase(), await createIdentity());
 
     const { data, error } = await supabaseAdmin
-      .from("connection_messages")
-      .insert({ request_id: requestId, sender: "visitor", body: "hola" })
+      .from("letters")
+      .insert({ correspondence_id: correspondenceId, sender: "visitor", body: "hola" })
       .select("status")
       .single();
     if (error) throw error;
@@ -101,20 +101,20 @@ describe("connection_messages (integration)", () => {
   });
 
   it("rejects an unknown sender", async () => {
-    const requestId = await createRequest(await createPhrase(), await createIdentity());
+    const correspondenceId = await createCorrespondence(await createPhrase(), await createIdentity());
 
     const { error } = await supabaseAdmin
-      .from("connection_messages")
-      .insert({ request_id: requestId, sender: "founder", body: "hola" });
+      .from("letters")
+      .insert({ correspondence_id: correspondenceId, sender: "founder", body: "hola" });
     expect(error).not.toBeNull();
   });
 
   it("rejects an unknown status", async () => {
-    const requestId = await createRequest(await createPhrase(), await createIdentity());
+    const correspondenceId = await createCorrespondence(await createPhrase(), await createIdentity());
 
     const { error } = await supabaseAdmin
-      .from("connection_messages")
-      .insert({ request_id: requestId, sender: "visitor", body: "hola", status: "answered" });
+      .from("letters")
+      .insert({ correspondence_id: correspondenceId, sender: "visitor", body: "hola", status: "answered" });
     expect(error).not.toBeNull();
   });
 });
