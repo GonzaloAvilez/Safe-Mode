@@ -1,14 +1,15 @@
 # ADR-004: Asynchronous letters between strangers
 
-**Status:** Proposed. Direction accepted 2026-11-07. Step 0 shipped (#202, PR #203/#204). Identity model revised 2026-11-08 (see [Identity model](#identity-model)).
+**Status:** Proposed. Direction accepted 2026-11-07. Step 0 shipped (#202, PR #203/#204). Identity model revised 2026-11-08 (see [Identity model](#identity-model)). Open decisions 1 and 2 resolved 2026-11-09 (see [Letter rules](#letter-rules)).
 **Related:** [ADR-002](./ADR-002-entry-vs-entry-matching.md), `docs/feedback-convergence-protocol.md`
 **Tracking:** live status in [tracking issue #216](https://github.com/GonzaloAvilez/Safe-Mode/issues/216) and [milestone #1](https://github.com/GonzaloAvilez/Safe-Mode/milestone/1) — not duplicated here.
 
 ## Decision
 
-A visitor whose entry matched a phrase can send **one moderated, asynchronous letter** to that
-phrase's author, and the author can answer it. It's not a chat. No contact exchange. Phrase-mediated: no private
-entry is ever exposed, so ADR-002's objection doesn't apply.
+A visitor whose entry matched a phrase can start a **moderated, asynchronous exchange of letters**
+with that phrase's author: up to 3 letters per side, taking turns, each one reviewed by a person
+before delivery. It's not a chat. No contact exchange. Phrase-mediated: no private entry is ever
+exposed, so ADR-002's objection doesn't apply.
 
 **Architectural style:** asynchronous *store-and-forward* messaging (mailbox), on top of the
 existing layered (N-tier) Next.js + Supabase stack. Principles: **privacy by design**, **data
@@ -32,8 +33,8 @@ minimization**, **explicit double opt-in**, **defense in depth**.
 | 2 | **Data** | `identities`, `identity_keys` (hashed), `phrases.identity_id`, `connection_requests`, `connection_messages`. Deny-by-default RLS. Retention TTL | Least privilege, data minimization, hashed capability secrets |
 | 3 | **Identity / access (cross-cutting)** | Anonymous identity that owns content. First credential: a return key for the author (shown once, stored hashed) | **Capability URL / bearer token** instead of accounts. Content owned by identity, not credential. No PII |
 | 4 | **Application (API / route handlers)** | `POST /connect` creates a request from `matched_phrase_id`. `POST /letters`, `GET /mailbox` (authorized by return key) | Thin controllers. Idempotent writes. Rate limiting |
-| 5 | **Domain (business rules, `src/lib`)** | Letter lifecycle: `draft → moderating → held/rejected → delivered → answered → closed` | **Finite state machine**. Domain rules isolated from transport |
-| 6 | **Safety pipeline (cross-cutting)** | Every letter goes through `moderateText` + crisis flow. Contact info (email/phone/URL/@handle) is blocked. Optional human review queue in `/admin` | **Defense in depth**, fail-closed moderation, reuse of existing gate |
+| 5 | **Domain (business rules, `src/lib`)** | Two-level lifecycle: each letter's status, plus the conversation state derived from its letters (see [Letter rules](#letter-rules)) | **Finite state machine**. Domain rules isolated from transport |
+| 6 | **Safety pipeline (cross-cutting)** | Every letter goes through `moderateText` + crisis flow. Contact info (email/phone/URL/@handle) is blocked. Human review queue in `/admin` before delivery | **Defense in depth**, fail-closed moderation, reuse of existing gate |
 | 7 | **Delivery / notification (infrastructure)** | Letter waits in a mailbox until the author returns. Push/email notifications are deferred | Pull-based delivery (polling on return). Notifications can be added later via an outbox |
 | 8 | **Observability** | Count requests, deliveries, rejections. No message content in logs | Privacy-preserving metrics (ADR-001) |
 
@@ -75,6 +76,63 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
 | `phrases.reply_key_hash` (one key per phrase, original design) | Future accounts would need every phrase claimed with its own key, one by one |
 | Supabase Auth `signInAnonymously()` now | Session lives in browser storage, so it doesn't work across devices either. No portable key. It would replace `sm_session` across the entries/phrases/resonate routes and need CAPTCHA plus manual cleanup. Its real strength (anonymous → linked email) can be added later as a credential |
 
+## Letter rules
+
+Decided 2026-11-09 (open decisions 1 and 2).
+
+**Lifecycle, on two levels.** A reply is a new letter, never a state of the previous one.
+
+```
+Letter (stored: connection_messages.status)
+
+  draft → moderating ─┬→ held ─┬→ delivered
+                      │        └→ rejected     (founder review)
+                      └→ rejected              (crisis, moderation, contact info)
+
+Conversation (derived from its letters, never stored, except closed)
+
+  waiting_for_visitor   it's the visitor's turn (always first)
+  awaiting_review       a letter is held, waiting for the founder
+  waiting_for_author    it's the author's turn
+  closed                limit reached, or 60 days without activity (connection_requests.closed_at)
+```
+
+`closed` is the only stored conversation state, because inactivity can't be derived from letters
+once retention has erased their text. Storing the rest would duplicate the truth held by the letters.
+
+**Exchange rules**
+
+- **Up to 3 letters per side** (6 total). The conversation closes when the 6th is delivered. Keeps
+  it an exchange of letters rather than a chat, and keeps manual review sustainable.
+- **Turns alternate.** The visitor always writes first, and nobody sends two letters in a row.
+- **While a letter waits for review, nobody can write.** The other side hasn't received it yet.
+- **A rejected letter doesn't use up the turn or count toward the limit.** The sender can try again
+  (for example, without the phone number).
+
+**Safety pipeline, in order**
+
+1. **Moderation** (`moderateText`). Crisis always wins, even if the letter also has contact info,
+   because the sender needs help resources first. Then general moderation.
+2. **Contact info** (`detectContactInfo`, #225).
+3. **Human review.** Everything that passes waits as `held` in the `/admin` queue.
+
+| Outcome | Delivered? | Sender sees | Text kept |
+|---|---|---|---|
+| Crisis | No | The existing crisis resource (same flow as entries) | 30 days, then anonymized (same as `crisis_entries`) |
+| General moderation | No | Rejection message | 60 days |
+| Contact info | No | What to remove, so they can rewrite | **Never stored**. Only the rejection and its reason |
+| Moderation call fails | No, nothing is stored | "Try again" | Nothing (fail-closed) |
+| Founder rejects | No | Rejection message | 60 days |
+| Founder approves | Yes | Delivered | 60 days |
+
+**Review promise: up to 48 hours.** The sender is told their letter can take up to 48 hours to
+arrive. There's no automatic delivery when that passes: a letter only reaches the other person once
+a human has approved it. Review happens in batches (no notifications). The `/admin` queue shows how
+long the oldest letter has been waiting.
+
+**Retention:** a letter's text is anonymized 60 days after it was written (30 for crisis letters),
+and a conversation with no activity for 60 days is closed.
+
 ## Future (out of scope): contact outside Refugio
 
 Allowed only after a genuine, reciprocal exchange. Each side consents separately, with a cooling-off
@@ -83,8 +141,10 @@ ethical or legal exposure, so get qualified review before shipping.
 
 ## Open decisions
 
-1. Moderation: automated only, or human review before delivery?
-2. Exchange size: one letter each way, or bounded N?
+1. ~~Moderation: automated only, or human review before delivery?~~ **Resolved 2026-11-09:** human
+   review before delivery, promised within 48 hours (see [Letter rules](#letter-rules)).
+2. ~~Exchange size: one letter each way, or bounded N?~~ **Resolved 2026-11-09:** up to 3 letters per
+   side, taking turns (see [Letter rules](#letter-rules)).
 3. Can Contribute phrases opt in, or only Leave a Trace?
 4. Should Observe ever be an entry point?
 5. Pre-existing user phrases (no author link): not connectable, or letters held until/unless the author resurfaces? They must not be answered by anyone else.
