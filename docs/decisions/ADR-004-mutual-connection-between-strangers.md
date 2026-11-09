@@ -6,10 +6,10 @@
 
 ## Decision
 
-A visitor whose entry matched a phrase can start a **moderated, asynchronous exchange of letters**
-with that phrase's author: up to 3 letters per side, taking turns, each one reviewed by a person
-before delivery. It's not a chat. No contact exchange. Phrase-mediated: no private entry is ever
-exposed, so ADR-002's objection doesn't apply.
+A visitor whose entry matched a phrase can start a **correspondence** with that phrase's author: a
+moderated, asynchronous exchange of letters, up to 3 per side, taking turns, each one reviewed by a
+person before delivery. It's not a chat. No contact exchange. Phrase-mediated: no private entry is
+ever exposed, so ADR-002's objection doesn't apply.
 
 **Architectural style:** asynchronous *store-and-forward* messaging (mailbox), on top of the
 existing layered (N-tier) Next.js + Supabase stack. Principles: **privacy by design**, **data
@@ -30,10 +30,10 @@ minimization**, **explicit double opt-in**, **defense in depth**.
 |---|---|---|---|
 | 0 ✅ | **Data (persistence)** | `entries.matched_phrase_id`, set server-side at match time | Server-authoritative state. Never trust client input |
 | 1 | **Presentation (UI)** | Author opt-in checkbox in Leave a Trace (off by default). Rewritten RulesGate/Mirror copy | Explicit consent, honest affordance (no promise the system can't keep) |
-| 2 | **Data** | `identities`, `identity_keys` (hashed), `phrases.identity_id`, `connection_requests`, `connection_messages`. Deny-by-default RLS. Retention TTL | Least privilege, data minimization, hashed capability secrets |
+| 2 | **Data** | `identities`, `identity_keys` (hashed), `phrases.identity_id`, `correspondences`, `letters` (renamed 2026-11-09 from `connection_requests` / `connection_messages`). Deny-by-default RLS. Retention TTL | Least privilege, data minimization, hashed capability secrets |
 | 3 | **Identity / access (cross-cutting)** | Anonymous identity that owns content. First credential: a return key for the author (shown once, stored hashed) | **Capability URL / bearer token** instead of accounts. Content owned by identity, not credential. No PII |
 | 4 | **Application (API / route handlers)** | `POST /connect` creates a request from `matched_phrase_id`. `POST /letters`, `GET /mailbox` (authorized by return key) | Thin controllers. Idempotent writes. Rate limiting |
-| 5 | **Domain (business rules, `src/lib`)** | Two-level lifecycle: each letter's status, plus the conversation state derived from its letters (see [Letter rules](#letter-rules)) | **Finite state machine**. Domain rules isolated from transport |
+| 5 | **Domain (business rules, `src/lib`)** | Two-level lifecycle: each letter's status, plus the correspondence state derived from its letters (see [Letter rules](#letter-rules)) | **Finite state machine**. Domain rules isolated from transport |
 | 6 | **Safety pipeline (cross-cutting)** | Every letter goes through `moderateText` + crisis flow. Contact info (email/phone/URL/@handle) is blocked. Human review queue in `/admin` before delivery | **Defense in depth**, fail-closed moderation, reuse of existing gate |
 | 7 | **Delivery / notification (infrastructure)** | Letter waits in a mailbox until the author returns. Push/email notifications are deferred | Pull-based delivery (polling on return). Notifications can be added later via an outbox |
 | 8 | **Observability** | Count requests, deliveries, rejections. No message content in logs | Privacy-preserving metrics (ADR-001) |
@@ -83,26 +83,26 @@ Decided 2026-11-09 (open decisions 1 and 2).
 **Lifecycle, on two levels.** A reply is a new letter, never a state of the previous one.
 
 ```
-Letter (stored: connection_messages.status)
+Letter (stored: letters.status)
 
   draft → moderating ─┬→ held ─┬→ delivered
                       │        └→ rejected     (founder review)
                       └→ rejected              (crisis, moderation, contact info)
 
-Conversation (derived from its letters, never stored, except closed)
+Correspondence (derived from its letters, never stored, except closed)
 
   waiting_for_visitor   it's the visitor's turn (always first)
   awaiting_review       a letter is held, waiting for the founder
   waiting_for_author    it's the author's turn
-  closed                limit reached, or 60 days without activity (connection_requests.closed_at)
+  closed                limit reached, or 60 days without activity (correspondences.closed_at)
 ```
 
-`closed` is the only stored conversation state, because inactivity can't be derived from letters
+`closed` is the only stored correspondence state, because inactivity can't be derived from letters
 once retention has erased their text. Storing the rest would duplicate the truth held by the letters.
 
-**Exchange rules**
+**Correspondence rules**
 
-- **Up to 3 letters per side** (6 total). The conversation closes when the 6th is delivered. Keeps
+- **Up to 3 letters per side** (6 total). The correspondence closes when the 6th is delivered. Keeps
   it an exchange of letters rather than a chat, and keeps manual review sustainable.
 - **Turns alternate.** The visitor always writes first, and nobody sends two letters in a row.
 - **While a letter waits for review, nobody can write.** The other side hasn't received it yet.
@@ -131,7 +131,7 @@ a human has approved it. Review happens in batches (no notifications). The `/adm
 long the oldest letter has been waiting.
 
 **Retention:** a letter's text is anonymized 60 days after it was written (30 for crisis letters),
-and a conversation with no activity for 60 days is closed.
+and a correspondence with no activity for 60 days is closed.
 
 ## Future (out of scope): contact outside Refugio
 

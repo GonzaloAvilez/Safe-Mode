@@ -1,17 +1,18 @@
-// ADR-004 #210, part B: the rules of a letter exchange, as pure functions. No database,
-// no transport. Part C (safety pipeline), part D (review queue) and the API routes (#211)
-// call into these so the rules live in exactly one place.
+// ADR-004 #210, part B: the rules of a correspondence (an exchange of letters between a
+// visitor and a phrase's author), as pure functions. No database, no transport. Part C
+// (safety pipeline), part D (review queue) and the API routes (#211) call into these so
+// the rules live in exactly one place.
 //
 // Two levels (ADR-004 "Letter rules"):
-//   - each letter has a stored status (connection_messages.status)
-//   - the conversation's state is derived from its letters, never stored, except closed
-//     (connection_requests.closed_at)
+//   - each letter has a stored status (letters.status)
+//   - the correspondence's state is derived from its letters, never stored, except closed
+//     (correspondences.closed_at)
 
 export type LetterSender = "visitor" | "author";
 export type LetterStatus = "draft" | "moderating" | "held" | "rejected" | "delivered";
 
-// Up to 3 letters per side, taking turns: the visitor writes first, so the exchange is
-// complete after the author's 3rd letter is delivered.
+// Up to 3 letters per side, taking turns: the visitor writes first, so the correspondence
+// is complete after the author's 3rd letter is delivered.
 export const LETTERS_PER_SIDE = 3;
 
 // ---------------------------------------------------------------------------------------
@@ -31,32 +32,34 @@ const LETTER_TRANSITIONS: Record<LetterStatus, readonly LetterStatus[]> = {
   delivered: [],
 };
 
-export function canTransition(from: LetterStatus, to: LetterStatus): boolean {
+export function isLetterTransitionAllowed(from: LetterStatus, to: LetterStatus): boolean {
   return LETTER_TRANSITIONS[from].includes(to);
 }
 
 // ---------------------------------------------------------------------------------------
-// Level 2: the conversation
+// Level 2: the correspondence
 // ---------------------------------------------------------------------------------------
 
-export type ConversationState =
+export type CorrespondenceState =
   | "waiting_for_visitor" // the visitor's turn (always first)
   | "awaiting_review" // a letter is held, waiting for the founder
   | "waiting_for_author" // the author's turn
   | "closed"; // limit reached, or closed_at set (e.g. 60 days without activity)
 
-export type ThreadLetter = { sender: LetterSender; status: LetterStatus };
+// Only what the rules need from a row of `letters`.
+export type Letter = { sender: LetterSender; status: LetterStatus };
 
-export type Thread = {
-  letters: readonly ThreadLetter[];
+// A row of `correspondences` plus its letters.
+export type Correspondence = {
+  letters: readonly Letter[];
   closedAt: string | null;
 };
 
-function countDelivered(letters: readonly ThreadLetter[], sender: LetterSender): number {
+function countDelivered(letters: readonly Letter[], sender: LetterSender): number {
   return letters.filter((letter) => letter.sender === sender && letter.status === "delivered").length;
 }
 
-export function isExchangeComplete(letters: readonly ThreadLetter[]): boolean {
+export function isCorrespondenceComplete(letters: readonly Letter[]): boolean {
   return (
     countDelivered(letters, "visitor") >= LETTERS_PER_SIDE && countDelivered(letters, "author") >= LETTERS_PER_SIDE
   );
@@ -67,27 +70,29 @@ export function isExchangeComplete(letters: readonly ThreadLetter[]): boolean {
 // visitor letter means the author's. That makes the result independent of how the
 // letters were sorted. Rejected letters don't count (they don't use up the turn), and
 // neither do draft/moderating, which are never stored (the pipeline runs before insert).
-export function conversationState(thread: Thread): ConversationState {
-  if (thread.closedAt !== null || isExchangeComplete(thread.letters)) return "closed";
-  if (thread.letters.some((letter) => letter.status === "held")) return "awaiting_review";
+export function getCorrespondenceState(correspondence: Correspondence): CorrespondenceState {
+  const { letters, closedAt } = correspondence;
 
-  const visitor = countDelivered(thread.letters, "visitor");
-  const author = countDelivered(thread.letters, "author");
+  if (closedAt !== null || isCorrespondenceComplete(letters)) return "closed";
+  if (letters.some((letter) => letter.status === "held")) return "awaiting_review";
+
+  const visitor = countDelivered(letters, "visitor");
+  const author = countDelivered(letters, "author");
 
   if (visitor === author) return "waiting_for_visitor";
   if (visitor === author + 1) return "waiting_for_author";
 
   // Only reachable if something wrote letters outside these rules. Fail closed rather
   // than guess whose turn it is.
-  throw new Error(`Letter thread breaks turn order: ${visitor} visitor vs ${author} author letters delivered`);
+  throw new Error(`Correspondence breaks turn order: ${visitor} visitor vs ${author} author letters delivered`);
 }
 
-export type SendCheck = { ok: true } | { ok: false; reason: "closed" | "awaiting_review" | "not_your_turn" };
+export type SendLetterCheck = { ok: true } | { ok: false; reason: "closed" | "awaiting_review" | "not_your_turn" };
 
 // There's no separate "limit reached" answer: with alternating turns, a side can only
-// reach its 3rd letter once the other side has too, which already closes the exchange.
-export function canSend(thread: Thread, sender: LetterSender): SendCheck {
-  const state = conversationState(thread);
+// reach its 3rd letter once the other side has too, which already closes the correspondence.
+export function canSendLetter(correspondence: Correspondence, sender: LetterSender): SendLetterCheck {
+  const state = getCorrespondenceState(correspondence);
 
   if (state === "closed") return { ok: false, reason: "closed" };
   if (state === "awaiting_review") return { ok: false, reason: "awaiting_review" };
