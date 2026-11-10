@@ -14,6 +14,9 @@ on:
       - "supabase/migrations/**"
       - "src/lib/entries.ts"
       - "src/lib/phrases.ts"
+      - "src/lib/letters.ts"
+      - "src/lib/letter-lifecycle.ts"
+      - "src/lib/letter-screening.ts"
   push:
     branches: [master, preview]
     paths:
@@ -21,6 +24,9 @@ on:
       - "supabase/migrations/**"
       - "src/lib/entries.ts"
       - "src/lib/phrases.ts"
+      - "src/lib/letters.ts"
+      - "src/lib/letter-lifecycle.ts"
+      - "src/lib/letter-screening.ts"
 
 jobs:
   integration-test:
