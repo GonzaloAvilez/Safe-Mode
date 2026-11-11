@@ -17,6 +17,7 @@ on:
       - "src/lib/letters.ts"
       - "src/lib/letter-lifecycle.ts"
       - "src/lib/letter-safety.ts"
+      - "src/lib/letter-review.ts"
   push:
     branches: [master, preview]
     paths:
@@ -27,6 +28,7 @@ on:
       - "src/lib/letters.ts"
       - "src/lib/letter-lifecycle.ts"
       - "src/lib/letter-safety.ts"
+      - "src/lib/letter-review.ts"
 
 jobs:
   integration-test:
