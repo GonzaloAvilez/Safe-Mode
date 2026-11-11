@@ -20,7 +20,16 @@ export async function createResponse(
 // own home in phrase_resonances (see recordResonance). A real toggle rather than a
 // one-way flag: a stray/accidental tap can be undone by tapping again, which is the
 // signal that the *remaining* true value meant it.
-export async function setWantsReply(entryId: string, value: boolean): Promise<void> {
-  const { error } = await supabaseAdmin.from("responses").update({ wants_reply: value }).eq("entry_id", entryId);
-  unwrap(null, error);
+//
+// Only the session that wrote the entry can change it (added 2026-11-11): the entry id
+// alone used to be enough, so anyone holding an id could flip someone else's toggle.
+// Returns whether a row was updated, i.e. whether the entry belongs to this session.
+export async function setWantsReply(entryId: string, sessionId: string, value: boolean): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("responses")
+    .update({ wants_reply: value })
+    .eq("entry_id", entryId)
+    .eq("session_id", sessionId)
+    .select("id");
+  return unwrap(data, error).length > 0;
 }
