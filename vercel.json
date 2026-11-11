@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/anonymize-crisis-entries",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/apply-letter-retention",
+      "schedule": "15 5 * * *"
     }
   ]
 }

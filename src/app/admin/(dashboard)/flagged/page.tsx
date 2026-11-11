@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { CRISIS_RETENTION_DAYS } from "@/lib/crisis-entries";
+import { CRISIS_LETTER_RETENTION_DAYS } from "@/lib/letter-retention";
 import { AdminCard } from "../../_components/admin-card";
 
 type FlaggedEntryRow = {
@@ -63,9 +64,9 @@ export default async function AdminFlaggedPage() {
           <h1 className="text-lg font-medium">Crisis letters</h1>
           <p className="mt-1 text-sm text-white/40">
             Cartas que la moderación marcó como crisis (ADR-004): no se entregaron y a quien escribió se le mostró el
-            recurso de ayuda. Solo texto, rol y fecha, sin datos que identifiquen a nadie. Retención prevista:{" "}
-            {CRISIS_RETENTION_DAYS} días, <span className="text-amber-300/80">todavía no activa</span> (llega con la
-            parte E de #210). Qué hacer con ellas está por decidir.
+            recurso de ayuda. Solo texto, rol y fecha, sin datos que identifiquen a nadie. Se anonimizan
+            automáticamente {CRISIS_LETTER_RETENTION_DAYS} días después de escritas (cron diario). Qué hacer con ellas
+            está por decidir.
           </p>
         </div>
         {crisisLetters.length === 0 ? (
