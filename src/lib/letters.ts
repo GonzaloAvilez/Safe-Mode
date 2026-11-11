@@ -9,6 +9,10 @@ import type { ContactInfoKind } from "@/lib/safety/contact-info";
 // safety pipeline and the database. Who the sender is (session or return key), rate
 // limiting and the maximum length are checked by the API route (#211) before this runs.
 
+// Longest letter accepted by the routes that write letters (founder decision 2026-11-11;
+// entries allow 800, phrases 400).
+export const LETTER_MAX_LENGTH = 1200;
+
 // Partial unique index from 20261110003100: at most one held letter per correspondence.
 const ONE_HELD_LETTER_INDEX = "letters_one_held_per_correspondence";
 const UNIQUE_VIOLATION = "23505";

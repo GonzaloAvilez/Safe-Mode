@@ -1,17 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { rateLimitAllowedFixture, rateLimitBlockedFixture } from "@/test/fixtures/upstash-responses";
 
-const { limitMock, slidingWindowMock, fromEnvMock, MockRatelimit, logRequestOutcomeMock, constructorConfigs } =
+const { limitMock, slidingWindowMock, fromEnvMock, MockRatelimit, logRequestOutcomeMock, constructorConfigs, slidingWindowArgs } =
   vi.hoisted(() => {
     const limitMock = vi.fn();
     const constructorConfigs: Array<{ prefix?: string }> = [];
+    // Every limiter is built once, at import time; afterEach's clearAllMocks then wipes
+    // slidingWindow's call history, so its arguments are also kept here for later tests.
+    const slidingWindowArgs: unknown[][] = [];
 
     class MockRatelimit {
       limit = limitMock;
       constructor(config: { prefix?: string }) {
         constructorConfigs.push(config);
       }
-      static slidingWindow = vi.fn().mockReturnValue("sliding-window-config");
+      static slidingWindow = vi.fn((...args: unknown[]) => {
+        slidingWindowArgs.push(args);
+        return "sliding-window-config";
+      });
     }
 
     return {
@@ -21,6 +27,7 @@ const { limitMock, slidingWindowMock, fromEnvMock, MockRatelimit, logRequestOutc
       MockRatelimit,
       logRequestOutcomeMock: vi.fn(),
       constructorConfigs,
+      slidingWindowArgs,
     };
   });
 
@@ -36,7 +43,7 @@ vi.mock("@/lib/logging", () => ({
   logRequestOutcome: logRequestOutcomeMock,
 }));
 
-const { isRateLimited, isResonateRateLimited } = await import("@/lib/rate-limit");
+const { isRateLimited, isResonateRateLimited, isLetterRateLimited } = await import("@/lib/rate-limit");
 
 const identifiers = { ip: "203.0.113.10", sessionId: "session-1" };
 
@@ -124,6 +131,36 @@ describe("isResonateRateLimited", () => {
     const result = await isResonateRateLimited(identifiers);
 
     expect(result).toBe(false);
+    consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("isLetterRateLimited", () => {
+  it("uses its own Ratelimit instance at 3 letters per 10 minutes", () => {
+    expect(constructorConfigs).toContainEqual(expect.objectContaining({ prefix: "ratelimit:letters" }));
+    expect(slidingWindowArgs).toContainEqual([3, "10 m"]);
+  });
+
+  it("limits by IP and by session independently", async () => {
+    limitMock.mockResolvedValueOnce(rateLimitAllowedFixture).mockResolvedValueOnce(rateLimitAllowedFixture);
+
+    expect(await isLetterRateLimited(identifiers)).toBe(false);
+    expect(limitMock).toHaveBeenCalledWith("ip:203.0.113.10");
+    expect(limitMock).toHaveBeenCalledWith("session:session-1");
+  });
+
+  it("returns true when either the IP or the session has exceeded the window", async () => {
+    limitMock.mockResolvedValueOnce(rateLimitAllowedFixture).mockResolvedValueOnce(rateLimitBlockedFixture);
+
+    expect(await isLetterRateLimited(identifiers)).toBe(true);
+  });
+
+  it("fails open when Upstash is unreachable", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    limitMock.mockRejectedValueOnce(new Error("fetch failed"));
+
+    expect(await isLetterRateLimited(identifiers)).toBe(false);
+    expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "rate_limit_unavailable");
     consoleErrorSpy.mockRestore();
   });
 });

@@ -66,3 +66,30 @@ export async function isResonateRateLimited({ ip, sessionId }: RateLimitIdentifi
     return false;
   }
 }
+
+// Letters (starting a correspondence and every later letter share this budget). Much
+// lower than entries: a real letter takes minutes to write, and every one that passes
+// the safety pipeline lands in the founder's manual review queue, so this mostly
+// protects review time. 3 per 10 minutes doesn't get in the way of anyone writing.
+const LETTER_RATE_LIMIT_MAX_REQUESTS = 3;
+const LETTER_RATE_LIMIT_WINDOW = "10 m";
+
+const letterRatelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(LETTER_RATE_LIMIT_MAX_REQUESTS, LETTER_RATE_LIMIT_WINDOW),
+  prefix: "ratelimit:letters",
+});
+
+export async function isLetterRateLimited({ ip, sessionId }: RateLimitIdentifiers): Promise<boolean> {
+  try {
+    const [ipResult, sessionResult] = await Promise.all([
+      letterRatelimit.limit(`ip:${ip}`),
+      letterRatelimit.limit(`session:${sessionId}`),
+    ]);
+    return !ipResult.success || !sessionResult.success;
+  } catch (error) {
+    logRequestOutcome(ip, "rate_limit_unavailable");
+    console.error("Upstash rate limit check failed, failing open:", error);
+    return false;
+  }
+}
