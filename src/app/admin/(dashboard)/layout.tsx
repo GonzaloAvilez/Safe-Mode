@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-session";
+import { countLettersAwaitingReview } from "@/lib/letter-review";
 import {
   currentSettingsEnvironment,
   isContributeOpen,
@@ -13,6 +14,7 @@ import {
 
 const NAV_LINKS = [
   { href: "/admin/phrases", label: "Phrases" },
+  { href: "/admin/letters", label: "Letters" },
   { href: "/admin/flagged", label: "Flagged / Crisis" },
   { href: "/admin/spend", label: "Spend" },
   { href: "/admin/metrics", label: "Metrics" },
@@ -22,6 +24,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   await requireAdminSession();
   const sitePublic = await isSitePublic();
   const contributeOpen = await isContributeOpen();
+  // Shown on the Letters link, so pending reviews are visible from any admin page
+  // (ADR-004: no notifications, the founder reviews in batches).
+  const lettersAwaitingReview = await countLettersAwaitingReview();
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white">
@@ -30,6 +35,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
           {NAV_LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="hover:text-white">
               {link.label}
+              {link.href === "/admin/letters" && lettersAwaitingReview > 0 && (
+                <span className="ml-1 text-amber-300">({lettersAwaitingReview})</span>
+              )}
             </Link>
           ))}
         </nav>
