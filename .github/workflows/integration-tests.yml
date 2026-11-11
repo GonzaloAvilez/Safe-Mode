@@ -16,7 +16,7 @@ on:
       - "src/lib/phrases.ts"
       - "src/lib/letters.ts"
       - "src/lib/letter-lifecycle.ts"
-      - "src/lib/letter-screening.ts"
+      - "src/lib/letter-safety.ts"
   push:
     branches: [master, preview]
     paths:
@@ -26,7 +26,7 @@ on:
       - "src/lib/phrases.ts"
       - "src/lib/letters.ts"
       - "src/lib/letter-lifecycle.ts"
-      - "src/lib/letter-screening.ts"
+      - "src/lib/letter-safety.ts"
 
 jobs:
   integration-test:

@@ -12,21 +12,21 @@ import { detectContactInfo, type ContactInfoKind, type ContactInfoResult } from 
 //
 // Fail-closed: if the moderation call throws, the error propagates and nothing is stored.
 
-export type LetterScreening =
+export type LetterSafetyOutcome =
   | { outcome: "held" }
   | { outcome: "rejected"; reason: "crisis" }
   | { outcome: "rejected"; reason: "moderation" }
   | { outcome: "rejected"; reason: "contact_info"; contactKinds: ContactInfoKind[] };
 
 // The decision alone, without the API call, so the order can be tested exhaustively.
-export function resolveLetterScreening(flags: ModerationFlags, contact: ContactInfoResult): LetterScreening {
+export function resolveLetterSafetyOutcome(flags: ModerationFlags, contact: ContactInfoResult): LetterSafetyOutcome {
   if (flags.flaggedCrisis) return { outcome: "rejected", reason: "crisis" };
   if (flags.flaggedGeneral) return { outcome: "rejected", reason: "moderation" };
   if (contact.found) return { outcome: "rejected", reason: "contact_info", contactKinds: contact.kinds };
   return { outcome: "held" };
 }
 
-export async function screenLetter(body: string): Promise<LetterScreening> {
+export async function checkLetterSafety(body: string): Promise<LetterSafetyOutcome> {
   const flags = resolveModerationFlags(await moderateText(body));
-  return resolveLetterScreening(flags, detectContactInfo(body));
+  return resolveLetterSafetyOutcome(flags, detectContactInfo(body));
 }

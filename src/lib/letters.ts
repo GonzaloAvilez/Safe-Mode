@@ -1,7 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
 import { canSendLetter, type Correspondence, type Letter, type LetterSender } from "@/lib/letter-lifecycle";
-import { screenLetter, type LetterScreening } from "@/lib/letter-screening";
+import { checkLetterSafety, type LetterSafetyOutcome } from "@/lib/letter-safety";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import type { ContactInfoKind } from "@/lib/safety/contact-info";
 
@@ -48,26 +48,26 @@ type LetterRow = {
   rejection_reason?: "crisis" | "moderation" | "contact_info";
 };
 
-// The row each screening outcome stores. Contact-info rejections never keep their text
+// The row each safety outcome stores. Contact-info rejections never keep their text
 // (it holds personal data); the database enforces that too.
-function letterRow(input: SubmitLetterInput, screening: LetterScreening): LetterRow {
+function letterRow(input: SubmitLetterInput, safety: LetterSafetyOutcome): LetterRow {
   const base = { correspondence_id: input.correspondenceId, sender: input.sender };
 
-  if (screening.outcome === "held") return { ...base, status: "held", body: input.body };
+  if (safety.outcome === "held") return { ...base, status: "held", body: input.body };
 
   return {
     ...base,
     status: "rejected",
-    rejection_reason: screening.reason,
-    body: screening.reason === "contact_info" ? null : input.body,
+    rejection_reason: safety.reason,
+    body: safety.reason === "contact_info" ? null : input.body,
   };
 }
 
-function toResult(screening: LetterScreening): SubmitLetterResult {
-  if (screening.outcome === "held") return { type: "held" };
-  if (screening.reason === "crisis") return { type: "crisis", resourceUrl: CRISIS_RESOURCE_URL };
-  if (screening.reason === "contact_info") {
-    return { type: "rejected", reason: "contact_info", contactKinds: screening.contactKinds };
+function toResult(safety: LetterSafetyOutcome): SubmitLetterResult {
+  if (safety.outcome === "held") return { type: "held" };
+  if (safety.reason === "crisis") return { type: "crisis", resourceUrl: CRISIS_RESOURCE_URL };
+  if (safety.reason === "contact_info") {
+    return { type: "rejected", reason: "contact_info", contactKinds: safety.contactKinds };
   }
   return { type: "rejected", reason: "moderation" };
 }
@@ -80,9 +80,9 @@ export async function submitLetter(input: SubmitLetterInput): Promise<SubmitLett
   const check = canSendLetter(correspondence, input.sender);
   if (!check.ok) return { type: "not_allowed", reason: check.reason };
 
-  const screening = await screenLetter(input.body);
+  const safety = await checkLetterSafety(input.body);
 
-  const { error } = await supabaseAdmin.from("letters").insert(letterRow(input, screening));
+  const { error } = await supabaseAdmin.from("letters").insert(letterRow(input, safety));
   if (error) {
     // Expected, not a bug: two submissions raced past canSendLetter during moderation
     // (double click, two tabs) and the index let only the first one in. Same answer
@@ -93,5 +93,5 @@ export async function submitLetter(input: SubmitLetterInput): Promise<SubmitLett
     throw error;
   }
 
-  return toResult(screening);
+  return toResult(safety);
 }
