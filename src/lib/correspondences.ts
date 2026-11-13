@@ -99,7 +99,7 @@ export async function startCorrespondence(input: StartCorrespondenceInput): Prom
   return { type: "started", correspondenceId, returnKey, letter };
 }
 
-type CorrespondenceSidesRow = {
+type CorrespondenceIdentitiesRow = {
   visitor_identity_id: string;
   phrases: { identity_id: string | null } | null;
 };
@@ -116,10 +116,10 @@ export async function resolveLetterSender(correspondenceId: string, identityId: 
     .maybeSingle();
   if (error) throw error;
 
-  const sides = data as CorrespondenceSidesRow | null;
-  if (!sides) return null;
-  if (sides.visitor_identity_id === identityId) return "visitor";
-  if (sides.phrases?.identity_id === identityId) return "author";
+  const identities = data as CorrespondenceIdentitiesRow | null;
+  if (!identities) return null;
+  if (identities.visitor_identity_id === identityId) return "visitor";
+  if (identities.phrases?.identity_id === identityId) return "author";
   return null;
 }
 

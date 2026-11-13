@@ -172,7 +172,7 @@ describe("startCorrespondence", () => {
 
 // A correspondence as resolveLetterSender reads it: the visitor's identity and the
 // identity of the phrase's author (null for a seed phrase or a phrase without an author).
-const sides = (authorIdentityId: string | null) =>
+const correspondenceIdentities = (authorIdentityId: string | null) =>
   query({ data: { visitor_identity_id: "visitor-1", phrases: { identity_id: authorIdentityId } }, error: null });
 
 describe("resolveLetterSender", () => {
@@ -182,7 +182,7 @@ describe("resolveLetterSender", () => {
     ["an identity from another correspondence", "stranger-1", "author-1", null],
     ["anyone but the visitor, on a seed phrase (no author identity)", "stranger-1", null, null],
   ])("answers for %s", async (_label, identityId, authorIdentityId, expected) => {
-    const correspondences = sides(authorIdentityId);
+    const correspondences = correspondenceIdentities(authorIdentityId);
     mockTables({ correspondences: [correspondences] });
 
     expect(await resolveLetterSender("correspondence-1", identityId)).toBe(expected);
@@ -214,7 +214,7 @@ describe("submitLetterWithReturnKey", () => {
     ["author", "author-1"],
   ])("sends the letter as the %s when the key belongs to that side", async (sender, identityId) => {
     resolveIdentityFromReturnKeyMock.mockResolvedValue(identityId);
-    mockTables({ correspondences: [sides("author-1")] });
+    mockTables({ correspondences: [correspondenceIdentities("author-1")] });
     submitLetterMock.mockResolvedValue({ type: "held" });
 
     expect(await submitLetterWithReturnKey(LETTER)).toEqual({ type: "held" });
@@ -236,7 +236,7 @@ describe("submitLetterWithReturnKey", () => {
 
   it("answers not_found for a real key that isn't part of this correspondence", async () => {
     resolveIdentityFromReturnKeyMock.mockResolvedValue("stranger-1");
-    mockTables({ correspondences: [sides("author-1")] });
+    mockTables({ correspondences: [correspondenceIdentities("author-1")] });
 
     expect(await submitLetterWithReturnKey(LETTER)).toEqual({ type: "not_found" });
     expect(submitLetterMock).not.toHaveBeenCalled();
@@ -245,7 +245,7 @@ describe("submitLetterWithReturnKey", () => {
   it("passes submitLetter's outcome through unchanged (turn rules live there)", async () => {
     const notYourTurn = { type: "not_allowed", reason: "not_your_turn" };
     resolveIdentityFromReturnKeyMock.mockResolvedValue("visitor-1");
-    mockTables({ correspondences: [sides("author-1")] });
+    mockTables({ correspondences: [correspondenceIdentities("author-1")] });
     submitLetterMock.mockResolvedValue(notYourTurn);
 
     expect(await submitLetterWithReturnKey(LETTER)).toEqual(notYourTurn);
