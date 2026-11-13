@@ -1,11 +1,13 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
-import { createIdentityWithReturnKey } from "@/lib/identity-keys";
+import { createIdentityWithReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
+import type { LetterSender } from "@/lib/letter-lifecycle";
 import { submitLetter, type SubmitLetterResult } from "@/lib/letters";
 
-// ADR-004 #211: starting a correspondence. A visitor whose entry matched a phrase writes
-// the first letter to that phrase's author; the correspondence is created together with
-// that letter, never empty (founder decision 2026-11-11).
+// ADR-004 #211: starting a correspondence and writing in it. A visitor whose entry matched
+// a phrase writes the first letter to that phrase's author; the correspondence is created
+// together with that letter, never empty (founder decision 2026-11-11). After that, each
+// side writes its next letter with its return key.
 //
 // Entries are never stored with a correspondence (ADR-004 hard rule): the entry is only
 // read here to prove the visitor owns it and to find the phrase it matched.
@@ -95,4 +97,48 @@ export async function startCorrespondence(input: StartCorrespondenceInput): Prom
   }
 
   return { type: "started", correspondenceId, returnKey, letter };
+}
+
+type CorrespondenceSidesRow = {
+  visitor_identity_id: string;
+  phrases: { identity_id: string | null } | null;
+};
+
+// Which side of the correspondence this identity writes from: the visitor who started it,
+// or the author of its phrase. Null when it's neither, or the correspondence doesn't exist.
+// A seed phrase has no author identity (the founder answers those from /admin), so only its
+// visitor can write through here.
+export async function resolveLetterSender(correspondenceId: string, identityId: string): Promise<LetterSender | null> {
+  const { data, error } = await supabaseAdmin
+    .from("correspondences")
+    .select("visitor_identity_id, phrases(identity_id)")
+    .eq("id", correspondenceId)
+    .maybeSingle();
+  if (error) throw error;
+
+  const sides = data as CorrespondenceSidesRow | null;
+  if (!sides) return null;
+  if (sides.visitor_identity_id === identityId) return "visitor";
+  if (sides.phrases?.identity_id === identityId) return "author";
+  return null;
+}
+
+type SubmitLetterWithReturnKeyInput = {
+  correspondenceId: string;
+  returnKey: string;
+  body: string;
+};
+
+// Either side writes its next letter, authorized only by its return key: the key says who
+// is writing, the correspondence says from which side. A key that doesn't exist, or that
+// isn't part of this correspondence, gets the same not_found as a correspondence that
+// doesn't exist, so the route can't be used to probe which correspondences exist.
+export async function submitLetterWithReturnKey(input: SubmitLetterWithReturnKeyInput): Promise<SubmitLetterResult> {
+  const identityId = await resolveIdentityFromReturnKey(input.returnKey);
+  if (!identityId) return { type: "not_found" };
+
+  const sender = await resolveLetterSender(input.correspondenceId, identityId);
+  if (!sender) return { type: "not_found" };
+
+  return submitLetter({ correspondenceId: input.correspondenceId, sender, body: input.body });
 }
