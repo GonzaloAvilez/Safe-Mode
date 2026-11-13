@@ -19,6 +19,7 @@ on:
       - "src/lib/letter-safety.ts"
       - "src/lib/letter-review.ts"
       - "src/lib/letter-retention.ts"
+      - "src/lib/correspondences.ts"
   push:
     branches: [master, preview]
     paths:
@@ -31,6 +32,7 @@ on:
       - "src/lib/letter-safety.ts"
       - "src/lib/letter-review.ts"
       - "src/lib/letter-retention.ts"
+      - "src/lib/correspondences.ts"
 
 jobs:
   integration-test:
