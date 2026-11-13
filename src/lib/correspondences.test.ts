@@ -1,16 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { fromMock, createIdentityWithReturnKeyMock, submitLetterMock } = vi.hoisted(() => ({
-  fromMock: vi.fn(),
-  createIdentityWithReturnKeyMock: vi.fn(),
-  submitLetterMock: vi.fn(),
-}));
+const { fromMock, createIdentityWithReturnKeyMock, resolveIdentityFromReturnKeyMock, submitLetterMock } = vi.hoisted(
+  () => ({
+    fromMock: vi.fn(),
+    createIdentityWithReturnKeyMock: vi.fn(),
+    resolveIdentityFromReturnKeyMock: vi.fn(),
+    submitLetterMock: vi.fn(),
+  })
+);
 
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: fromMock } }));
-vi.mock("@/lib/identity-keys", () => ({ createIdentityWithReturnKey: createIdentityWithReturnKeyMock }));
+vi.mock("@/lib/identity-keys", () => ({
+  createIdentityWithReturnKey: createIdentityWithReturnKeyMock,
+  resolveIdentityFromReturnKey: resolveIdentityFromReturnKeyMock,
+}));
 vi.mock("@/lib/letters", () => ({ submitLetter: submitLetterMock }));
 
-const { isPhraseConnectable, startCorrespondence } = await import("@/lib/correspondences");
+const { isPhraseConnectable, resolveLetterSender, startCorrespondence, submitLetterWithReturnKey } = await import(
+  "@/lib/correspondences"
+);
 
 // resetAllMocks also drops queued mockReturnValueOnce values (see letter-review.test.ts).
 afterEach(() => {
@@ -159,5 +167,87 @@ describe("startCorrespondence", () => {
 
     await expect(startCorrespondence(INPUT)).rejects.toEqual(error);
     expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+  });
+});
+
+// A correspondence as resolveLetterSender reads it: the visitor's identity and the
+// identity of the phrase's author (null for a seed phrase or a phrase without an author).
+const correspondenceIdentities = (authorIdentityId: string | null) =>
+  query({ data: { visitor_identity_id: "visitor-1", phrases: { identity_id: authorIdentityId } }, error: null });
+
+describe("resolveLetterSender", () => {
+  it.each([
+    ["the visitor who started it", "visitor-1", "author-1", "visitor"],
+    ["the author of its phrase", "author-1", "author-1", "author"],
+    ["an identity from another correspondence", "stranger-1", "author-1", null],
+    ["anyone but the visitor, on a seed phrase (no author identity)", "stranger-1", null, null],
+  ])("answers for %s", async (_label, identityId, authorIdentityId, expected) => {
+    const correspondences = correspondenceIdentities(authorIdentityId);
+    mockTables({ correspondences: [correspondences] });
+
+    expect(await resolveLetterSender("correspondence-1", identityId)).toBe(expected);
+    expect(correspondences.calls).toEqual([
+      ["select", ["visitor_identity_id, phrases(identity_id)"]],
+      ["eq", ["id", "correspondence-1"]],
+    ]);
+  });
+
+  it("answers null for a correspondence that doesn't exist", async () => {
+    mockTables({ correspondences: [query({ data: null, error: null })] });
+
+    expect(await resolveLetterSender("missing", "visitor-1")).toBeNull();
+  });
+
+  it("throws when the lookup fails", async () => {
+    const error = { message: "connection failure" };
+    mockTables({ correspondences: [query({ data: null, error })] });
+
+    await expect(resolveLetterSender("correspondence-1", "visitor-1")).rejects.toEqual(error);
+  });
+});
+
+describe("submitLetterWithReturnKey", () => {
+  const LETTER = { correspondenceId: "correspondence-1", returnKey: "the-key", body: "Gracias por responder." };
+
+  it.each([
+    ["visitor", "visitor-1"],
+    ["author", "author-1"],
+  ])("sends the letter as the %s when the key belongs to that side", async (sender, identityId) => {
+    resolveIdentityFromReturnKeyMock.mockResolvedValue(identityId);
+    mockTables({ correspondences: [correspondenceIdentities("author-1")] });
+    submitLetterMock.mockResolvedValue({ type: "held" });
+
+    expect(await submitLetterWithReturnKey(LETTER)).toEqual({ type: "held" });
+    expect(resolveIdentityFromReturnKeyMock).toHaveBeenCalledWith("the-key");
+    expect(submitLetterMock).toHaveBeenCalledWith({
+      correspondenceId: "correspondence-1",
+      sender,
+      body: "Gracias por responder.",
+    });
+  });
+
+  it("answers not_found for a key that doesn't exist, without looking up the correspondence", async () => {
+    resolveIdentityFromReturnKeyMock.mockResolvedValue(null);
+    mockTables({});
+
+    expect(await submitLetterWithReturnKey(LETTER)).toEqual({ type: "not_found" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("answers not_found for a real key that isn't part of this correspondence", async () => {
+    resolveIdentityFromReturnKeyMock.mockResolvedValue("stranger-1");
+    mockTables({ correspondences: [correspondenceIdentities("author-1")] });
+
+    expect(await submitLetterWithReturnKey(LETTER)).toEqual({ type: "not_found" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("passes submitLetter's outcome through unchanged (turn rules live there)", async () => {
+    const notYourTurn = { type: "not_allowed", reason: "not_your_turn" };
+    resolveIdentityFromReturnKeyMock.mockResolvedValue("visitor-1");
+    mockTables({ correspondences: [correspondenceIdentities("author-1")] });
+    submitLetterMock.mockResolvedValue(notYourTurn);
+
+    expect(await submitLetterWithReturnKey(LETTER)).toEqual(notYourTurn);
   });
 });
