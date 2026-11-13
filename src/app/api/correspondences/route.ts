@@ -2,6 +2,7 @@ import { startCorrespondence } from "@/lib/correspondences";
 import { LETTER_MAX_LENGTH } from "@/lib/letters";
 import { botGuard, textLengthGuard } from "@/lib/public-submission-guards";
 import { isLetterRateLimited } from "@/lib/rate-limit";
+import { readJsonObject } from "@/lib/request-body";
 import { getRequestIp } from "@/lib/request-ip";
 import { getOrCreateSessionId } from "@/lib/session";
 
@@ -24,7 +25,9 @@ export async function POST(request: Request) {
     return Response.json({ error: "too many requests" }, { status: 429 });
   }
 
-  const body = await request.json();
+  const body = await readJsonObject(request);
+  if (!body) return Response.json({ error: "body must be a JSON object" }, { status: 400 });
+
   const blocked = botGuard(ip, body.honeypot, body.formRenderedAt) ?? textLengthGuard(body.text, LETTER_MAX_LENGTH);
   if (blocked) return blocked;
 
@@ -32,7 +35,9 @@ export async function POST(request: Request) {
     return Response.json({ error: "entryId must be a uuid" }, { status: 400 });
   }
 
-  const result = await startCorrespondence({ entryId: body.entryId, sessionId, body: body.text });
+  // textLengthGuard above only lets a non-empty string through.
+  const text = body.text as string;
+  const result = await startCorrespondence({ entryId: body.entryId, sessionId, body: text });
 
   // The response can carry the return key: it must never be stored by a cache.
   return Response.json(result, { status: STATUS_BY_RESULT[result.type], headers: { "Cache-Control": "no-store" } });

@@ -23,7 +23,11 @@ const ENTRY_ID = "6f1c2c8e-8a7b-4c1e-9d5a-2b3c4d5e6f70";
 const VALID = { entryId: ENTRY_ID, text: "Gracias por tu frase.", honeypot: "", formRenderedAt: 0 };
 
 function start(body: unknown) {
-  return POST(new Request("http://localhost/api/correspondences", { method: "POST", body: JSON.stringify(body) }));
+  return startWithRawBody(JSON.stringify(body));
+}
+
+function startWithRawBody(raw: string) {
+  return POST(new Request("http://localhost/api/correspondences", { method: "POST", body: raw }));
 }
 
 beforeEach(() => {
@@ -78,6 +82,18 @@ describe("POST /api/correspondences", () => {
     ["entryId that isn't a uuid", { ...VALID, entryId: "entry-1" }],
   ])("answers 400 and starts nothing for %s", async (_label, body) => {
     expect((await start(body)).status).toBe(400);
+    expect(startCorrespondenceMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["malformed JSON", "{"],
+    ["a null body", "null"],
+    ["an array body", JSON.stringify([VALID])],
+  ])("answers 400 (not 500) and starts nothing for %s", async (_label, raw) => {
+    const response = await startWithRawBody(raw);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "body must be a JSON object" });
     expect(startCorrespondenceMock).not.toHaveBeenCalled();
   });
 
