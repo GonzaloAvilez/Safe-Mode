@@ -93,3 +93,27 @@ export async function isLetterRateLimited({ ip, sessionId }: RateLimitIdentifier
     return false;
   }
 }
+
+// Reading the mailbox (GET /api/mailbox). Its own budget, so opening the mailbox never
+// uses up the 3 letters above. Same number as entries: someone checking for a reply opens
+// it a few times at most. A return key is 256 random bits, so this protects the database,
+// not the keys (guessing one isn't feasible at any rate).
+const mailboxRatelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW),
+  prefix: "ratelimit:mailbox",
+});
+
+export async function isMailboxRateLimited({ ip, sessionId }: RateLimitIdentifiers): Promise<boolean> {
+  try {
+    const [ipResult, sessionResult] = await Promise.all([
+      mailboxRatelimit.limit(`ip:${ip}`),
+      mailboxRatelimit.limit(`session:${sessionId}`),
+    ]);
+    return !ipResult.success || !sessionResult.success;
+  } catch (error) {
+    logRequestOutcome(ip, "rate_limit_unavailable");
+    console.error("Upstash rate limit check failed, failing open:", error);
+    return false;
+  }
+}
