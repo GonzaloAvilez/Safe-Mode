@@ -5,8 +5,7 @@ import { isLetterRateLimited } from "@/lib/rate-limit";
 import { readJsonObject } from "@/lib/request-body";
 import { getRequestIp } from "@/lib/request-ip";
 import { getOrCreateSessionId } from "@/lib/session";
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUuid } from "@/lib/uuid";
 
 const STATUS_BY_RESULT = {
   started: 201,
@@ -31,7 +30,7 @@ export async function POST(request: Request) {
   const blocked = botGuard(ip, body.honeypot, body.formRenderedAt) ?? textLengthGuard(body.text, LETTER_MAX_LENGTH);
   if (blocked) return blocked;
 
-  if (typeof body.entryId !== "string" || !UUID.test(body.entryId)) {
+  if (!isUuid(body.entryId)) {
     return Response.json({ error: "entryId must be a uuid" }, { status: 400 });
   }
 
