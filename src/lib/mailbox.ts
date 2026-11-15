@@ -11,7 +11,8 @@ import {
 // ADR-004 #211: the mailbox. Whoever holds a return key reads the correspondences their
 // identity takes part in, seen from their own side: a visitor key opens the one
 // correspondence it started, an author key opens every correspondence on the author's
-// phrases. Seed phrases have no author identity; the founder reads those in /admin.
+// phrases. Seed phrases have no author identity: the founder reads their side in
+// /admin/mailbox (getSeedPhraseMailbox, below).
 //
 // One principle decides what's shown (founder decision 2026-11-14): you only learn about
 // a letter from the other side once it's delivered to you. Their letters waiting for
@@ -148,24 +149,48 @@ async function listCorrespondencesAsAuthor(identityId: string): Promise<MailboxC
   return data as unknown as MailboxCorrespondenceRow[];
 }
 
+// Seed phrases with no author identity: the ones the founder answers (isAnsweredByFounder
+// in correspondences.ts, the same rule written as a query).
+async function listSeedPhraseCorrespondences(): Promise<MailboxCorrespondenceRow[]> {
+  const { data, error } = await supabaseAdmin
+    .from("correspondences")
+    .select(`${CORRESPONDENCE_COLUMNS}, phrases!inner(text)`)
+    .eq("phrases.source", "seed")
+    .is("phrases.identity_id", null);
+  if (error) throw error;
+  return data as unknown as MailboxCorrespondenceRow[];
+}
+
+type MailboxRow = { row: MailboxCorrespondenceRow; side: LetterSender };
+
 // Newest correspondence first; letters oldest first inside each one.
-export async function getMailbox(identityId: string): Promise<Mailbox> {
-  const [asVisitor, asAuthor] = await Promise.all([
-    listCorrespondencesAsVisitor(identityId),
-    listCorrespondencesAsAuthor(identityId),
-  ]);
-
-  const rows = [
-    ...asVisitor.map((row) => ({ row, side: "visitor" as const })),
-    ...asAuthor.map((row) => ({ row, side: "author" as const })),
-  ];
-
+function toMailbox(rows: MailboxRow[]): Mailbox {
   const correspondences = rows
     .filter(({ row, side }) => isCorrespondenceVisibleTo(row.letters, side))
     .sort((a, b) => b.row.created_at.localeCompare(a.row.created_at))
     .map(({ row, side }) => toMailboxCorrespondence(row, side));
 
   return { correspondences };
+}
+
+export async function getMailbox(identityId: string): Promise<Mailbox> {
+  const [asVisitor, asAuthor] = await Promise.all([
+    listCorrespondencesAsVisitor(identityId),
+    listCorrespondencesAsAuthor(identityId),
+  ]);
+
+  return toMailbox([
+    ...asVisitor.map((row) => ({ row, side: "visitor" as const })),
+    ...asAuthor.map((row) => ({ row, side: "author" as const })),
+  ]);
+}
+
+// The founder's mailbox in /admin/mailbox: the author's side of every correspondence on
+// their seed phrases, with exactly the rules any author's mailbox follows. The founder
+// still sees every held letter in /admin/letters, as the reviewer, not as the author.
+export async function getSeedPhraseMailbox(): Promise<Mailbox> {
+  const rows = await listSeedPhraseCorrespondences();
+  return toMailbox(rows.map((row) => ({ row, side: "author" as const })));
 }
 
 // null when the key doesn't belong to any identity.

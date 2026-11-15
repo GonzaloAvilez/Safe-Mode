@@ -9,8 +9,14 @@ const { fromMock, resolveIdentityFromReturnKeyMock } = vi.hoisted(() => ({
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: fromMock } }));
 vi.mock("@/lib/identity-keys", () => ({ resolveIdentityFromReturnKey: resolveIdentityFromReturnKeyMock }));
 
-const { getMailbox, getMailboxState, getMailboxWithReturnKey, isCorrespondenceVisibleTo, isLetterVisibleTo } =
-  await import("@/lib/mailbox");
+const {
+  getMailbox,
+  getMailboxState,
+  getMailboxWithReturnKey,
+  getSeedPhraseMailbox,
+  isCorrespondenceVisibleTo,
+  isLetterVisibleTo,
+} = await import("@/lib/mailbox");
 
 afterEach(() => {
   vi.resetAllMocks();
@@ -146,17 +152,29 @@ const correspondenceRow = (id: string, createdAt: string, letters: LetterRow[], 
   letters,
 });
 
-// Both queries go to correspondences at once (Promise.all); each is answered by what it
-// filters on, so the test doesn't depend on which one runs first.
+type QueryKind = "visitor" | "author" | "seed";
+
+function queryKind(calls: [string, unknown[]][]): QueryKind {
+  const filtersOn = (column: string) => calls.some(([method, args]) => method === "eq" && args[0] === column);
+  if (filtersOn("phrases.identity_id")) return "author";
+  if (filtersOn("phrases.source")) return "seed";
+  return "visitor";
+}
+
+// The mailbox's queries go to correspondences at once (Promise.all); each is answered by
+// what it filters on, so the test doesn't depend on which one runs first.
 function mockCorrespondences({
   asVisitor = [],
   asAuthor = [],
+  onSeedPhrases = [],
   failing,
 }: {
   asVisitor?: unknown[];
   asAuthor?: unknown[];
-  failing?: { side: LetterSender; error: unknown };
+  onSeedPhrases?: unknown[];
+  failing?: { query: QueryKind; error: unknown };
 }) {
+  const rowsByQuery: Record<QueryKind, unknown[]> = { visitor: asVisitor, author: asAuthor, seed: onSeedPhrases };
   const queries: [string, unknown[]][][] = [];
   fromMock.mockImplementation((table: string) => {
     if (table !== "correspondences") throw new Error(`unexpected query on ${table}`);
@@ -164,16 +182,13 @@ function mockCorrespondences({
     queries.push(calls);
     const builder: Record<string, unknown> = {
       then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => {
-        const isAuthorQuery = calls.some(([method, args]) => method === "eq" && args[0] === "phrases.identity_id");
-        const side: LetterSender = isAuthorQuery ? "author" : "visitor";
+        const kind = queryKind(calls);
         const result =
-          failing?.side === side
-            ? { data: null, error: failing.error }
-            : { data: isAuthorQuery ? asAuthor : asVisitor, error: null };
+          failing?.query === kind ? { data: null, error: failing.error } : { data: rowsByQuery[kind], error: null };
         return Promise.resolve(result).then(resolve, reject);
       },
     };
-    for (const method of ["select", "eq"]) {
+    for (const method of ["select", "eq", "is"]) {
       builder[method] = (...args: unknown[]) => {
         calls.push([method, args]);
         return builder;
@@ -330,10 +345,66 @@ describe("getMailbox", () => {
     const error = { message: "connection failure" };
     mockCorrespondences({
       asVisitor: [correspondenceRow("c1", "2026-11-10T09:00:00.000Z", [])],
-      failing: { side, error },
+      failing: { query: side, error },
     });
 
     await expect(getMailbox("identity-1")).rejects.toEqual(error);
+  });
+});
+
+describe("getSeedPhraseMailbox", () => {
+  it("reads only correspondences on seed phrases without an author identity", async () => {
+    const queries = mockCorrespondences({});
+
+    await getSeedPhraseMailbox();
+
+    expect(queries).toHaveLength(1);
+    const [seedQuery] = queries;
+    expect(seedQuery).toContainEqual(["eq", ["phrases.source", "seed"]]);
+    expect(seedQuery).toContainEqual(["is", ["phrases.identity_id", null]]);
+    // Without !inner, both filters would keep every correspondence with an empty phrase.
+    expect(String(seedQuery.find(([method]) => method === "select")![1][0])).toContain("phrases!inner(text)");
+  });
+
+  it("shows them from the author's side, with the same rules as any author's mailbox", async () => {
+    mockCorrespondences({
+      onSeedPhrases: [
+        correspondenceRow("not-yet", "2026-11-12T09:00:00.000Z", [letterRow("visitor", "held", "2026-11-12T10:00:00.000Z")]),
+        correspondenceRow("reached", "2026-11-10T09:00:00.000Z", [
+          letterRow("visitor", "delivered", "2026-11-10T10:00:00.000Z"),
+          letterRow("author", "rejected", "2026-11-11T10:00:00.000Z", { rejection_reason: "review" }),
+        ]),
+      ],
+    });
+
+    const { correspondences } = await getSeedPhraseMailbox();
+
+    expect(correspondences.map(({ id, yourSide, state }) => [id, yourSide, state])).toEqual([
+      ["reached", "author", "your_turn"],
+    ]);
+    expect(correspondences[0].letters.map(({ sender, status }) => [sender, status])).toEqual([
+      ["visitor", "delivered"],
+      ["author", "rejected"],
+    ]);
+  });
+
+  it("lists the newest correspondence first", async () => {
+    const delivered = (createdAt: string) => [letterRow("visitor", "delivered", createdAt)];
+    mockCorrespondences({
+      onSeedPhrases: [
+        correspondenceRow("old", "2026-11-01T09:00:00.000Z", delivered("2026-11-01T10:00:00.000Z")),
+        correspondenceRow("new", "2026-11-09T09:00:00.000Z", delivered("2026-11-09T10:00:00.000Z")),
+      ],
+    });
+
+    expect((await getSeedPhraseMailbox()).correspondences.map(({ id }) => id)).toEqual(["new", "old"]);
+  });
+
+  it("throws when the lookup fails", async () => {
+    const error = { message: "connection failure" };
+    mockCorrespondences({ failing: { query: "seed", error } });
+
+    await expect(getSeedPhraseMailbox()).rejects.toEqual(error);
   });
 });
 
