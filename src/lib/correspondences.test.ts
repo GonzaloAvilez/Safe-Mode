@@ -16,9 +16,14 @@ vi.mock("@/lib/identity-keys", () => ({
 }));
 vi.mock("@/lib/letters", () => ({ submitLetter: submitLetterMock }));
 
-const { isPhraseConnectable, resolveLetterSender, startCorrespondence, submitLetterWithReturnKey } = await import(
-  "@/lib/correspondences"
-);
+const {
+  isAnsweredByFounder,
+  isPhraseConnectable,
+  resolveLetterSender,
+  startCorrespondence,
+  submitLetterWithReturnKey,
+  submitSeedPhraseLetter,
+} = await import("@/lib/correspondences");
 
 // resetAllMocks also drops queued mockReturnValueOnce values (see letter-review.test.ts).
 afterEach(() => {
@@ -57,10 +62,22 @@ const SEED_PHRASE = { id: "phrase-1", identity_id: null, source: "seed" };
 const ownedEntry = (phrase: unknown) => query({ data: { entries: { phrases: phrase } }, error: null });
 const INPUT = { entryId: "entry-1", sessionId: "session-1", body: "Gracias por tu frase." };
 
+describe("isAnsweredByFounder", () => {
+  it.each([
+    [{ identity_id: null, source: "seed" as const }, true],
+    [{ identity_id: "author-1", source: "seed" as const }, false], // its author answers, never two
+    [{ identity_id: "author-1", source: "user" as const }, false],
+    [{ identity_id: null, source: "user" as const }, false],
+  ])("%j → %s", (phrase, expected) => {
+    expect(isAnsweredByFounder(phrase)).toBe(expected);
+  });
+});
+
 describe("isPhraseConnectable", () => {
   it.each([
     [{ identity_id: "author-1", source: "user" as const }, true],
     [{ identity_id: null, source: "seed" as const }, true],
+    [{ identity_id: "author-1", source: "seed" as const }, true],
     [{ identity_id: null, source: "user" as const }, false], // pre-existing user phrase, no author (OD-5)
   ])("%j → %s", (phrase, expected) => {
     expect(isPhraseConnectable(phrase)).toBe(expected);
@@ -249,5 +266,61 @@ describe("submitLetterWithReturnKey", () => {
     submitLetterMock.mockResolvedValue(notYourTurn);
 
     expect(await submitLetterWithReturnKey(LETTER)).toEqual(notYourTurn);
+  });
+});
+
+describe("submitSeedPhraseLetter", () => {
+  const LETTER = { correspondenceId: "correspondence-1", body: "Gracias por escribirme." };
+  const correspondencePhrase = (phrase: unknown) => query({ data: { phrases: phrase }, error: null });
+
+  it("sends the founder's letter as the author on a seed phrase without an author", async () => {
+    const correspondences = correspondencePhrase({ identity_id: null, source: "seed" });
+    mockTables({ correspondences: [correspondences] });
+    submitLetterMock.mockResolvedValue({ type: "held" });
+
+    expect(await submitSeedPhraseLetter(LETTER)).toEqual({ type: "held" });
+    expect(correspondences.calls).toEqual([
+      ["select", ["phrases(identity_id, source)"]],
+      ["eq", ["id", "correspondence-1"]],
+    ]);
+    expect(submitLetterMock).toHaveBeenCalledWith({
+      correspondenceId: "correspondence-1",
+      sender: "author",
+      body: "Gracias por escribirme.",
+    });
+  });
+
+  it.each([
+    ["a user phrase with its own author", { identity_id: "author-1", source: "user" }],
+    ["a user phrase without an author", { identity_id: null, source: "user" }],
+    ["a seed phrase that has an author identity", { identity_id: "author-1", source: "seed" }],
+  ])("answers not_found and writes nothing on %s", async (_label, phrase) => {
+    mockTables({ correspondences: [correspondencePhrase(phrase)] });
+
+    expect(await submitSeedPhraseLetter(LETTER)).toEqual({ type: "not_found" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("answers not_found for a correspondence that doesn't exist", async () => {
+    mockTables({ correspondences: [query({ data: null, error: null })] });
+
+    expect(await submitSeedPhraseLetter(LETTER)).toEqual({ type: "not_found" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("passes submitLetter's outcome through unchanged (turn rules and safety live there)", async () => {
+    const rejected = { type: "rejected", reason: "contact_info", contactKinds: ["email"] };
+    mockTables({ correspondences: [correspondencePhrase({ identity_id: null, source: "seed" })] });
+    submitLetterMock.mockResolvedValue(rejected);
+
+    expect(await submitSeedPhraseLetter(LETTER)).toEqual(rejected);
+  });
+
+  it("throws when the lookup fails, writing nothing", async () => {
+    const error = { message: "connection failure" };
+    mockTables({ correspondences: [query({ data: null, error })] });
+
+    await expect(submitSeedPhraseLetter(LETTER)).rejects.toEqual(error);
+    expect(submitLetterMock).not.toHaveBeenCalled();
   });
 });

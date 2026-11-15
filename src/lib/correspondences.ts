@@ -14,12 +14,19 @@ import { submitLetter, type SubmitLetterResult } from "@/lib/letters";
 
 type PhraseOwnership = { identity_id: string | null; source: "seed" | "user" };
 
+// Every seed phrase is the founder's own (confirmed 2026-11-11) and has no author
+// identity, so the founder answers its letters from /admin, never with a return key. A
+// seed phrase that did have an author identity would be answered by that author instead,
+// so a correspondence never has two people writing as its author.
+export function isAnsweredByFounder(phrase: PhraseOwnership): boolean {
+  return phrase.source === "seed" && phrase.identity_id === null;
+}
+
 // A phrase accepts letters when its author opted in (phrases.identity_id, from #212), or
-// when it's a seed phrase: every seed is the founder's own, answered from /admin
-// (confirmed 2026-11-11). User phrases from before opt-in existed have no reachable
+// when the founder answers it. User phrases from before opt-in existed have no reachable
 // author and never accept letters (ADR-004 open decision 5).
 export function isPhraseConnectable(phrase: PhraseOwnership): boolean {
-  return phrase.identity_id !== null || phrase.source === "seed";
+  return phrase.identity_id !== null || isAnsweredByFounder(phrase);
 }
 
 export type StartCorrespondenceResult =
@@ -141,4 +148,37 @@ export async function submitLetterWithReturnKey(input: SubmitLetterWithReturnKey
   if (!sender) return { type: "not_found" };
 
   return submitLetter({ correspondenceId: input.correspondenceId, sender, body: input.body });
+}
+
+type CorrespondencePhraseRow = { phrases: PhraseOwnership | null };
+
+async function isAnsweredByFounderCorrespondence(correspondenceId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("correspondences")
+    .select("phrases(identity_id, source)")
+    .eq("id", correspondenceId)
+    .maybeSingle();
+  if (error) throw error;
+
+  const phrase = (data as CorrespondencePhraseRow | null)?.phrases;
+  return phrase ? isAnsweredByFounder(phrase) : false;
+}
+
+type SubmitSeedPhraseLetterInput = {
+  correspondenceId: string;
+  body: string;
+};
+
+// The founder writes as the author of one of their seed phrases, from /admin/mailbox (the
+// caller checks the admin session). Any other correspondence answers not_found, so /admin
+// can never write as the author of someone else's phrase.
+//
+// The letter goes through the same pipeline as every other one, human review included
+// (founder decision 2026-11-14): the founder delivers it from /admin/letters, so
+// approveLetter stays the only place a letter is delivered, and the one that closes the
+// correspondence after its 6th letter.
+export async function submitSeedPhraseLetter(input: SubmitSeedPhraseLetterInput): Promise<SubmitLetterResult> {
+  if (!(await isAnsweredByFounderCorrespondence(input.correspondenceId))) return { type: "not_found" };
+
+  return submitLetter({ correspondenceId: input.correspondenceId, sender: "author", body: input.body });
 }
