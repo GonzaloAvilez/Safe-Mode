@@ -14,6 +14,8 @@ const {
   isWellFormedReturnKey,
   createIdentityWithReturnKey,
   resolveIdentityFromReturnKey,
+  confirmReturnKey,
+  hasConfirmedReturnKey,
 } = await import("@/lib/identity-keys");
 
 const SECRET = "test-return-key-hash-secret-0123456789";
@@ -218,5 +220,105 @@ describe("resolveIdentityFromReturnKey", () => {
   it("throws when the lookup fails", async () => {
     mockLookup({ data: null, error: new Error("lookup failed") });
     await expect(resolveIdentityFromReturnKey(generateReturnKey())).rejects.toThrow("lookup failed");
+  });
+});
+
+// A Supabase query builder stand-in: every chained method is recorded and returns the
+// same object; awaiting it, or maybeSingle(), resolves to `result`.
+function query(result: { data: unknown; error: unknown }) {
+  const calls: [string, unknown[]][] = [];
+  const builder: Record<string, unknown> = {
+    then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+      Promise.resolve(result).then(resolve, reject),
+    maybeSingle: () => Promise.resolve(result),
+  };
+  for (const method of ["select", "update", "eq", "is", "not", "limit"]) {
+    builder[method] = (...args: unknown[]) => {
+      calls.push([method, args]);
+      return builder;
+    };
+  }
+  return { builder, calls };
+}
+
+function mockQueries(...queries: ReturnType<typeof query>[]) {
+  for (const { builder } of queries) fromMock.mockReturnValueOnce(builder);
+}
+
+describe("confirmReturnKey", () => {
+  const sealHash = () => createHmac("sha256", SECRET).update(SEAL).digest("hex");
+
+  it("records the confirmation on the key's row, only if it wasn't confirmed yet", async () => {
+    const confirm = query({ data: [{ id: "key-1" }], error: null });
+    mockQueries(confirm);
+
+    await expect(confirmReturnKey("48213 · 39017 · 56229")).resolves.toBe(true);
+
+    expect(fromMock).toHaveBeenCalledWith("identity_keys");
+    const update = confirm.calls.find(([method]) => method === "update")![1][0] as { confirmed_at: string };
+    expect(Number.isNaN(Date.parse(update.confirmed_at))).toBe(false);
+    expect(confirm.calls).toContainEqual(["eq", ["kind", "return_key"]]);
+    expect(confirm.calls).toContainEqual(["eq", ["key_hash", sealHash()]]);
+    expect(confirm.calls).toContainEqual(["is", ["confirmed_at", null]]);
+    expect(fromMock).toHaveBeenCalledOnce();
+  });
+
+  it("answers true for a key that was already confirmed, without touching its first confirmation", async () => {
+    const lookup = query({ data: { id: "key-1" }, error: null });
+    mockQueries(query({ data: [], error: null }), lookup);
+
+    await expect(confirmReturnKey(SEAL)).resolves.toBe(true);
+    expect(lookup.calls).toContainEqual(["eq", ["kind", "return_key"]]);
+    expect(lookup.calls).toContainEqual(["eq", ["key_hash", sealHash()]]);
+    expect(lookup.calls.some(([method]) => method === "update")).toBe(false);
+  });
+
+  it("answers false for a key that doesn't exist", async () => {
+    mockQueries(query({ data: [], error: null }), query({ data: null, error: null }));
+
+    await expect(confirmReturnKey(SEAL)).resolves.toBe(false);
+  });
+
+  it("answers false for a malformed key without querying the database", async () => {
+    await expect(confirmReturnKey("not-a-key")).resolves.toBe(false);
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the confirmation", [query({ data: null, error: new Error("update failed") })], "update failed"],
+    [
+      "the lookup after it",
+      [query({ data: [], error: null }), query({ data: null, error: new Error("lookup failed") })],
+      "lookup failed",
+    ],
+  ])("throws when %s fails", async (_label, queries, message) => {
+    mockQueries(...queries);
+
+    await expect(confirmReturnKey(SEAL)).rejects.toThrow(message);
+  });
+});
+
+describe("hasConfirmedReturnKey", () => {
+  it("looks for a confirmed return key of this identity", async () => {
+    const lookup = query({ data: [{ id: "key-1" }], error: null });
+    mockQueries(lookup);
+
+    await expect(hasConfirmedReturnKey("identity-1")).resolves.toBe(true);
+    expect(fromMock).toHaveBeenCalledWith("identity_keys");
+    expect(lookup.calls).toContainEqual(["eq", ["identity_id", "identity-1"]]);
+    expect(lookup.calls).toContainEqual(["eq", ["kind", "return_key"]]);
+    expect(lookup.calls).toContainEqual(["not", ["confirmed_at", "is", null]]);
+  });
+
+  it("answers false when the identity has no confirmed key", async () => {
+    mockQueries(query({ data: [], error: null }));
+
+    await expect(hasConfirmedReturnKey("identity-1")).resolves.toBe(false);
+  });
+
+  it("throws when the lookup fails", async () => {
+    mockQueries(query({ data: null, error: new Error("lookup failed") }));
+
+    await expect(hasConfirmedReturnKey("identity-1")).rejects.toThrow("lookup failed");
   });
 });

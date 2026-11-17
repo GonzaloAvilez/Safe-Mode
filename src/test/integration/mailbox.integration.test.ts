@@ -14,7 +14,7 @@ const { moderateTextMock } = vi.hoisted(() => ({ moderateTextMock: vi.fn() }));
 vi.mock("@/lib/openai", () => ({ moderateText: moderateTextMock }));
 
 import { startCorrespondence, submitLetterWithReturnKey } from "@/lib/correspondences";
-import { createIdentityWithReturnKey, generateReturnKey } from "@/lib/identity-keys";
+import { confirmReturnKey, createIdentityWithReturnKey, generateReturnKey } from "@/lib/identity-keys";
 import { approveLetter, rejectLetter } from "@/lib/letter-review";
 import { getMailboxWithReturnKey, type Mailbox } from "@/lib/mailbox";
 import { createResponse } from "@/lib/responses";
@@ -38,9 +38,11 @@ afterEach(async () => {
   vi.resetAllMocks();
 });
 
+// Already confirmed, as an author's key always is before their phrase accepts letters (#212).
 async function createIdentity() {
   const identity = await createIdentityWithReturnKey();
   identityIds.push(identity.identityId);
+  await confirmReturnKey(identity.returnKey);
   return identity;
 }
 

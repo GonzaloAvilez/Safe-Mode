@@ -43,9 +43,8 @@ vi.mock("@/lib/logging", () => ({
   logRequestOutcome: logRequestOutcomeMock,
 }));
 
-const { isRateLimited, isResonateRateLimited, isLetterRateLimited, isMailboxRateLimited } = await import(
-  "@/lib/rate-limit"
-);
+const { isRateLimited, isResonateRateLimited, isLetterRateLimited, isMailboxRateLimited, isReturnKeyConfirmRateLimited } =
+  await import("@/lib/rate-limit");
 
 const identifiers = { ip: "203.0.113.10", sessionId: "session-1" };
 
@@ -198,6 +197,42 @@ describe("isMailboxRateLimited", () => {
     limitMock.mockRejectedValueOnce(new Error("fetch failed"));
 
     expect(await isMailboxRateLimited(identifiers)).toBe(false);
+    expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "rate_limit_unavailable");
+    consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("isReturnKeyConfirmRateLimited", () => {
+  it("uses its own Ratelimit instance at 10 per minute, so confirming never uses up the mailbox budget", () => {
+    const confirmIndex = constructorConfigs.findIndex((config) => config.prefix === "ratelimit:return-key-confirm");
+
+    expect(confirmIndex).toBeGreaterThan(-1);
+    // Limiters are built in declaration order, so the same index pairs config and window.
+    expect(slidingWindowArgs[confirmIndex]).toEqual([10, "60 s"]);
+  });
+
+  it("limits by IP and by session independently", async () => {
+    limitMock.mockResolvedValueOnce(rateLimitAllowedFixture).mockResolvedValueOnce(rateLimitAllowedFixture);
+
+    expect(await isReturnKeyConfirmRateLimited(identifiers)).toBe(false);
+    expect(limitMock).toHaveBeenCalledWith("ip:203.0.113.10");
+    expect(limitMock).toHaveBeenCalledWith("session:session-1");
+  });
+
+  it.each([
+    ["the IP", rateLimitBlockedFixture, rateLimitAllowedFixture],
+    ["the session", rateLimitAllowedFixture, rateLimitBlockedFixture],
+  ])("returns true when %s has exceeded the window", async (_label, ipResult, sessionResult) => {
+    limitMock.mockResolvedValueOnce(ipResult).mockResolvedValueOnce(sessionResult);
+
+    expect(await isReturnKeyConfirmRateLimited(identifiers)).toBe(true);
+  });
+
+  it("fails open when Upstash is unreachable", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    limitMock.mockRejectedValueOnce(new Error("fetch failed"));
+
+    expect(await isReturnKeyConfirmRateLimited(identifiers)).toBe(false);
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "rate_limit_unavailable");
     consoleErrorSpy.mockRestore();
   });

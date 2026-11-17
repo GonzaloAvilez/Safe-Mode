@@ -48,8 +48,8 @@ export function isWellFormedReturnKey(key: string): boolean {
 // 10^15 seals is about 50 bits: too few for a plain hash, because whoever stole the table
 // could hash every possible seal until one matched. So a seal is hashed with HMAC-SHA256 and
 // a server secret (a "pepper") that lives in Vercel, never in the database: the table alone
-// is useless for guessing. What's left is guessing through the API, and the mailbox and
-// letters routes rate-limit that.
+// is useless for guessing. What's left is guessing through the API, and every route that
+// checks a key (mailbox, letters, confirm) rate-limits that.
 //
 // The secret can never change. Only hashes are stored, so existing keys can't be re-hashed:
 // changing or losing it locks every holder out for good. Without it this throws; it never
@@ -118,4 +118,46 @@ export async function resolveIdentityFromReturnKey(key: string): Promise<string 
     .maybeSingle();
 
   return unwrap(data, error)?.identity_id ?? null;
+}
+
+// Marks a return key as saved (identity_keys.confirmed_at, #212): the person showed they
+// kept it before anything depends on it. Only the first confirmation is recorded, so
+// confirming again changes nothing. False when the key matches none; malformed input never
+// reaches the database.
+export async function confirmReturnKey(key: string): Promise<boolean> {
+  if (!isWellFormedReturnKey(key)) return false;
+  const keyHash = hashReturnKey(key);
+
+  // The app server's clock, as the confirmed_at migration expects.
+  const { data: confirmed, error: confirmError } = await supabaseAdmin
+    .from("identity_keys")
+    .update({ confirmed_at: new Date().toISOString() })
+    .eq("kind", "return_key")
+    .eq("key_hash", keyHash)
+    .is("confirmed_at", null)
+    .select("id");
+  if (unwrap(confirmed, confirmError).length > 0) return true;
+
+  // Nothing was updated: the key was already confirmed, or there's no such key.
+  const { data: existing, error: lookupError } = await supabaseAdmin
+    .from("identity_keys")
+    .select("id")
+    .eq("kind", "return_key")
+    .eq("key_hash", keyHash)
+    .maybeSingle();
+  return unwrap(existing, lookupError) !== null;
+}
+
+// Whether this identity holds a return key it confirmed. A phrase only accepts letters once
+// its author's key is confirmed (correspondences.ts), so no letter is written to someone
+// who could never read it.
+export async function hasConfirmedReturnKey(identityId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("identity_keys")
+    .select("id")
+    .eq("identity_id", identityId)
+    .eq("kind", "return_key")
+    .not("confirmed_at", "is", null)
+    .limit(1);
+  return unwrap(data, error).length > 0;
 }
