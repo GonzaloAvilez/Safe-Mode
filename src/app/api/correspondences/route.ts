@@ -1,6 +1,6 @@
 import { startCorrespondence } from "@/lib/correspondences";
 import { LETTER_MAX_LENGTH } from "@/lib/letters";
-import { botGuard, textLengthGuard } from "@/lib/public-submission-guards";
+import { botGuard, lettersOpenGuard, textLengthGuard } from "@/lib/public-submission-guards";
 import { isLetterRateLimited } from "@/lib/rate-limit";
 import { readJsonObject } from "@/lib/request-body";
 import { getRequestIp } from "@/lib/request-ip";
@@ -17,6 +17,9 @@ const STATUS_BY_RESULT = {
 // entry matched, by writing the first letter. Body: { entryId, text, honeypot,
 // formRenderedAt }. On success the response carries the visitor's return key, shown once.
 export async function POST(request: Request) {
+  const closed = await lettersOpenGuard();
+  if (closed) return closed;
+
   const ip = getRequestIp(request);
   const sessionId = await getOrCreateSessionId();
 

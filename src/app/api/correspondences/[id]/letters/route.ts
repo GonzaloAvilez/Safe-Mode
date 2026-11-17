@@ -1,6 +1,6 @@
 import { submitLetterWithReturnKey } from "@/lib/correspondences";
 import { LETTER_MAX_LENGTH, type SubmitLetterResult } from "@/lib/letters";
-import { botGuard, textLengthGuard } from "@/lib/public-submission-guards";
+import { botGuard, lettersOpenGuard, textLengthGuard } from "@/lib/public-submission-guards";
 import { isLetterRateLimited } from "@/lib/rate-limit";
 import { readJsonObject } from "@/lib/request-body";
 import { getRequestIp } from "@/lib/request-ip";
@@ -23,6 +23,9 @@ const STATUS_BY_RESULT: Record<SubmitLetterResult["type"], number> = {
 // `Authorization: Bearer <key>`; the key decides which side is writing. Body: { text,
 // honeypot, formRenderedAt }.
 export async function POST(request: Request, ctx: RouteContext<"/api/correspondences/[id]/letters">) {
+  const closed = await lettersOpenGuard();
+  if (closed) return closed;
+
   const ip = getRequestIp(request);
   const sessionId = await getOrCreateSessionId();
 

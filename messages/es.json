@@ -46,6 +46,7 @@
     "title": "ANTES DE ENTRAR",
     "p1": "Es anónimo — no pedimos cuentas, nombres ni fotos. Aquí, ser honesto cuesta menos que esconderse.",
     "p2": "No es un chat — nadie te responde directamente. Lo que ves aquí es real, humano, de alguien más.",
+    "p2LettersOpen": "No es un chat. A veces puedes escribirle una carta a quien dejó una frase.",
     "p3": "No reemplaza ayuda profesional — si necesitas hablar con alguien ahora, hay ayuda real en <link>{url}</link>.",
     "close": "Entendido"
   },

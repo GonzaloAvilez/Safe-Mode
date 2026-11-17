@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { startCorrespondenceMock, isLetterRateLimitedMock, isSuspectedBotMock } = vi.hoisted(() => ({
+const { startCorrespondenceMock, isLetterRateLimitedMock, isSuspectedBotMock, isLettersOpenMock } = vi.hoisted(() => ({
   startCorrespondenceMock: vi.fn(),
   isLetterRateLimitedMock: vi.fn(),
   isSuspectedBotMock: vi.fn(),
+  isLettersOpenMock: vi.fn(),
 }));
 
 vi.mock("@/lib/correspondences", () => ({ startCorrespondence: startCorrespondenceMock }));
+vi.mock("@/lib/settings", () => ({ isLettersOpen: isLettersOpenMock }));
 // letters.ts is loaded for real (the route uses its LETTER_MAX_LENGTH); these stop its
 // imports from building real Supabase/OpenAI clients at load time.
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: {} }));
@@ -31,6 +33,7 @@ function startWithRawBody(raw: string) {
 }
 
 beforeEach(() => {
+  isLettersOpenMock.mockResolvedValue(true);
   isLetterRateLimitedMock.mockResolvedValue(false);
   isSuspectedBotMock.mockReturnValue(false);
 });
@@ -59,6 +62,17 @@ describe("POST /api/correspondences", () => {
     startCorrespondenceMock.mockResolvedValueOnce(result);
 
     expect((await start(VALID)).status).toBe(status);
+  });
+
+  it("answers 503 and starts nothing while letters are closed, before spending any rate limit", async () => {
+    isLettersOpenMock.mockResolvedValueOnce(false);
+
+    const response = await start(VALID);
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "letters are closed" });
+    expect(isLetterRateLimitedMock).not.toHaveBeenCalled();
+    expect(startCorrespondenceMock).not.toHaveBeenCalled();
   });
 
   it("answers 429 and starts nothing when rate limited", async () => {

@@ -64,6 +64,19 @@ export async function setContributeOpen(value: boolean): Promise<void> {
   return setFlag("contribute_open", value);
 }
 
+// ADR-004 #212: whether people can start correspondences and write letters. Fails closed
+// like contribute_open: every letter promises a human review within 48 hours, so a
+// missing/errored row must never open letters by accident. Only writing closes: reading
+// the mailbox and everything in /admin keep working, so nobody loses the letters already
+// written to them and the review queue can still be emptied while letters are closed.
+export async function isLettersOpen(): Promise<boolean> {
+  return getFlag("letters_open", false);
+}
+
+export async function setLettersOpen(value: boolean): Promise<void> {
+  return setFlag("letters_open", value);
+}
+
 // So the admin UI can make it obvious which environment's flag is being toggled —
 // same shared table, easy to forget which row you're touching otherwise.
 export function currentSettingsEnvironment(): string {
