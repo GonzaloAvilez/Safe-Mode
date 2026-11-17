@@ -14,7 +14,7 @@ const { moderateTextMock } = vi.hoisted(() => ({ moderateTextMock: vi.fn() }));
 vi.mock("@/lib/openai", () => ({ moderateText: moderateTextMock }));
 
 import { startCorrespondence } from "@/lib/correspondences";
-import { resolveIdentityFromReturnKey } from "@/lib/identity-keys";
+import { confirmReturnKey, createIdentityWithReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
 import { createResponse } from "@/lib/responses";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -35,13 +35,15 @@ afterEach(async () => {
   vi.resetAllMocks();
 });
 
-async function createPhrase(kind: "seed" | "user without author" | "user with author"): Promise<string> {
+type PhraseKind = "seed" | "user without author" | "user whose author confirmed their key" | "user whose author never confirmed";
+
+async function createPhrase(kind: PhraseKind): Promise<string> {
   let identityId: string | null = null;
-  if (kind === "user with author") {
-    const identity = await supabaseAdmin.from("identities").insert({}).select("id").single();
-    if (identity.error) throw identity.error;
-    identityId = identity.data.id;
-    identityIds.push(identity.data.id);
+  if (kind === "user whose author confirmed their key" || kind === "user whose author never confirmed") {
+    const author = await createIdentityWithReturnKey();
+    identityId = author.identityId;
+    identityIds.push(author.identityId);
+    if (kind === "user whose author confirmed their key") await confirmReturnKey(author.returnKey);
   }
   const { data, error } = await supabaseAdmin
     .from("phrases")
@@ -107,9 +109,9 @@ describe("startCorrespondence (integration)", () => {
     expect(Object.keys(correspondence).sort()).toEqual(["closed_at", "created_at", "id", "phrase_id", "visitor_identity_id"]);
   });
 
-  it("starts with a phrase whose author opted in", async () => {
+  it("starts with a phrase whose author opted in and confirmed their key", async () => {
     const session = randomUUID();
-    const entryId = await createMatchedEntry(session, await createPhrase("user with author"));
+    const entryId = await createMatchedEntry(session, await createPhrase("user whose author confirmed their key"));
     moderateTextMock.mockResolvedValue(benignModerationCheckFixture);
 
     const result = await startCorrespondence({ entryId, sessionId: session, body: "Gracias por tu frase." });
@@ -139,6 +141,11 @@ describe("startCorrespondence (integration)", () => {
     [
       "a user phrase without an author",
       async () => createMatchedEntry(SESSION, await createPhrase("user without author")),
+      { type: "phrase_not_connectable" },
+    ],
+    [
+      "a phrase whose author never confirmed their key",
+      async () => createMatchedEntry(SESSION, await createPhrase("user whose author never confirmed")),
       { type: "phrase_not_connectable" },
     ],
   ])("refuses %s and creates nothing", async (_label, makeEntry, expected) => {

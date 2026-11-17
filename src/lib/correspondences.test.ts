@@ -1,18 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { fromMock, createIdentityWithReturnKeyMock, resolveIdentityFromReturnKeyMock, submitLetterMock } = vi.hoisted(
-  () => ({
-    fromMock: vi.fn(),
-    createIdentityWithReturnKeyMock: vi.fn(),
-    resolveIdentityFromReturnKeyMock: vi.fn(),
-    submitLetterMock: vi.fn(),
-  })
-);
+const {
+  fromMock,
+  createIdentityWithReturnKeyMock,
+  resolveIdentityFromReturnKeyMock,
+  hasConfirmedReturnKeyMock,
+  submitLetterMock,
+} = vi.hoisted(() => ({
+  fromMock: vi.fn(),
+  createIdentityWithReturnKeyMock: vi.fn(),
+  resolveIdentityFromReturnKeyMock: vi.fn(),
+  hasConfirmedReturnKeyMock: vi.fn(),
+  submitLetterMock: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: fromMock } }));
 vi.mock("@/lib/identity-keys", () => ({
   createIdentityWithReturnKey: createIdentityWithReturnKeyMock,
   resolveIdentityFromReturnKey: resolveIdentityFromReturnKeyMock,
+  hasConfirmedReturnKey: hasConfirmedReturnKeyMock,
 }));
 vi.mock("@/lib/letters", () => ({ submitLetter: submitLetterMock }));
 
@@ -75,12 +81,14 @@ describe("isAnsweredByFounder", () => {
 
 describe("isPhraseConnectable", () => {
   it.each([
-    [{ identity_id: "author-1", source: "user" as const }, true],
-    [{ identity_id: null, source: "seed" as const }, true],
-    [{ identity_id: "author-1", source: "seed" as const }, true],
-    [{ identity_id: null, source: "user" as const }, false], // pre-existing user phrase, no author (OD-5)
-  ])("%j → %s", (phrase, expected) => {
-    expect(isPhraseConnectable(phrase)).toBe(expected);
+    [{ identity_id: "author-1", source: "user" as const }, true, true],
+    [{ identity_id: "author-1", source: "user" as const }, false, false], // author never confirmed their key
+    [{ identity_id: null, source: "seed" as const }, false, true], // the founder answers
+    [{ identity_id: "author-1", source: "seed" as const }, true, true],
+    [{ identity_id: "author-1", source: "seed" as const }, false, false], // its author answers, not the founder
+    [{ identity_id: null, source: "user" as const }, false, false], // pre-existing user phrase, no author (OD-5)
+  ])("%j with the author's key confirmed: %s → %s", (phrase, authorKeyConfirmed, expected) => {
+    expect(isPhraseConnectable(phrase, authorKeyConfirmed)).toBe(expected);
   });
 });
 
@@ -147,6 +155,29 @@ describe("startCorrespondence", () => {
 
     expect(await startCorrespondence(INPUT)).toEqual({ type: "phrase_not_connectable" });
     expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+    expect(hasConfirmedReturnKeyMock).not.toHaveBeenCalled();
+  });
+
+  it("answers phrase_not_connectable while the author hasn't confirmed their key, creating nothing", async () => {
+    mockTables({ responses: [ownedEntry({ id: "phrase-3", identity_id: "author-1", source: "user" })] });
+    hasConfirmedReturnKeyMock.mockResolvedValue(false);
+
+    expect(await startCorrespondence(INPUT)).toEqual({ type: "phrase_not_connectable" });
+    expect(hasConfirmedReturnKeyMock).toHaveBeenCalledWith("author-1");
+    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+  });
+
+  it("starts with a phrase whose author confirmed their key", async () => {
+    mockTables({
+      responses: [ownedEntry({ id: "phrase-3", identity_id: "author-1", source: "user" })],
+      correspondences: [query({ data: { id: "c1" }, error: null })],
+    });
+    hasConfirmedReturnKeyMock.mockResolvedValue(true);
+    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
+    submitLetterMock.mockResolvedValue({ type: "held" });
+
+    expect(await startCorrespondence(INPUT)).toMatchObject({ type: "started", correspondenceId: "c1" });
+    expect(hasConfirmedReturnKeyMock).toHaveBeenCalledWith("author-1");
   });
 
   it("deletes the identity and hands over no key when the correspondence can't be created", async () => {

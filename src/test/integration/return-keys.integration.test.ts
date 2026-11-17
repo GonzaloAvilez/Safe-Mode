@@ -4,7 +4,12 @@
 // PostgREST however it's typed.
 import { createHash, createHmac } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
-import { createIdentityWithReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
+import {
+  confirmReturnKey,
+  createIdentityWithReturnKey,
+  hasConfirmedReturnKey,
+  resolveIdentityFromReturnKey,
+} from "@/lib/identity-keys";
 import { supabaseAdmin } from "@/lib/supabase";
 
 let identityIds: string[] = [];
@@ -67,5 +72,43 @@ describe("return keys (integration)", () => {
     if (inserted.error) throw inserted.error;
 
     expect(await resolveIdentityFromReturnKey(legacyKey)).toBe(identity.data.id);
+  });
+});
+
+async function confirmedAt(identityId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.from("identity_keys").select("confirmed_at").eq("identity_id", identityId).single();
+  if (error) throw error;
+  return data.confirmed_at;
+}
+
+describe("confirming a return key (integration)", () => {
+  it("starts unconfirmed, and confirming it (typed as on the card) records when", async () => {
+    const { identityId, returnKey } = await createIdentity();
+    expect(await confirmedAt(identityId)).toBeNull();
+    expect(await hasConfirmedReturnKey(identityId)).toBe(false);
+
+    expect(await confirmReturnKey(asOnTheCard(returnKey))).toBe(true);
+
+    expect(await confirmedAt(identityId)).not.toBeNull();
+    expect(await hasConfirmedReturnKey(identityId)).toBe(true);
+  });
+
+  it("keeps the first confirmation when the key is confirmed again", async () => {
+    const { identityId, returnKey } = await createIdentity();
+    await confirmReturnKey(returnKey);
+    const first = await confirmedAt(identityId);
+
+    expect(await confirmReturnKey(returnKey)).toBe(true);
+
+    expect(await confirmedAt(identityId)).toBe(first);
+  });
+
+  it("answers false for a seal that isn't a key, and confirms nothing", async () => {
+    const { identityId, returnKey } = await createIdentity();
+    const otherSeal = returnKey.replace(/.$/, (digit) => String((Number(digit) + 1) % 10));
+
+    expect(await confirmReturnKey(otherSeal)).toBe(false);
+
+    expect(await confirmedAt(identityId)).toBeNull();
   });
 });

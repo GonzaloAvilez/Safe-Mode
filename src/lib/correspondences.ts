@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
-import { createIdentityWithReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
+import { createIdentityWithReturnKey, hasConfirmedReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
 import type { LetterSender } from "@/lib/letter-lifecycle";
 import { submitLetter, type SubmitLetterResult } from "@/lib/letters";
 
@@ -22,11 +22,13 @@ export function isAnsweredByFounder(phrase: PhraseOwnership): boolean {
   return phrase.source === "seed" && phrase.identity_id === null;
 }
 
-// A phrase accepts letters when its author opted in (phrases.identity_id, from #212), or
-// when the founder answers it. User phrases from before opt-in existed have no reachable
-// author and never accept letters (ADR-004 open decision 5).
-export function isPhraseConnectable(phrase: PhraseOwnership): boolean {
-  return phrase.identity_id !== null || isAnsweredByFounder(phrase);
+// A phrase accepts letters when its author opted in (phrases.identity_id) and confirmed
+// they saved their return key (#212), or when the founder answers it. Without a confirmed
+// key, letters would reach someone who can never read them. User phrases from before
+// opt-in existed have no reachable author and never accept letters (ADR-004 open
+// decision 5).
+export function isPhraseConnectable(phrase: PhraseOwnership, authorKeyConfirmed: boolean): boolean {
+  return (phrase.identity_id !== null && authorKeyConfirmed) || isAnsweredByFounder(phrase);
 }
 
 export type StartCorrespondenceResult =
@@ -72,7 +74,8 @@ async function deleteIdentity(identityId: string): Promise<void> {
 export async function startCorrespondence(input: StartCorrespondenceInput): Promise<StartCorrespondenceResult> {
   const phrase = await findMatchedPhrase(input.entryId, input.sessionId);
   if (!phrase) return { type: "entry_not_found" };
-  if (!isPhraseConnectable(phrase)) return { type: "phrase_not_connectable" };
+  const authorKeyConfirmed = phrase.identity_id !== null && (await hasConfirmedReturnKey(phrase.identity_id));
+  if (!isPhraseConnectable(phrase, authorKeyConfirmed)) return { type: "phrase_not_connectable" };
 
   // Key handoff order (#211): every write the key depends on happens before the key is
   // returned. If any of them fails, the identity is deleted and no key leaves the server,

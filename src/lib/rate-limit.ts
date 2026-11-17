@@ -96,8 +96,9 @@ export async function isLetterRateLimited({ ip, sessionId }: RateLimitIdentifier
 
 // Reading the mailbox (GET /api/mailbox). Its own budget, so opening the mailbox never
 // uses up the 3 letters above. Same number as entries: someone checking for a reply opens
-// it a few times at most. A return key is 256 random bits, so this protects the database,
-// not the keys (guessing one isn't feasible at any rate).
+// it a few times at most. It also protects the keys: a seal has about 50 bits and the
+// table only holds hashes peppered with a server secret (identity-keys.ts), so guessing
+// through the API is what's left, and limits like this one are what slow it down.
 const mailboxRatelimit = new Ratelimit({
   redis: Redis.fromEnv(),
   limiter: Ratelimit.slidingWindow(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW),
@@ -109,6 +110,30 @@ export async function isMailboxRateLimited({ ip, sessionId }: RateLimitIdentifie
     const [ipResult, sessionResult] = await Promise.all([
       mailboxRatelimit.limit(`ip:${ip}`),
       mailboxRatelimit.limit(`session:${sessionId}`),
+    ]);
+    return !ipResult.success || !sessionResult.success;
+  } catch (error) {
+    logRequestOutcome(ip, "rate_limit_unavailable");
+    console.error("Upstash rate limit check failed, failing open:", error);
+    return false;
+  }
+}
+
+// Confirming a return key (POST /api/return-key/confirm). It answers whether a key exists,
+// so it slows down guessing like the mailbox limit above. Its own budget, so confirming
+// never uses up the mailbox's; a key is confirmed once, so 10 a minute leaves room for
+// retries.
+const returnKeyConfirmRatelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW),
+  prefix: "ratelimit:return-key-confirm",
+});
+
+export async function isReturnKeyConfirmRateLimited({ ip, sessionId }: RateLimitIdentifiers): Promise<boolean> {
+  try {
+    const [ipResult, sessionResult] = await Promise.all([
+      returnKeyConfirmRatelimit.limit(`ip:${ip}`),
+      returnKeyConfirmRatelimit.limit(`session:${sessionId}`),
     ]);
     return !ipResult.success || !sessionResult.success;
   } catch (error) {
