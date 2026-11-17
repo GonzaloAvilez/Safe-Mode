@@ -5,12 +5,14 @@ const {
   createIdentityWithReturnKeyMock,
   resolveIdentityFromReturnKeyMock,
   hasConfirmedReturnKeyMock,
+  deleteIdentityMock,
   submitLetterMock,
 } = vi.hoisted(() => ({
   fromMock: vi.fn(),
   createIdentityWithReturnKeyMock: vi.fn(),
   resolveIdentityFromReturnKeyMock: vi.fn(),
   hasConfirmedReturnKeyMock: vi.fn(),
+  deleteIdentityMock: vi.fn(),
   submitLetterMock: vi.fn(),
 }));
 
@@ -19,6 +21,7 @@ vi.mock("@/lib/identity-keys", () => ({
   createIdentityWithReturnKey: createIdentityWithReturnKeyMock,
   resolveIdentityFromReturnKey: resolveIdentityFromReturnKeyMock,
   hasConfirmedReturnKey: hasConfirmedReturnKeyMock,
+  deleteIdentity: deleteIdentityMock,
 }));
 vi.mock("@/lib/letters", () => ({ submitLetter: submitLetterMock }));
 
@@ -182,31 +185,27 @@ describe("startCorrespondence", () => {
 
   it("deletes the identity and hands over no key when the correspondence can't be created", async () => {
     const insertError = { message: "connection failure" };
-    const identities = query({ error: null });
     mockTables({
       responses: [ownedEntry(SEED_PHRASE)],
       correspondences: [query({ data: null, error: insertError })],
-      identities: [identities],
     });
     createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
 
     await expect(startCorrespondence(INPUT)).rejects.toEqual(insertError);
-    expect(identities.calls).toEqual([["delete", []], ["eq", ["id", "identity-1"]]]);
+    expect(deleteIdentityMock).toHaveBeenCalledWith("identity-1");
     expect(submitLetterMock).not.toHaveBeenCalled();
   });
 
   it("undoes the whole start when the first letter couldn't be stored (moderation unavailable)", async () => {
-    const identities = query({ error: null });
     mockTables({
       responses: [ownedEntry(SEED_PHRASE)],
       correspondences: [query({ data: { id: "c1" }, error: null })],
-      identities: [identities],
     });
     createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
     submitLetterMock.mockRejectedValue(new Error("OpenAI unavailable"));
 
     await expect(startCorrespondence(INPUT)).rejects.toThrow("OpenAI unavailable");
-    expect(identities.calls).toEqual([["delete", []], ["eq", ["id", "identity-1"]]]); // cascades to the correspondence
+    expect(deleteIdentityMock).toHaveBeenCalledWith("identity-1"); // cascades to the correspondence
   });
 
   it("throws when the entry lookup fails", async () => {

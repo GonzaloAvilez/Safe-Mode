@@ -1,6 +1,11 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
-import { createIdentityWithReturnKey, hasConfirmedReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
+import {
+  createIdentityWithReturnKey,
+  deleteIdentity,
+  hasConfirmedReturnKey,
+  resolveIdentityFromReturnKey,
+} from "@/lib/identity-keys";
 import type { LetterSender } from "@/lib/letter-lifecycle";
 import { submitLetter, type SubmitLetterResult } from "@/lib/letters";
 
@@ -63,12 +68,6 @@ async function findMatchedPhrase(entryId: string, sessionId: string) {
     .maybeSingle();
   if (error) throw error;
   return (data as OwnedEntryRow | null)?.entries?.phrases ?? null;
-}
-
-async function deleteIdentity(identityId: string): Promise<void> {
-  // Cascades to the identity's key, its correspondence and that correspondence's letters.
-  const { error } = await supabaseAdmin.from("identities").delete().eq("id", identityId);
-  if (error) console.error("startCorrespondence: couldn't clean up identity after a failure", error);
 }
 
 export async function startCorrespondence(input: StartCorrespondenceInput): Promise<StartCorrespondenceResult> {

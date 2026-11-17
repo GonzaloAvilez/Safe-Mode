@@ -75,6 +75,16 @@ export function hashReturnKey(key: string): string {
   return createHmac("sha256", hashSecret()).update(normalized).digest("hex");
 }
 
+// Undoes a half-finished key handoff: deletes the identity, cascading to its keys and to
+// the correspondences and letters it started; a phrase it wrote stays, without an author
+// (phrases.identity_id is set null). A failure here is logged, not thrown: the caller is
+// already failing with the error that matters, and what's left is an unreachable identity
+// with no PII.
+export async function deleteIdentity(identityId: string): Promise<void> {
+  const { error } = await supabaseAdmin.from("identities").delete().eq("id", identityId);
+  if (error) console.error("couldn't clean up an identity after a failure", error);
+}
+
 // Creates a new anonymous identity with one return key. The raw key is returned exactly
 // once, for the caller to show the person; it's never stored or logged.
 //
@@ -98,7 +108,7 @@ export async function createIdentityWithReturnKey(): Promise<{ identityId: strin
     .insert({ identity_id: identityId, kind: "return_key", key_hash: keyHash });
 
   if (keyError) {
-    await supabaseAdmin.from("identities").delete().eq("id", identityId);
+    await deleteIdentity(identityId);
     throw keyError;
   }
 
