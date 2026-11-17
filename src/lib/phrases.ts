@@ -4,8 +4,9 @@ import { getEmbedding, moderateText } from "@/lib/openai";
 import { resolvePhraseModerationStatus, shouldActivatePhrase } from "@/lib/safety/phrase-moderation";
 import { estimateEmbeddingCostUsd } from "@/lib/safety/embedding-cost";
 import { canSpendToday, recordEmbeddingSpend } from "@/lib/spend";
-import { PhraseOrigin } from "@/lib/phrase-origin";
+import { LEAVE_A_TRACE_ORIGIN, PhraseOrigin } from "@/lib/phrase-origin";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/locale";
+import { createIdentityWithReturnKey, deleteIdentity } from "@/lib/identity-keys";
 
 export type PhraseMatch = {
   id: string;
@@ -56,6 +57,31 @@ export async function submitUserPhrase(
     .single();
 
   return { id: unwrap(data, error).id };
+}
+
+// ADR-004 #212: a Leave a Trace author who accepts letters. Only Leave a Trace, never
+// Contribute (OD-3, decided 2026-11-16), so the origin is fixed here. Same key handoff order
+// as startCorrespondence: the identity and its key exist before the phrase points to them,
+// and if the phrase can't be stored the identity is deleted, so no key ever leaves the
+// server pointing to nothing. The phrase accepts letters only once the author confirms the
+// key (correspondences.ts); moderation runs afterwards exactly as for any other phrase.
+export async function submitUserPhraseAcceptingLetters(
+  text: string,
+  language: Locale
+): Promise<{ id: string; returnKey: string }> {
+  const { identityId, returnKey } = await createIdentityWithReturnKey();
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("phrases")
+      .insert({ text, origin: LEAVE_A_TRACE_ORIGIN, source: "user", language, identity_id: identityId })
+      .select("id")
+      .single();
+    return { id: unwrap(data, error).id, returnKey };
+  } catch (error) {
+    await deleteIdentity(identityId);
+    throw error;
+  }
 }
 
 // Intended to be scheduled with Next's after() so it runs post-response, without making

@@ -156,6 +156,7 @@ ethical or legal exposure, so get qualified review before shipping.
    review before delivery, promised within 48 hours (see [Letter rules](#letter-rules)).
 2. ~~Exchange size: one letter each way, or bounded N?~~ **Resolved 2026-11-09:** up to 3 letters per
    side, taking turns (see [Letter rules](#letter-rules)).
-3. Can Contribute phrases opt in, or only Leave a Trace?
+3. ~~Can Contribute phrases opt in, or only Leave a Trace?~~ **Resolved 2026-11-16:** only Leave a
+   Trace. A Contribute phrase never accepts letters; `POST /api/phrases` refuses the opt-in for it.
 4. Should Observe ever be an entry point?
 5. Pre-existing user phrases (no author link): not connectable, or letters held until/unless the author resurfaces? They must not be answered by anyone else.

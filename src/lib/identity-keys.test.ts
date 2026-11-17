@@ -16,6 +16,7 @@ const {
   resolveIdentityFromReturnKey,
   confirmReturnKey,
   hasConfirmedReturnKey,
+  deleteIdentity,
 } = await import("@/lib/identity-keys");
 
 const SECRET = "test-return-key-hash-secret-0123456789";
@@ -295,6 +296,30 @@ describe("confirmReturnKey", () => {
     mockQueries(...queries);
 
     await expect(confirmReturnKey(SEAL)).rejects.toThrow(message);
+  });
+});
+
+describe("deleteIdentity", () => {
+  it("deletes the identity by id", async () => {
+    const deletion = query({ data: null, error: null });
+    const deleteMock = vi.fn().mockReturnValue(deletion.builder);
+    fromMock.mockReturnValueOnce({ delete: deleteMock });
+
+    await deleteIdentity("identity-1");
+
+    expect(fromMock).toHaveBeenCalledWith("identities");
+    expect(deleteMock).toHaveBeenCalled();
+    expect(deletion.calls).toEqual([["eq", ["id", "identity-1"]]]);
+  });
+
+  it("logs a failed cleanup instead of throwing over the caller's own error", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const deletion = query({ data: null, error: new Error("delete failed") });
+    fromMock.mockReturnValueOnce({ delete: () => deletion.builder });
+
+    await expect(deleteIdentity("identity-1")).resolves.toBeUndefined();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(String), new Error("delete failed"));
+    consoleErrorSpy.mockRestore();
   });
 });
 

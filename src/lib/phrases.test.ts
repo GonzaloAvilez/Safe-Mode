@@ -34,7 +34,11 @@ const {
   getEmbeddingMock,
   canSpendTodayMock,
   recordEmbeddingSpendMock,
+  createIdentityWithReturnKeyMock,
+  deleteIdentityMock,
 } = vi.hoisted(() => ({
+  createIdentityWithReturnKeyMock: vi.fn(),
+  deleteIdentityMock: vi.fn(),
   fromMock: vi.fn(),
   insertMock: vi.fn(),
   insertSelectMock: vi.fn(),
@@ -64,9 +68,15 @@ vi.mock("@/lib/spend", () => ({
   canSpendToday: canSpendTodayMock,
   recordEmbeddingSpend: recordEmbeddingSpendMock,
 }));
- 
+
+vi.mock("@/lib/identity-keys", () => ({
+  createIdentityWithReturnKey: createIdentityWithReturnKeyMock,
+  deleteIdentity: deleteIdentityMock,
+}));
+
 const {
   submitUserPhrase,
+  submitUserPhraseAcceptingLetters,
   finalizeUserPhraseModeration,
   setPhraseActive,
   approvePhrase,
@@ -131,6 +141,55 @@ describe("submitUserPhrase", () => {
     singleMock.mockResolvedValueOnce(insertPhraseErrorFixture);
 
     await expect(submitUserPhrase("una frase anonima", LEAVE_A_TRACE_ORIGIN)).rejects.toThrow("insert failed");
+  });
+
+  it("never gives the phrase an author", async () => {
+    setUpInsertChain();
+    singleMock.mockResolvedValueOnce(insertPhraseSuccessFixture);
+
+    await submitUserPhrase("una frase anonima", LEAVE_A_TRACE_ORIGIN);
+
+    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+    expect(insertMock.mock.calls[0][0]).not.toHaveProperty("identity_id");
+  });
+});
+
+describe("submitUserPhraseAcceptingLetters", () => {
+  it("creates the author's identity first, then stores the phrase as theirs, from Leave a Trace", async () => {
+    setUpInsertChain();
+    createIdentityWithReturnKeyMock.mockResolvedValueOnce({ identityId: "identity-1", returnKey: "482133901756229" });
+    singleMock.mockResolvedValueOnce(insertPhraseSuccessFixture);
+
+    const result = await submitUserPhraseAcceptingLetters("una frase anonima", "es");
+
+    expect(result).toEqual({ id: insertPhraseSuccessFixture.data.id, returnKey: "482133901756229" });
+    expect(insertMock).toHaveBeenCalledWith({
+      text: "una frase anonima",
+      source: "user",
+      origin: "leave_a_trace",
+      language: "es",
+      identity_id: "identity-1",
+    });
+    expect(createIdentityWithReturnKeyMock.mock.invocationCallOrder[0]).toBeLessThan(insertMock.mock.invocationCallOrder[0]);
+    expect(JSON.stringify(insertMock.mock.calls)).not.toContain("482133901756229");
+    expect(deleteIdentityMock).not.toHaveBeenCalled();
+  });
+
+  it("deletes the identity and hands over no key when the phrase can't be stored", async () => {
+    setUpInsertChain();
+    createIdentityWithReturnKeyMock.mockResolvedValueOnce({ identityId: "identity-1", returnKey: "482133901756229" });
+    singleMock.mockResolvedValueOnce(insertPhraseErrorFixture);
+
+    await expect(submitUserPhraseAcceptingLetters("una frase anonima", "es")).rejects.toThrow("insert failed");
+    expect(deleteIdentityMock).toHaveBeenCalledWith("identity-1");
+  });
+
+  it("stores no phrase when the identity can't be created", async () => {
+    setUpInsertChain();
+    createIdentityWithReturnKeyMock.mockRejectedValueOnce(new Error("identity insert failed"));
+
+    await expect(submitUserPhraseAcceptingLetters("una frase anonima", "es")).rejects.toThrow("identity insert failed");
+    expect(insertMock).not.toHaveBeenCalled();
   });
 });
 
