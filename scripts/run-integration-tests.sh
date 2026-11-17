@@ -44,4 +44,8 @@ export SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 # fixture, not a live API call). Same placeholder pattern ci.yml already uses.
 export OPENAI_API_KEY="ci-placeholder"
 
+# src/lib/identity-keys.ts refuses to hash a return key without it (it never falls back to
+# a plain hash). A fixed test value: it only protects keys in this throwaway database.
+export RETURN_KEY_HASH_SECRET="integration-tests-return-key-hash-secret"
+
 npx vitest run --config vitest.integration.config.ts

@@ -27,6 +27,7 @@ cat > .env.development.local <<'EOF'
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-dev-anon-placeholder-unused-by-app-code
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+RETURN_KEY_HASH_SECRET=local-dev-return-key-hash-secret-not-real
 EOF
 
 echo "Local Supabase stack ready at http://127.0.0.1:54321 — .env.development.local written (gitignored, not a secret)."
