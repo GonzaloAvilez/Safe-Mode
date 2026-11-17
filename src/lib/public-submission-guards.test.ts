@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { isRateLimitedMock, isSuspectedBotMock, logRequestOutcomeMock } = vi.hoisted(() => ({
+const { isRateLimitedMock, isSuspectedBotMock, logRequestOutcomeMock, isLettersOpenMock } = vi.hoisted(() => ({
   isRateLimitedMock: vi.fn(),
   isSuspectedBotMock: vi.fn(),
   logRequestOutcomeMock: vi.fn(),
+  isLettersOpenMock: vi.fn(),
+}));
+
+vi.mock("@/lib/settings", () => ({
+  isLettersOpen: isLettersOpenMock,
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -18,7 +23,7 @@ vi.mock("@/lib/logging", () => ({
   logRequestOutcome: logRequestOutcomeMock,
 }));
 
-const { rateLimitGuard, botGuard, textLengthGuard } = await import("@/lib/public-submission-guards");
+const { rateLimitGuard, botGuard, textLengthGuard, lettersOpenGuard } = await import("@/lib/public-submission-guards");
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -109,5 +114,23 @@ describe("textLengthGuard", () => {
 
   it("accepts text exactly at the max length", () => {
     expect(textLengthGuard("a".repeat(400), 400)).toBeNull();
+  });
+});
+
+describe("lettersOpenGuard", () => {
+  it("returns null while letters are open", async () => {
+    isLettersOpenMock.mockResolvedValueOnce(true);
+
+    expect(await lettersOpenGuard()).toBeNull();
+  });
+
+  it("returns a 503 response while letters are closed", async () => {
+    isLettersOpenMock.mockResolvedValueOnce(false);
+
+    const result = await lettersOpenGuard();
+
+    expect(result).not.toBeNull();
+    expect(result!.status).toBe(503);
+    expect(await result!.json()).toEqual({ error: "letters are closed" });
   });
 });

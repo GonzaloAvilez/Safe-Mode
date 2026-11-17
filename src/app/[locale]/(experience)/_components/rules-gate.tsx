@@ -1,8 +1,17 @@
 "use client";
 
+import { Suspense, use } from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { useTranslations } from "next-intl";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
+
+// The closed copy promises that no one replies, which stops being true the moment
+// letters open (ADR-004 #212), so this rule follows letters_open. Nothing is shown
+// while the flag loads, so neither promise ever appears when it isn't true.
+function LettersRule({ lettersOpen }: { lettersOpen: Promise<boolean> }) {
+  const t = useTranslations("rulesGate");
+  return <p>{t(use(lettersOpen) ? "p2LettersOpen" : "p2")}</p>;
+}
 
 // AlertDialog blocks outside-click by default, but NOT the Escape key — verified by
 // hand, it still closes on Escape unless the "escape-key" reason is caught here and
@@ -11,7 +20,13 @@ import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 // "Entendido" button's "close-press" reason). Shows on every fresh visit, no
 // localStorage skip — same "never assume a returning preference" call already made
 // for the sound toggle in handpan-audio.ts.
-export function RulesGate({ onAcknowledge }: { onAcknowledge: () => void }) {
+export function RulesGate({
+  lettersOpen,
+  onAcknowledge,
+}: {
+  lettersOpen: Promise<boolean>;
+  onAcknowledge: () => void;
+}) {
   const t = useTranslations("rulesGate");
 
   return (
@@ -38,7 +53,9 @@ export function RulesGate({ onAcknowledge }: { onAcknowledge: () => void }) {
             className="mt-5 flex flex-col gap-3 text-left text-[15px] leading-[1.7] tracking-[.2px] text-white/60"
           >
             <p>{t("p1")}</p>
-            <p>{t("p2")}</p>
+            <Suspense fallback={null}>
+              <LettersRule lettersOpen={lettersOpen} />
+            </Suspense>
             <p>
               {t.rich("p3", {
                 url: CRISIS_RESOURCE_URL,

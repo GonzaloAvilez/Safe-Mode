@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { isLocale } from "@/lib/locale";
+import { isLettersOpen } from "@/lib/settings";
 import { ScreenHeader } from "./_shared/screen-header";
 import { AmbientGlowBackground } from "./_shared/ambient-glow-background";
 import { LivingPhrasesFeed } from "./_components/living-phrases-feed";
@@ -28,6 +29,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = await getTranslations({ locale, namespace: "home" });
+  // Deliberately not awaited, for the same reason as above: RulesGate reads it with
+  // `use`, so the modal still streams with the shell and only its letters rule waits.
+  const lettersOpen = isLettersOpen();
 
   return (
     <>
@@ -38,7 +42,10 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
 
       <ScreenHeader tagline={t("tagline")} />
 
-      <HomeGate introPhrase={<Suspense fallback={null}><ArrivalPhrase locale={locale} /></Suspense>} />
+      <HomeGate
+        lettersOpen={lettersOpen}
+        introPhrase={<Suspense fallback={null}><ArrivalPhrase locale={locale} /></Suspense>}
+      />
     </>
   );
 }

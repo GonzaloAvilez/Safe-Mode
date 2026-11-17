@@ -49,7 +49,7 @@ function getServerSnapshot(): HomeGateStage {
 // visit starts silent, a mood/ambience choice), this is a safety disclosure —
 // re-showing it on every single visit to someone who already read it (or already
 // completed the whole flow) is just friction, not reinforcement.
-export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
+export function HomeGate({ introPhrase, lettersOpen }: { introPhrase: ReactNode; lettersOpen: Promise<boolean> }) {
   const t = useTranslations("home");
   const { locale } = useParams<{ locale: Locale }>();
   const router = useRouter();
@@ -72,7 +72,7 @@ export function HomeGate({ introPhrase }: { introPhrase: ReactNode }) {
 
   return (
     <>
-      {stage === "rules-required" && <RulesGate onAcknowledge={handleAcknowledge} />}
+      {stage === "rules-required" && <RulesGate lettersOpen={lettersOpen} onAcknowledge={handleAcknowledge} />}
       <ScreenCta href="/arrive" label={t("enterCta")} accentRgb="200,160,30" disabled={stage !== "ready"} />
     </>
   );

@@ -46,6 +46,7 @@
     "title": "BEFORE YOU ENTER",
     "p1": "It's anonymous — no accounts, no names, no photos. Here, honesty costs less than hiding does.",
     "p2": "It's not a chat — no one replies to you directly. What you see here is real, human, from someone else.",
+    "p2LettersOpen": "It's not a chat. Sometimes you can write a letter to whoever left a phrase, if they chose to. A person reads every letter before it's delivered, and it can take up to two days.",
     "p3": "It doesn't replace professional help — if you need to talk to someone right now, there's real help at <link>{url}</link>.",
     "close": "Got it"
   },

@@ -5,11 +5,13 @@ import { getSeedPhraseMailbox } from "@/lib/mailbox";
 import {
   currentSettingsEnvironment,
   isContributeOpen,
+  isLettersOpen,
   isSitePublic,
 } from "@/lib/settings";
 import {
   logoutAdmin,
   setContributeOpenAction,
+  setLettersOpenAction,
   setSitePublicAction,
 } from "./actions";
 
@@ -26,6 +28,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   await requireAdminSession();
   const sitePublic = await isSitePublic();
   const contributeOpen = await isContributeOpen();
+  const lettersOpen = await isLettersOpen();
   // Shown on the Letters link, so pending reviews are visible from any admin page
   // (ADR-004: no notifications, the founder reviews in batches).
   const lettersAwaitingReview = await countLettersAwaitingReview();
@@ -69,6 +72,15 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
             <input type="hidden" name="value" value={(!contributeOpen).toString()} />
             <button type="submit" className="text-sm text-white/40 hover:text-white/70">
               {contributeOpen ? "Cerrar contribute" : "Abrir contribute"}
+            </button>
+          </form>
+          <span className={`text-xs ${lettersOpen ? "text-green-400" : "text-red-400"}`}>
+            Cartas {lettersOpen ? "abiertas" : "cerradas"}
+          </span>
+          <form action={setLettersOpenAction}>
+            <input type="hidden" name="value" value={(!lettersOpen).toString()} />
+            <button type="submit" className="text-sm text-white/40 hover:text-white/70">
+              {lettersOpen ? "Cerrar cartas" : "Abrir cartas"}
             </button>
           </form>
           <form action={logoutAdmin}>

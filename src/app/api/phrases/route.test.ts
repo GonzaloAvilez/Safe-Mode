@@ -38,6 +38,10 @@ vi.mock("next/server", () => ({
   after: afterMock,
 }));
 
+// public-submission-guards.ts imports settings.ts for lettersOpenGuard, which this route
+// doesn't use; this stops it from building a real Supabase client at load time.
+vi.mock("@/lib/settings", () => ({ isLettersOpen: vi.fn() }));
+
 const { POST } = await import("@/app/api/phrases/route");
 
 function postRequest(body: unknown): Request {
