@@ -124,6 +124,12 @@
     "skippedSubcopy": "Y no dejar nada también es una forma de estar aquí.",
     "backToStart": "Volver al inicio"
   },
+  "returnKeyCard": {
+    "brand": "REFUGIO",
+    "stamp": "CORREO DE REFUGIO",
+    "footer": "Este sello abre tus cartas.",
+    "qrLabel": "Código QR de tu sello"
+  },
   "contribute": {
     "tagline": "Un aporte rápido.",
     "headline": "Deja una frase para el muro de Refugio.",
