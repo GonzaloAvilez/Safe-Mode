@@ -11,11 +11,13 @@ import { ScreenPrompt } from "../../_shared/screen-prompt";
 import { CorrespondenceList } from "./correspondence-list";
 import { LetterPaper } from "./letter-paper";
 import { ShowSealStep } from "./show-seal-step";
+import { WriteLetterStep } from "./write-letter-step";
 
 // ADR-004 #213: the mailbox (design B, "cartas en papel"). Whoever holds a seal comes back here to
 // read the letters on their correspondences: the author of a phrase, or the visitor who wrote to
 // them. The seal opens it (ShowSealStep), the correspondences are envelopes (CorrespondenceList),
-// and each one's letters are read one at a time, on paper (LetterPaper).
+// and each one's letters are read one at a time, on paper (LetterPaper). When it's this side's
+// turn, the next letter is written on paper and leaves in its envelope (WriteLetterStep).
 //
 // The seal and the letters live only in memory (MailboxStateProvider): a reload or "close my
 // mailbox" asks for the seal again. Reading works whether or not letters are open: someone who
@@ -50,7 +52,17 @@ function CloseMailboxLink({ label }: { label: string }) {
 
 // One correspondence, one letter at a time: it opens on the latest letter, and the others are a
 // tap away.
-function CorrespondenceReader({ correspondence, onBack }: { correspondence: MailboxCorrespondence; onBack: () => void }) {
+// When it's this side's turn, the letter can be answered: "Responder", or "Escribir otra carta"
+// under a letter of its own that wasn't delivered (design C3; it doesn't use up the turn).
+function CorrespondenceReader({
+  correspondence,
+  onBack,
+  onWrite,
+}: {
+  correspondence: MailboxCorrespondence;
+  onBack: () => void;
+  onWrite: () => void;
+}) {
   const t = useTranslations("mailbox");
   const { letters } = correspondence;
   const [index, setIndex] = useState(letters.length - 1);
@@ -114,6 +126,16 @@ function CorrespondenceReader({ correspondence, onBack }: { correspondence: Mail
       )}
       <p className="-mt-3 text-center text-[11px] text-white/40">{t("letter.turns")}</p>
 
+      {correspondence.state === "your_turn" && (
+        <button
+          type="button"
+          onClick={onWrite}
+          className="rounded-full border border-[rgba(210,158,32,0.6)] px-9 py-2.5 text-[13px] tracking-[1px] text-white/85 transition-colors duration-300 hover:text-white"
+        >
+          {letter?.sender === correspondence.yourSide && letter.status === "rejected" ? t("letter.writeAnother") : t("letter.reply")}
+        </button>
+      )}
+
       <button
         type="button"
         onClick={onBack}
@@ -134,6 +156,7 @@ export function MailboxScreen() {
     setMailboxPhase: setPhase,
     openCorrespondenceId,
     setOpenCorrespondenceId,
+    setLetterOutcome,
     clearMailboxState,
   } = useMailboxState();
 
@@ -159,8 +182,17 @@ export function MailboxScreen() {
     );
   }
 
-  const reading =
-    phase === "reading" ? mailbox.correspondences.find((correspondence) => correspondence.id === openCorrespondenceId) : undefined;
+  const open = mailbox.correspondences.find((correspondence) => correspondence.id === openCorrespondenceId);
+
+  if (open && (phase === "writing" || phase === "sending" || phase === "sent")) {
+    return (
+      <MailboxShell tagline={t("insideTagline")}>
+        <WriteLetterStep correspondence={open} />
+      </MailboxShell>
+    );
+  }
+
+  const reading = phase === "reading" ? open : undefined;
 
   if (reading) {
     return (
@@ -171,6 +203,10 @@ export function MailboxScreen() {
           onBack={() => {
             setOpenCorrespondenceId(null);
             setPhase("correspondences");
+          }}
+          onWrite={() => {
+            setLetterOutcome(null);
+            setPhase("writing");
           }}
         />
       </MailboxShell>

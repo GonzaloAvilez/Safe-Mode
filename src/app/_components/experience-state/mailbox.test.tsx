@@ -29,10 +29,14 @@ describe("mailbox state", () => {
       result.current.setMailbox(MAILBOX);
       result.current.setMailboxPhase("reading");
       result.current.setOpenCorrespondenceId("c1");
+      result.current.setLetterDraft("A medias.");
+      result.current.setLetterOutcome({ type: "crisis" });
     });
 
     act(() => result.current.clearMailboxState());
 
+    expect(result.current.letterDraft).toBe("");
+    expect(result.current.letterOutcome).toBeNull();
     expect(result.current.mailboxReturnKey).toBeNull();
     expect(result.current.mailbox).toBeNull();
     expect(result.current.mailboxPhase).toBe("showing_seal");

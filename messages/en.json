@@ -229,7 +229,42 @@
       "next": "Next letter",
       "goTo": "Go to letter {number}",
       "turns": "Up to three letters each way, taking turns.",
-      "back": "Back to my envelopes"
+      "back": "Back to my envelopes",
+      "reply": "Reply",
+      "writeAnother": "Write another letter"
+    },
+    "write": {
+      "headline": "Your letter",
+      "paperLabel": "Letter {number} · Yours",
+      "fieldLabel": "Your letter",
+      "placeholder": "Write what you'd like to tell them...",
+      "noContact": "No names, phone numbers or social media.",
+      "review": "A person reads every letter before delivering it. It can take up to 48 hours.",
+      "send": "Seal the envelope",
+      "notNow": "Not now",
+      "moderation": "This letter can't go out like this. You can rewrite it, calmly.",
+      "contactFound": "Your letter has {things}.",
+      "contactRemove": "Remove {count, plural, one {it} other {them}} and the letter can go out. Nobody here shares how to reach them: that's how both of you stay safe.",
+      "contactKind": {
+        "phone": "a phone number",
+        "email": "an email address",
+        "url": "a link",
+        "handle": "a social media handle"
+      },
+      "lettersClosed": "Letters are paused for now. Your letter is still here.",
+      "tooMany": "Too many tries. Wait a moment and try again.",
+      "failed": "We couldn't send your letter. Try again."
+    },
+    "send": {
+      "sealing": "Sealing the envelope…",
+      "headline": "The envelope is on its way.",
+      "review": "A person reads it before delivering it. It can take up to 48 hours.",
+      "comeBack": "Come back with your seal whenever you want to see if they wrote back."
+    },
+    "crisis": {
+      "headline": "Before your letter,\nyou matter.",
+      "intro": "You're not alone. If you feel like you need to talk to someone right now, here's help:",
+      "notSent": "This letter won't be sent. It isn't a punishment: when you feel calmer, you can write again."
     },
     "close": "Close my mailbox",
     "backToStart": "Back to start"
