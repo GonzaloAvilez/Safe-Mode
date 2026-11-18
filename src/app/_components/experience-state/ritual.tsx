@@ -9,7 +9,12 @@ export type WriteOutcome =
   | { type: "cap_reached" }
   | { type: "error"; message: string };
 
-export type LeaveATracePhase = "writing" | "submitted" | "skipped";
+// ADR-004 #212: when letters are open, "choosing" comes between writing and sending (the phrase
+// leaves only once the person has answered whether they want letters), and "keeping" is where
+// someone who said yes keeps their seal.
+export type LeaveATracePhase = "writing" | "choosing" | "keeping" | "submitted" | "skipped";
+
+export type LeaveATraceKey = { returnKey: string; sentence: string };
 
 type MirrorInteraction = {
   entryId: string | null;
@@ -26,6 +31,11 @@ type RitualState = {
   setLeaveATraceDraft: Dispatch<SetStateAction<string>>;
   leaveATracePhase: LeaveATracePhase;
   setLeaveATracePhase: Dispatch<SetStateAction<LeaveATracePhase>>;
+  // The seal and its gift sentence, shown once on the card (ADR-004 #212). Memory only, like
+  // the drafts: never in the URL, never in browser storage, gone on reload or when the ritual
+  // resets. Only its hash is stored on the server, so a lost seal can't be recovered.
+  leaveATraceKey: LeaveATraceKey | null;
+  setLeaveATraceKey: Dispatch<SetStateAction<LeaveATraceKey | null>>;
   mirrorInteraction: MirrorInteraction;
   setMirrorInteraction: Dispatch<SetStateAction<MirrorInteraction>>;
   clearRitualState: () => void;
@@ -46,6 +56,7 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
   const [writeOutcome, setWriteOutcome] = useState<WriteOutcome | null>(null);
   const [leaveATraceDraft, setLeaveATraceDraft] = useState("");
   const [leaveATracePhase, setLeaveATracePhase] = useState<LeaveATracePhase>("writing");
+  const [leaveATraceKey, setLeaveATraceKey] = useState<LeaveATraceKey | null>(null);
   const [mirrorInteraction, setMirrorInteraction] = useState<MirrorInteraction>(EMPTY_MIRROR_INTERACTION);
 
   const clearRitualState = useCallback(() => {
@@ -53,6 +64,7 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
     setWriteOutcome(null);
     setLeaveATraceDraft("");
     setLeaveATracePhase("writing");
+    setLeaveATraceKey(null);
     setMirrorInteraction(EMPTY_MIRROR_INTERACTION);
   }, []);
 
@@ -67,6 +79,8 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
         setLeaveATraceDraft,
         leaveATracePhase,
         setLeaveATracePhase,
+        leaveATraceKey,
+        setLeaveATraceKey,
         mirrorInteraction,
         setMirrorInteraction,
         clearRitualState,
