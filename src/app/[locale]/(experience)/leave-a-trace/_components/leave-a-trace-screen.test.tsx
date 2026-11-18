@@ -49,6 +49,59 @@ describe("LeaveATraceScreen", () => {
     expect(screen.queryByText(T.choice.headline)).toBeNull();
   });
 
+  it("shows the missing light after the card, with its own tagline", () => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "sealing", key: { returnKey: SEAL, sentence: SENTENCE } });
+
+    expect(screen.getByText(T.seal.headline)).toBeTruthy();
+    expect(screen.getByText(T.seal.tagline)).toBeTruthy();
+  });
+
+  it.each([
+    ["sealed", T.sealedSubcopy],
+    ["skipped", T.skippedSubcopy],
+  ] as const)("the %s closing carries its own line", (phase, line) => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase });
+
+    expect(screen.getByText(line)).toBeTruthy();
+  });
+
+  it("only whoever sealed it is told the seal will open a letter", () => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "submitted" });
+
+    expect(screen.queryByText(T.sealedSubcopy)).toBeNull();
+    expect(screen.queryByText(T.skippedSubcopy)).toBeNull();
+  });
+
+  it("with letters open, the whole way: writing, the choice, the card, the missing light, a sealed closing", async () => {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(
+        url === "/api/return-key/confirm"
+          ? new Response(null, { status: 204 })
+          : new Response(JSON.stringify({ ok: true, returnKey: SEAL, returnKeySentence: SENTENCE }), { status: 200 })
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "writing" });
+
+    fireEvent.change(screen.getByPlaceholderText(T.placeholder), { target: { value: "Una frase." } });
+    fireEvent.click(screen.getByRole("button", { name: T.submit }));
+    fireEvent.click(await screen.findByRole("button", { name: T.choice.yes }));
+    fireEvent.click(await screen.findByRole("button", { name: T.keep.wroteByHand }));
+    fireEvent.click(screen.getByRole("checkbox", { name: T.keep.wroteConfirm }));
+    fireEvent.click(screen.getByRole("button", { name: T.keep.continue }));
+    await screen.findByText(T.seal.headline);
+
+    // Answer whichever group is asked, as someone holding the seal would.
+    const asked = (["first", "middle", "last"] as const).findIndex((group) => screen.queryByText(T.seal.field[group]));
+    fireEvent.change(screen.getByPlaceholderText("00000"), { target: { value: ["48213", "39017", "56229"][asked] } });
+    fireEvent.click(screen.getByRole("button", { name: T.seal.submit }));
+
+    await screen.findByText(T.sealedSubcopy, {}, { timeout: 4000 });
+    expect(screen.getByTestId("closing-scene")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith("/api/return-key/confirm", expect.objectContaining({ headers: { Authorization: `Bearer ${SEAL}` } }));
+    expect(screen.getByTestId("key").textContent).toBe("");
+  });
+
   it("with letters closed, a trace goes straight to the closing, never asking about letters", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
     renderStep(<LeaveATraceScreen lettersOpen={false} />, { phase: "writing" });

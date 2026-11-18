@@ -25,6 +25,7 @@ describe("ritual state, Leave a Trace", () => {
       result.current.setLeaveATraceDraft("Lo que no dije.");
       result.current.setLeaveATracePhase("keeping");
       result.current.setLeaveATraceKey({ returnKey: "482133901756229", sentence: "Estuviste aquí." });
+      result.current.setLeaveATraceLastAsked(2);
     });
     expect(result.current.leaveATraceKey).not.toBeNull();
 
@@ -33,6 +34,7 @@ describe("ritual state, Leave a Trace", () => {
     expect(result.current.leaveATraceDraft).toBe("");
     expect(result.current.leaveATracePhase).toBe("writing");
     expect(result.current.leaveATraceKey).toBeNull();
+    expect(result.current.leaveATraceLastAsked).toBeNull();
   });
 
   it("keeps the seal in memory only: nothing is written to the browser's storage", () => {

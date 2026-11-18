@@ -19,7 +19,14 @@ import { ReturnKeyCard, readCardFonts } from "./return-key-card";
 export function KeepReturnKeyStep() {
   const t = useTranslations("leaveATrace");
   const tc = useTranslations("returnKeyCard");
-  const { leaveATraceKey: key, setLeaveATraceKey: setKey, setLeaveATracePhase: setPhase } = useRitualState();
+  const {
+    leaveATraceKey: key,
+    setLeaveATraceKey: setKey,
+    leaveATracePhase: phase,
+    setLeaveATracePhase: setPhase,
+    leaveATraceLastAsked: lastAsked,
+    setLeaveATraceLastAsked: setLastAsked,
+  } = useRitualState();
   const cardRef = useRef<HTMLDivElement>(null);
   const [kept, setKept] = useState<"none" | "image" | "hand">("none");
   const [wroteItAll, setWroteItAll] = useState(false);
@@ -27,13 +34,16 @@ export function KeepReturnKeyStep() {
   const [error, setError] = useState<string | null>(null);
   const [iosHint, setIosHint] = useState(false);
 
-  // A seal that isn't in memory (the ritual was reset) can't be shown: nothing left to keep.
+  // A seal that isn't in memory (the ritual was reset) can't be shown: nothing left to keep. Only
+  // while still on this step, so letting go of the seal on the way out never redirects anything.
   useEffect(() => {
-    if (!key) setPhase("submitted");
-  }, [key, setPhase]);
+    if (!key && phase === "keeping") setPhase("submitted");
+  }, [key, phase, setPhase]);
   if (!key) return null;
 
-  const canContinue = kept === "image" || (kept === "hand" && wroteItAll);
+  // Someone back from sealing to look at their seal again already kept it once: no second gate.
+  const returning = lastAsked !== null;
+  const canContinue = returning || kept === "image" || (kept === "hand" && wroteItAll);
 
   async function saveImage() {
     if (!key || !cardRef.current) return;
@@ -56,9 +66,15 @@ export function KeepReturnKeyStep() {
     }
   }
 
-  // The seal leaves memory as the step ends: from here only whoever kept it has it.
-  function finish() {
+  // On to sealing, still holding the seal: sealing checks one of its groups and confirms it.
+  function goSeal() {
+    setPhase("sealing");
+  }
+
+  // The seal leaves memory: the trace is left, it just never receives letters.
+  function leaveWithoutLetters() {
     setKey(null);
+    setLastAsked(null);
     setPhase("submitted");
   }
 
@@ -126,7 +142,7 @@ export function KeepReturnKeyStep() {
         {canContinue && (
           <button
             type="button"
-            onClick={finish}
+            onClick={goSeal}
             className="mt-2 rounded-full border border-white/25 px-8 py-2.5 text-[13px] tracking-[1px] text-white/80 transition-colors duration-300 hover:border-[rgba(210,158,32,0.6)] hover:text-white"
           >
             {t("keep.continue")}
@@ -135,7 +151,7 @@ export function KeepReturnKeyStep() {
 
         <button
           type="button"
-          onClick={finish}
+          onClick={leaveWithoutLetters}
           className="mt-1 text-[12px] tracking-[.5px] text-white/35 underline decoration-white/10 underline-offset-4 transition-colors duration-300 hover:text-white/60"
         >
           {t("keep.withoutLetters")}
