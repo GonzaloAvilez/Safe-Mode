@@ -172,6 +172,68 @@
     "footer": "Este sello abre tus cartas.",
     "qrLabel": "Código QR de tu sello"
   },
+  "mailbox": {
+    "tagline": "Tu buzón.",
+    "insideTagline": "Esto es solo para ti.",
+    "show": {
+      "headline": "Muestra tu sello.",
+      "subcopy": "El buzón se abre con tu estampilla.",
+      "chooseImage": "Elegir la imagen de mi sello",
+      "chooseAnother": "Elegir otra imagen",
+      "imagePrivacy": "La imagen se lee aquí, en tu teléfono. No se envía a ningún lado.",
+      "orType": "o escribe sus números",
+      "fieldLabel": "Tu sello",
+      "submit": "Abrir",
+      "reading": "Leyendo tu sello…",
+      "opening": "Abriendo tu buzón…",
+      "incomplete": "Tu sello tiene 15 números.",
+      "notRecognized": "Ese sello no abre ningún buzón.",
+      "notRecognizedHint": "Revisa los números, o elige la imagen de tu sello.",
+      "noSealInImage": "No encontramos un sello en esa imagen.",
+      "noSealInImageHint": "Elige la imagen que guardaste, completa y sin recortar.",
+      "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
+      "failed": "No pudimos abrir tu buzón. Vuelve a intentarlo."
+    },
+    "list": {
+      "headline": "Tus sobres",
+      "aboutYourTrace": "Sobre tu huella",
+      "toAPhrase": "A quien dejó una frase",
+      "postmark": {
+        "your_turn": "Te toca",
+        "their_turn": "Esperando",
+        "awaiting_review": "En camino",
+        "closed": "Terminada"
+      },
+      "onItsWay": "“En camino”: una persona está leyendo tu carta antes de entregarla, hasta 48 horas.",
+      "kept": "Las cartas se guardan 60 días."
+    },
+    "empty": {
+      "headline": "Todavía no hay cartas.",
+      "subcopy": "Puede que nadie escriba, y también está bien. Tu huella sigue aquí, encendida.",
+      "kept": "Si llega una carta, aquí te espera 60 días."
+    },
+    "letter": {
+      "number": "Carta {number}",
+      "yours": "Tu carta",
+      "fromVisitor": "— alguien que se reconoció en tu frase",
+      "fromAuthor": "— quien dejó la frase",
+      "held": "En camino",
+      "heldNote": "Una persona la lee antes de entregarla. Puede tardar hasta 48 horas.",
+      "rejected": "No se entregó",
+      "rejectedHeadline": "Esta carta no llegó a su destino.",
+      "rejectedBody": "La persona que lee las cartas antes de entregarlas decidió no enviarla. No cuenta como tu turno: puedes escribir otra.",
+      "erasedHeadline": "Esta carta ya no guarda su texto.",
+      "erasedTheirs": "Las cartas se guardan 60 días. Lo que queda es que alguien te escribió.",
+      "erasedYours": "Las cartas se guardan 60 días. Lo que queda es que le escribiste.",
+      "previous": "Carta anterior",
+      "next": "Carta siguiente",
+      "goTo": "Ir a la carta {number}",
+      "turns": "Hasta tres cartas de cada lado, por turnos.",
+      "back": "Volver a mis sobres"
+    },
+    "close": "Cerrar mi buzón",
+    "backToStart": "Volver al inicio"
+  },
   "contribute": {
     "tagline": "Un aporte rápido.",
     "headline": "Deja una frase para el muro de Refugio.",
