@@ -142,7 +142,29 @@
       "withoutLetters": "Better without letters",
       "imageError": "We couldn't prepare the image. You can write your seal down by hand.",
       "fileName": "refugio-seal.png"
-    }
+    },
+    "seal": {
+      "tagline": "One last gesture.",
+      "headline": "Light the missing light.",
+      "ask": {
+        "first": "Type the first group of your seal.",
+        "middle": "Type the middle group of your seal.",
+        "last": "Type the last group of your seal."
+      },
+      "field": {
+        "first": "First group",
+        "middle": "Middle group",
+        "last": "Last group"
+      },
+      "submit": "Light it",
+      "back": "See my seal again",
+      "hint": "The three lights together open your letters.",
+      "wrong": "That's not the group. You can see your seal again.",
+      "lit": "The three lights are on.",
+      "tooMany": "Too many tries. Wait a moment and try again.",
+      "failed": "We couldn't seal your trace. Please try again."
+    },
+    "sealedSubcopy": "If someone writes to you, your seal will open their letter."
   },
   "returnKeyCard": {
     "brand": "REFUGIO",

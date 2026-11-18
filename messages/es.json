@@ -142,7 +142,29 @@
       "withoutLetters": "Mejor sin cartas",
       "imageError": "No pudimos preparar la imagen. Puedes anotar tu sello a mano.",
       "fileName": "refugio-sello.png"
-    }
+    },
+    "seal": {
+      "tagline": "Un último gesto.",
+      "headline": "Enciende la luz que falta.",
+      "ask": {
+        "first": "Escribe el grupo del principio de tu sello.",
+        "middle": "Escribe el grupo del centro de tu sello.",
+        "last": "Escribe el grupo del final de tu sello."
+      },
+      "field": {
+        "first": "Grupo del principio",
+        "middle": "Grupo del centro",
+        "last": "Grupo del final"
+      },
+      "submit": "Encender",
+      "back": "Volver a ver mi sello",
+      "hint": "Las tres luces juntas abren tus cartas.",
+      "wrong": "Ese no es el grupo. Puedes volver a ver tu sello.",
+      "lit": "Las tres luces están encendidas.",
+      "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
+      "failed": "No pudimos sellar tu huella. Vuelve a intentarlo."
+    },
+    "sealedSubcopy": "Si alguien te escribe, tu sello abrirá su carta."
   },
   "returnKeyCard": {
     "brand": "REFUGIO",

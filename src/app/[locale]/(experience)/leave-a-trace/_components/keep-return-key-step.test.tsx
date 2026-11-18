@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import es from "../../../../../../messages/es.json";
 
@@ -127,25 +127,42 @@ describe("KeepReturnKeyStep", () => {
     expect((screen.getByRole("button", { name: KEEP.save }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("continuing lets go of the seal and goes to the closing", async () => {
+  it("continuing goes on to sealing, still holding the seal", async () => {
     renderStep(<KeepReturnKeyStep />, KEPT);
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
     await screen.findByText(KEEP.saved);
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.continue }));
 
-    await waitFor(() => expect(phase()).toBe("submitted"));
-    expect(screen.getByTestId("key").textContent).toBe("");
+    await waitFor(() => expect(phase()).toBe("sealing"));
+    expect(screen.getByTestId("key").textContent).toBe(SEAL);
+  });
+
+  it("someone back from sealing to look at the seal again can go on without saving it twice", () => {
+    renderStep(<KeepReturnKeyStep />, { ...KEPT, lastAsked: 1 });
+
+    fireEvent.click(screen.getByRole("button", { name: KEEP.continue }));
+
+    expect(phase()).toBe("sealing");
+    expect(drawImageMock).not.toHaveBeenCalled();
   });
 
   it("“Mejor sin cartas” is always there: it goes to the closing without saving anything, and lets go of the seal", async () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepReturnKeyStep />, { ...KEPT, lastAsked: 2 });
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.withoutLetters }));
 
     await waitFor(() => expect(phase()).toBe("submitted"));
     expect(screen.getByTestId("key").textContent).toBe("");
+    expect(screen.getByTestId("lastAsked").textContent).toBe("");
     expect(drawImageMock).not.toHaveBeenCalled();
+  });
+
+  it("letting go of the seal from elsewhere doesn't pull a later step back to the closing", async () => {
+    renderStep(<KeepReturnKeyStep />, { phase: "sealed", key: null });
+
+    await act(async () => {});
+    expect(phase()).toBe("sealed");
   });
 
   it("never puts the seal in the browser's storage or the address", () => {
