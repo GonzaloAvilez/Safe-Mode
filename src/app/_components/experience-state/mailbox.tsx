@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { Mailbox } from "@/lib/mailbox";
 import { createStrictContext } from "./create-strict-context";
 
@@ -20,6 +20,10 @@ type MailboxState = {
   setMailboxPhase: Dispatch<SetStateAction<MailboxPhase>>;
   openCorrespondenceId: string | null;
   setOpenCorrespondenceId: Dispatch<SetStateAction<string | null>>;
+  // Marks the start of something that will open the mailbox when it finishes (reading the
+  // picture, fetching the mailbox). The returned check says whether its result may still be
+  // used: not once the mailbox was closed in the meantime.
+  startMailboxOperation: () => () => boolean;
   clearMailboxState: () => void;
 };
 
@@ -31,8 +35,18 @@ export function MailboxStateProvider({ children }: { children: ReactNode }) {
   const [mailbox, setMailbox] = useState<Mailbox | null>(null);
   const [mailboxPhase, setMailboxPhase] = useState<MailboxPhase>("showing_seal");
   const [openCorrespondenceId, setOpenCorrespondenceId] = useState<string | null>(null);
+  // Bumped every time the mailbox is closed. An operation started before that belongs to a
+  // mailbox that no longer exists, so its result must not reopen it: whoever left mid-request
+  // would otherwise find it open on coming back, without having shown the seal.
+  const generation = useRef(0);
+
+  const startMailboxOperation = useCallback(() => {
+    const startedIn = generation.current;
+    return () => startedIn === generation.current;
+  }, []);
 
   const clearMailboxState = useCallback(() => {
+    generation.current += 1;
     setMailboxReturnKey(null);
     setMailbox(null);
     setMailboxPhase("showing_seal");
@@ -50,6 +64,7 @@ export function MailboxStateProvider({ children }: { children: ReactNode }) {
         setMailboxPhase,
         openCorrespondenceId,
         setOpenCorrespondenceId,
+        startMailboxOperation,
         clearMailboxState,
       }}
     >

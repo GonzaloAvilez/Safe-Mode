@@ -6,7 +6,7 @@ import { parseSeal } from "@/lib/return-key-groups";
 
 // A photo can be several thousand pixels wide. The QR's modules stay many pixels wide well below
 // this, and jsQR is much faster on a smaller picture.
-const MAX_SIDE = 1600;
+const MAX_IMAGE_DIMENSION_PX = 1600;
 
 // The seal in a picture's pixels (RGBA, row by row), or null when there's no QR, or the QR holds
 // something other than a seal. jsQR loads only when someone chooses a picture.
@@ -21,7 +21,7 @@ export async function readSealFromPixels(pixels: Uint8ClampedArray, width: numbe
 export async function readSealFromImage(file: Blob): Promise<string | null> {
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION_PX / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
 

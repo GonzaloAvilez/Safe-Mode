@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { openMailbox } from "./open-mailbox";
+import { fetchMailboxWithReturnKey } from "./fetch-mailbox-with-return-key";
 
 const SEAL = "482133901756229";
 const MAILBOX = { correspondences: [] };
@@ -14,11 +14,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("openMailbox", () => {
+describe("fetchMailboxWithReturnKey", () => {
   it("asks for the mailbox with the seal in the Authorization header, never in the URL, and never cached", async () => {
     const fetchMock = stubFetch(Response.json(MAILBOX));
 
-    await openMailbox(SEAL);
+    await fetchMailboxWithReturnKey(SEAL);
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0];
@@ -34,19 +34,19 @@ describe("openMailbox", () => {
     };
     stubFetch(Response.json(mailbox));
 
-    expect(await openMailbox(SEAL)).toEqual({ type: "opened", mailbox });
+    expect(await fetchMailboxWithReturnKey(SEAL)).toEqual({ type: "opened", mailbox });
   });
 
   it("says the seal opens nothing when the server doesn't recognize it", async () => {
     stubFetch(Response.json({ error: "return key not recognized" }, { status: 401 }));
 
-    expect(await openMailbox(SEAL)).toEqual({ type: "not_recognized" });
+    expect(await fetchMailboxWithReturnKey(SEAL)).toEqual({ type: "not_recognized" });
   });
 
   it("says to wait after too many tries", async () => {
     stubFetch(Response.json({ error: "too many requests" }, { status: 429 }));
 
-    expect(await openMailbox(SEAL)).toEqual({ type: "error", reason: "too_many" });
+    expect(await fetchMailboxWithReturnKey(SEAL)).toEqual({ type: "error", reason: "too_many" });
   });
 
   it.each([
@@ -55,7 +55,7 @@ describe("openMailbox", () => {
   ])("fails on any other answer from the server: %s", async (_label, response) => {
     stubFetch(response);
 
-    expect(await openMailbox(SEAL)).toEqual({ type: "error", reason: "failed" });
+    expect(await fetchMailboxWithReturnKey(SEAL)).toEqual({ type: "error", reason: "failed" });
   });
 
   it.each([
@@ -65,12 +65,12 @@ describe("openMailbox", () => {
   ])("fails on a 200 whose body is %s", async (_label, response) => {
     stubFetch(response);
 
-    expect(await openMailbox(SEAL)).toEqual({ type: "error", reason: "failed" });
+    expect(await fetchMailboxWithReturnKey(SEAL)).toEqual({ type: "error", reason: "failed" });
   });
 
   it("says it couldn't connect when the request never reaches the server", async () => {
     stubFetch(new TypeError("Failed to fetch"));
 
-    expect(await openMailbox(SEAL)).toEqual({ type: "error", reason: "offline" });
+    expect(await fetchMailboxWithReturnKey(SEAL)).toEqual({ type: "error", reason: "offline" });
   });
 });

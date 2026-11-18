@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import es from "../../../../../../messages/es.json";
+
+const { readSealFromImageMock } = vi.hoisted(() => ({ readSealFromImageMock: vi.fn() }));
+vi.mock("./read-seal-from-image", () => ({ readSealFromImage: readSealFromImageMock }));
 
 vi.mock("../../_shared/screen-header", () => ({ ScreenHeader: ({ tagline }: { tagline: string }) => <header>{tagline}</header> }));
 vi.mock("../../_shared/screen-cta", () => ({
@@ -45,6 +48,74 @@ describe("MailboxScreen, before it's open", () => {
 
     expect(screen.getByText(T.show.headline)).toBeTruthy();
     expect(screen.queryByText(T.list.headline)).toBeNull();
+  });
+});
+
+describe("MailboxScreen, leaving while the mailbox is still opening", () => {
+  const sealField = () => screen.getByLabelText(T.show.fieldLabel);
+  const expectClosed = () => {
+    expect(screen.getByTestId("key").textContent).toBe("");
+    expect(screen.getByTestId("opened").textContent).toBe("");
+    expect(screen.getByTestId("phase").textContent).toBe("showing_seal");
+    expect(screen.getByText(T.show.headline)).toBeTruthy();
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    readSealFromImageMock.mockReset();
+  });
+
+  it("a mailbox that arrives after “Volver al inicio” stays closed", async () => {
+    let answer: (response: Response) => void = () => {};
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((resolve) => (answer = resolve))));
+    renderMailbox(<MailboxScreen />);
+    fireEvent.change(sealField(), { target: { value: SEAL } });
+    fireEvent.click(screen.getByRole("button", { name: T.show.submit }));
+    await screen.findByText(T.show.opening);
+
+    fireEvent.click(screen.getByText(T.backToStart));
+    await act(async () => answer(Response.json({ correspondences: [correspondence()] })));
+
+    expectClosed();
+    expect(screen.getByTestId("locked").textContent).toBe("false");
+  });
+
+  it("a seal read from the picture after “Volver al inicio” opens nothing, and nothing is asked of the server", async () => {
+    let read: (seal: string | null) => void = () => {};
+    readSealFromImageMock.mockReturnValue(new Promise((resolve) => (read = resolve)));
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ correspondences: [correspondence()] }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderMailbox(<MailboxScreen />);
+    fireEvent.change(screen.getByLabelText(T.show.chooseImage), { target: { files: [new File(["png"], "sello.png")] } });
+    await screen.findByText(T.show.reading);
+
+    fireEvent.click(screen.getByText(T.backToStart));
+    await act(async () => read(SEAL));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expectClosed();
+    expect(screen.getByTestId("locked").textContent).toBe("false");
+  });
+
+  it("after leaving, opening it again with the seal still works", async () => {
+    let answer: (response: Response) => void = () => {};
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(new Promise<Response>((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(Response.json({ correspondences: [correspondence()] }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderMailbox(<MailboxScreen />);
+    fireEvent.change(sealField(), { target: { value: SEAL } });
+    fireEvent.click(screen.getByRole("button", { name: T.show.submit }));
+    await screen.findByText(T.show.opening);
+    fireEvent.click(screen.getByText(T.backToStart));
+    await act(async () => answer(Response.json({ correspondences: [] })));
+
+    fireEvent.change(sealField(), { target: { value: SEAL } });
+    fireEvent.click(screen.getByRole("button", { name: T.show.submit }));
+
+    await screen.findByText(T.list.headline);
+    expect(screen.getByTestId("key").textContent).toBe(SEAL);
   });
 });
 

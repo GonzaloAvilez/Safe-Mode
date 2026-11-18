@@ -39,6 +39,18 @@ describe("mailbox state", () => {
     expect(result.current.openCorrespondenceId).toBeNull();
   });
 
+  it("an operation started before the mailbox was closed is no longer current; one started after is", () => {
+    const { result } = renderHook(() => useMailboxState(), { wrapper });
+    const before = result.current.startMailboxOperation();
+    expect(before()).toBe(true);
+
+    act(() => result.current.clearMailboxState());
+    const after = result.current.startMailboxOperation();
+
+    expect(before()).toBe(false);
+    expect(after()).toBe(true);
+  });
+
   it("keeps the seal in memory only: nothing is written to the browser's storage", () => {
     localStorage.clear();
     sessionStorage.clear();

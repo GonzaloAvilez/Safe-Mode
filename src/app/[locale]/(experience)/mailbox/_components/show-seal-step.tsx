@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, type ChangeEvent, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type SubmitEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useMailboxState } from "@/app/_components/experience-state/mailbox";
 import { parseSeal } from "@/lib/return-key-groups";
 import { ScreenPrompt } from "../../_shared/screen-prompt";
-import { openMailbox } from "./open-mailbox";
+import { fetchMailboxWithReturnKey } from "./fetch-mailbox-with-return-key";
 import { readSealFromImage } from "./read-seal-from-image";
 
 // ADR-004 #213, design B2: the mailbox opens with the seal. First the picture of it, the one
@@ -22,19 +22,44 @@ export function ShowSealStep() {
   const t = useTranslations("mailbox.show");
   const tc = useTranslations("common");
   const tCard = useTranslations("returnKeyCard");
-  const { setMailboxReturnKey, setMailbox, setMailboxPhase } = useMailboxState();
+  const { setMailboxReturnKey, setMailbox, setMailboxPhase, startMailboxOperation } = useMailboxState();
   const { lock: lockLocaleSwitch, unlock: unlockLocaleSwitch } = useLocaleTransition();
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState<"reading" | "opening" | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
   const [imageUnread, setImageUnread] = useState(false);
+  const mounted = useRef(false);
 
-  async function open(returnKey: string) {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Reading the picture and fetching the mailbox take a moment, and the person may leave
+  // meanwhile: "Volver al inicio" closes the mailbox, and going anywhere else takes this step
+  // away. Either way, what arrives afterwards is for a mailbox nobody is waiting for, and must not
+  // open it. The language switch is held for the whole operation, so changing language never
+  // counts as leaving.
+  async function whileStaying(operation: (isStillWanted: () => boolean) => Promise<void>) {
+    const isCurrentMailbox = startMailboxOperation();
+    const isStillWanted = () => mounted.current && isCurrentMailbox();
+    lockLocaleSwitch();
+    try {
+      await operation(isStillWanted);
+    } finally {
+      unlockLocaleSwitch();
+      // Whatever happened, this step can be used again (it's gone anyway if the mailbox opened).
+      if (mounted.current) setBusy(null);
+    }
+  }
+
+  async function open(returnKey: string, isStillWanted: () => boolean) {
     setBusy("opening");
     setMessage(null);
-    lockLocaleSwitch();
-    const result = await openMailbox(returnKey);
-    unlockLocaleSwitch();
+    const result = await fetchMailboxWithReturnKey(returnKey);
+    if (!isStillWanted()) return;
 
     if (result.type === "opened") {
       setMailboxReturnKey(returnKey);
@@ -43,7 +68,6 @@ export function ShowSealStep() {
       return;
     }
 
-    setBusy(null);
     if (result.type === "not_recognized") {
       setMessage({ text: t("notRecognized"), hint: t("notRecognizedHint") });
     } else if (result.reason === "too_many") {
@@ -61,17 +85,19 @@ export function ShowSealStep() {
     event.target.value = "";
     if (!file || busy) return;
 
-    setBusy("reading");
-    setMessage(null);
-    const seal = await readSealFromImage(file);
-    if (!seal) {
-      setBusy(null);
-      setImageUnread(true);
-      setMessage({ text: t("noSealInImage"), hint: t("noSealInImageHint") });
-      return;
-    }
-    setImageUnread(false);
-    await open(seal);
+    await whileStaying(async (isStillWanted) => {
+      setBusy("reading");
+      setMessage(null);
+      const seal = await readSealFromImage(file);
+      if (!isStillWanted()) return;
+      if (!seal) {
+        setImageUnread(true);
+        setMessage({ text: t("noSealInImage"), hint: t("noSealInImageHint") });
+        return;
+      }
+      setImageUnread(false);
+      await open(seal, isStillWanted);
+    });
   }
 
   async function openTyped(event: SubmitEvent) {
@@ -82,7 +108,7 @@ export function ShowSealStep() {
       setMessage({ text: t("incomplete") });
       return;
     }
-    await open(seal);
+    await whileStaying((isStillWanted) => open(seal, isStillWanted));
   }
 
   return (

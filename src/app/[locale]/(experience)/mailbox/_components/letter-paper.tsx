@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import type { MailboxLetter } from "@/lib/mailbox";
 import type { LetterSender } from "@/lib/letter-lifecycle";
-import { formatLetterAge } from "./letter-date";
+import { formatLetterAge } from "./format-letter-age";
 
 // ADR-004 #213, design B4: one letter, on paper. What the paper says depends on the letter:
 //   - delivered: the text, signed by who wrote it (never a name: "someone who saw themselves in

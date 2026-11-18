@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLetterAge } from "./letter-date";
+import { formatLetterAge } from "./format-letter-age";
 
 const NOW = new Date("2026-11-18T12:00:00Z");
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();

@@ -50,7 +50,7 @@ function CloseMailboxLink({ label }: { label: string }) {
 
 // One correspondence, one letter at a time: it opens on the latest letter, and the others are a
 // tap away.
-function Reading({ correspondence, onBack }: { correspondence: MailboxCorrespondence; onBack: () => void }) {
+function CorrespondenceReader({ correspondence, onBack }: { correspondence: MailboxCorrespondence; onBack: () => void }) {
   const t = useTranslations("mailbox");
   const { letters } = correspondence;
   const [index, setIndex] = useState(letters.length - 1);
@@ -165,7 +165,7 @@ export function MailboxScreen() {
   if (reading) {
     return (
       <MailboxShell tagline={t("insideTagline")}>
-        <Reading
+        <CorrespondenceReader
           key={reading.id}
           correspondence={reading}
           onBack={() => {

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import es from "../../../../../../messages/es.json";
 
@@ -135,6 +136,57 @@ describe("ShowSealStep, typing the numbers", () => {
   });
 });
 
+// The step taken away without closing the mailbox: going to another screen.
+function LeavableStep() {
+  const [here, setHere] = useState(true);
+  return (
+    <>
+      {here && <ShowSealStep />}
+      <button type="button" onClick={() => setHere(false)}>
+        irse a otra pantalla
+      </button>
+    </>
+  );
+}
+
+describe("ShowSealStep, leaving for another screen mid-way", () => {
+  const expectClosed = () => {
+    expect(screen.getByTestId("key").textContent).toBe("");
+    expect(screen.getByTestId("opened").textContent).toBe("");
+    expect(screen.getByTestId("phase").textContent).toBe("showing_seal");
+  };
+
+  it("a mailbox that arrives after the step is gone doesn't open", async () => {
+    let answer: (response: Response) => void = () => {};
+    stubFetch(new Promise<Response>((resolve) => (answer = resolve)));
+    renderMailbox(<LeavableStep />);
+    typeAndOpen(SEAL);
+    await waitFor(() => expect(status().textContent).toBe(T.opening));
+
+    fireEvent.click(screen.getByText("irse a otra pantalla"));
+    await act(async () => answer(Response.json(MAILBOX)));
+
+    expectClosed();
+    expect(screen.getByTestId("locked").textContent).toBe("false");
+  });
+
+  it("a seal read after the step is gone opens nothing and asks nothing", async () => {
+    let read: (seal: string | null) => void = () => {};
+    readSealFromImageMock.mockReturnValue(new Promise((resolve) => (read = resolve)));
+    const fetchMock = stubFetch(Response.json(MAILBOX));
+    renderMailbox(<LeavableStep />);
+    choosePicture();
+    await waitFor(() => expect(status().textContent).toBe(T.reading));
+
+    fireEvent.click(screen.getByText("irse a otra pantalla"));
+    await act(async () => read(SEAL));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expectClosed();
+    expect(screen.getByTestId("locked").textContent).toBe("false");
+  });
+});
+
 describe("ShowSealStep, choosing the picture", () => {
   it("opens the mailbox with the seal read from the picture", async () => {
     readSealFromImageMock.mockResolvedValue(SEAL);
@@ -183,7 +235,7 @@ describe("ShowSealStep, choosing the picture", () => {
     await waitFor(() => expect(screen.getByTestId("phase").textContent).toBe("correspondences"));
   });
 
-  it("says it is reading the picture while it reads", async () => {
+  it("says it is reading the picture while it reads, holding the language switch until it's done", async () => {
     let read: (seal: string | null) => void = () => {};
     readSealFromImageMock.mockReturnValue(new Promise((resolve) => (read = resolve)));
     renderMailbox(<ShowSealStep />);
@@ -191,6 +243,8 @@ describe("ShowSealStep, choosing the picture", () => {
     choosePicture();
 
     await waitFor(() => expect(status().textContent).toBe(T.reading));
+    expect(screen.getByTestId("locked").textContent).toBe("true");
     await act(async () => read(null));
+    expect(screen.getByTestId("locked").textContent).toBe("false");
   });
 });
