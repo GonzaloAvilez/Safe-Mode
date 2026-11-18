@@ -124,6 +124,12 @@
     "skippedSubcopy": "And leaving nothing is also a way of being here.",
     "backToStart": "Back to start"
   },
+  "returnKeyCard": {
+    "brand": "REFUGIO",
+    "stamp": "REFUGIO POST",
+    "footer": "This seal opens your letters.",
+    "qrLabel": "QR code of your seal"
+  },
   "contribute": {
     "tagline": "A quick contribution.",
     "headline": "Leave a phrase for Refugio's wall.",
