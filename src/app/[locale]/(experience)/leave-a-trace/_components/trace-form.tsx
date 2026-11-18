@@ -3,9 +3,10 @@
 import { useState, type SubmitEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
-import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useRitualState } from "@/app/_components/experience-state/ritual";
+import { sendTrace } from "./send-trace";
+
 const MAX_TEXT_LENGTH = 400;
 
 type ErrorOutcome = { message: string } | null;
@@ -20,7 +21,17 @@ type ErrorOutcome = { message: string } | null;
 // Doesn't render its own closing state — LeaveATracePage owns that (the rich
 // Gratitude-style canvas + closing copy), so it just reports back which way this
 // resolved.
-export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "skipped") => void }) {
+//
+// With letters open (ADR-004 #212) submitting doesn't send anything yet: it goes on to the choice
+// ("choosing"), which sends the phrase once the person has answered whether they want letters.
+// With letters closed it sends right here, exactly as before.
+export function TraceForm({
+  lettersOpen,
+  onResolved,
+}: {
+  lettersOpen: boolean;
+  onResolved: (phase: "submitted" | "skipped" | "choosing") => void;
+}) {
   const t = useTranslations("leaveATrace");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -32,39 +43,33 @@ export function TraceForm({ onResolved }: { onResolved: (phase: "submitted" | "s
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
+    if (lettersOpen) {
+      onResolved("choosing");
+      return;
+    }
+
     setSubmitting(true);
     lockLocaleSwitch();
     setError(null);
 
-    try {
-      const res = await fetch("/api/phrases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          honeypot,
-          formRenderedAt,
-          origin: LEAVE_A_TRACE_ORIGIN,
-          locale,
-        }),
-      });
+    const result = await sendTrace({
+      text,
+      acceptsLetters: false,
+      honeypot,
+      formRenderedAt,
+      locale,
+      messages: { somethingWrong: tc("errors.somethingWrong"), couldntConnect: tc("errors.couldntConnect") },
+    });
 
-      if (!res.ok) {
-        const body = await res.json();
-        setError({ message: body.error ?? tc("errors.somethingWrong") });
-        setSubmitting(false);
-        unlockLocaleSwitch();
-        return;
-      }
-
-      setText("");
-      unlockLocaleSwitch();
-      onResolved("submitted");
-    } catch {
-      setError({ message: tc("errors.couldntConnect") });
+    unlockLocaleSwitch();
+    if (result.type === "error") {
+      setError({ message: result.message });
       setSubmitting(false);
-      unlockLocaleSwitch();
+      return;
     }
+
+    setText("");
+    onResolved("submitted");
   }
 
   return (

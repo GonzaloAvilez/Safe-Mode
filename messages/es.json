@@ -122,7 +122,27 @@
     "doneTagline": "El ciclo cierra.",
     "doneHeadline": "Tu presencia ahora\ntambién forma parte\nde este ecosistema.",
     "skippedSubcopy": "Y no dejar nada también es una forma de estar aquí.",
-    "backToStart": "Volver al inicio"
+    "backToStart": "Volver al inicio",
+    "choice": {
+      "label": "TU HUELLA",
+      "headline": "Antes de soltarla: ¿quieres que alguien pueda escribirte una carta?",
+      "body": "Si alguien la encuentra y se reconoce en ella, podrá escribirte. Una persona lee cada carta antes de entregarla, y se guardan 60 días. Puede que nadie escriba, y también está bien.",
+      "yes": "Sí, quiero un sello",
+      "no": "Así está bien"
+    },
+    "keep": {
+      "tagline": "Esto es solo para ti.",
+      "body": "Así vas a volver a tus cartas: con esta imagen o con estos números. Nadie más los tiene, ni nosotros.",
+      "save": "Guardar imagen",
+      "saved": "Tu imagen está lista.",
+      "iosHint": "En iPhone, si se abre la imagen, mantenla presionada y elige «Guardar en Fotos».",
+      "wroteByHand": "Lo anoté a mano",
+      "wroteConfirm": "Ya lo anoté completo",
+      "continue": "Continuar",
+      "withoutLetters": "Mejor sin cartas",
+      "imageError": "No pudimos preparar la imagen. Puedes anotar tu sello a mano.",
+      "fileName": "refugio-sello.png"
+    }
   },
   "returnKeyCard": {
     "brand": "REFUGIO",

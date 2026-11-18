@@ -122,7 +122,27 @@
     "doneTagline": "The circle closes.",
     "doneHeadline": "Your presence is now\nalso part\nof this ecosystem.",
     "skippedSubcopy": "And leaving nothing is also a way of being here.",
-    "backToStart": "Back to start"
+    "backToStart": "Back to start",
+    "choice": {
+      "label": "YOUR TRACE",
+      "headline": "Before you let it go: would you like someone to be able to write you a letter?",
+      "body": "If someone finds it and recognizes themselves in it, they'll be able to write to you. A person reads every letter before it's delivered, and letters are kept for 60 days. Maybe no one will write, and that's okay too.",
+      "yes": "Yes, I'd like a seal",
+      "no": "That's fine as it is"
+    },
+    "keep": {
+      "tagline": "This is only for you.",
+      "body": "This is how you'll get back to your letters: with this image or with these numbers. No one else has them, not even us.",
+      "save": "Save image",
+      "saved": "Your image is ready.",
+      "iosHint": "On iPhone, if the image opens, press and hold it and choose “Save to Photos”.",
+      "wroteByHand": "I wrote it down",
+      "wroteConfirm": "I've written it all down",
+      "continue": "Continue",
+      "withoutLetters": "Better without letters",
+      "imageError": "We couldn't prepare the image. You can write your seal down by hand.",
+      "fileName": "refugio-seal.png"
+    }
   },
   "returnKeyCard": {
     "brand": "REFUGIO",
