@@ -60,6 +60,59 @@ describe("LeaveATraceScreen", () => {
     expect(screen.queryByText(T.choice.headline)).toBeNull();
   });
 
+  // The phrase is sent from the choice, a different component than the form that showed the hidden
+  // field: whatever a bot put there while writing has to reach the server all the same.
+  describe("the bot trap on the way from writing to the choice", () => {
+    const hiddenField = (container: HTMLElement) => container.querySelector('input[name="website"]') as HTMLInputElement;
+    const phraseSent = (fetchMock: ReturnType<typeof vi.fn>) => JSON.parse(fetchMock.mock.calls[0][1].body);
+
+    function startWriting() {
+      const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+      const { container } = renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "writing" });
+      fireEvent.change(screen.getByPlaceholderText(T.placeholder), { target: { value: "Una frase." } });
+      return { fetchMock, container };
+    }
+
+    it.each([
+      ["“Así está bien”", T.choice.no],
+      ["“Sí, quiero un sello”", T.choice.yes],
+    ])("a field filled while writing still counts when the person answers %s", async (_label, answer) => {
+      const { fetchMock, container } = startWriting();
+
+      fireEvent.change(hiddenField(container), { target: { value: "http://spam.example" } });
+      fireEvent.click(screen.getByRole("button", { name: T.submit }));
+      await screen.findByText(T.choice.headline);
+      fireEvent.click(screen.getByRole("button", { name: answer }));
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+      expect(phraseSent(fetchMock).honeypot).toBe("http://spam.example");
+    });
+
+    it("a field filled only in the choice counts too", async () => {
+      const { fetchMock, container } = startWriting();
+
+      fireEvent.click(screen.getByRole("button", { name: T.submit }));
+      await screen.findByText(T.choice.headline);
+      fireEvent.change(hiddenField(container), { target: { value: "http://spam.example" } });
+      fireEvent.click(screen.getByRole("button", { name: T.choice.no }));
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+      expect(phraseSent(fetchMock).honeypot).toBe("http://spam.example");
+    });
+
+    it("a person who never touches the hidden field sends it empty", async () => {
+      const { fetchMock } = startWriting();
+
+      fireEvent.click(screen.getByRole("button", { name: T.submit }));
+      await screen.findByText(T.choice.headline);
+      fireEvent.click(screen.getByRole("button", { name: T.choice.no }));
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+      expect(phraseSent(fetchMock).honeypot).toBe("");
+    });
+  });
+
   it("with letters open, goes from writing to the choice, to the card, to the closing", async () => {
     const fetchMock = vi
       .fn()
