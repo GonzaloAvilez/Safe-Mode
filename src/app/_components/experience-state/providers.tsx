@@ -5,6 +5,7 @@ import { ContributionStateProvider } from "./contribution";
 import { ExperiencePreferencesProvider } from "./preferences";
 import { FormTimingProvider, useFormTiming } from "./form-timing";
 import { LocaleTransitionProvider, useLocaleTransition } from "./locale-transition";
+import { MailboxStateProvider } from "./mailbox";
 import { RitualStateProvider, useRitualState } from "./ritual";
 
 // Root composition is intentionally the only place that knows every session-state
@@ -15,7 +16,9 @@ export function ExperienceProviders({ children }: { children: ReactNode }) {
       <LocaleTransitionProvider>
         <FormTimingProvider>
           <RitualStateProvider>
-            <ContributionStateProvider>{children}</ContributionStateProvider>
+            <MailboxStateProvider>
+              <ContributionStateProvider>{children}</ContributionStateProvider>
+            </MailboxStateProvider>
           </RitualStateProvider>
         </FormTimingProvider>
       </LocaleTransitionProvider>

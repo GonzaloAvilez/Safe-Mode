@@ -31,6 +31,18 @@ export function pickAskedGroup(previous: SealGroupIndex | null = null, random: (
   return candidates[Math.min(Math.floor(random() * candidates.length), candidates.length - 1)];
 }
 
+// What can stand between the digit groups when a seal is typed or read: spaces, hyphens, dots,
+// and the middle dot the card shows. The same separators the server accepts (identity-keys.ts).
+const SEAL_SEPARATORS = /[\s.·-]/g;
+
+// The seal in someone's text, the way the mailbox reads it (#213): typed by hand, or read from the
+// QR on the saved picture. Only a whole seal counts: null for anything else, so nothing short of
+// 15 digits is ever sent.
+export function parseSeal(text: string): string | null {
+  const digits = text.replace(SEAL_SEPARATORS, "");
+  return SEAL_PATTERN.test(digits) ? digits : null;
+}
+
 // What the person typed for the asked group, forgiving of spaces and the like: only the
 // digits count, and they must be exactly that group's five.
 export function isAskedGroupCorrect(seal: string, asked: SealGroupIndex, typed: string): boolean {

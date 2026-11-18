@@ -172,6 +172,68 @@
     "footer": "This seal opens your letters.",
     "qrLabel": "QR code of your seal"
   },
+  "mailbox": {
+    "tagline": "Your mailbox.",
+    "insideTagline": "This is only for you.",
+    "show": {
+      "headline": "Show your seal.",
+      "subcopy": "Your stamp opens the mailbox.",
+      "chooseImage": "Choose the picture of my seal",
+      "chooseAnother": "Choose another picture",
+      "imagePrivacy": "The picture is read here, on your phone. It isn't sent anywhere.",
+      "orType": "or type its numbers",
+      "fieldLabel": "Your seal",
+      "submit": "Open",
+      "reading": "Reading your seal…",
+      "opening": "Opening your mailbox…",
+      "incomplete": "Your seal has 15 digits.",
+      "notRecognized": "That seal doesn't open any mailbox.",
+      "notRecognizedHint": "Check the numbers, or choose the picture of your seal.",
+      "noSealInImage": "We couldn't find a seal in that picture.",
+      "noSealInImageHint": "Choose the picture you saved, whole and uncropped.",
+      "tooMany": "Too many tries. Wait a moment and try again.",
+      "failed": "We couldn't open your mailbox. Try again."
+    },
+    "list": {
+      "headline": "Your envelopes",
+      "aboutYourTrace": "About your trace",
+      "toAPhrase": "To whoever left a phrase",
+      "postmark": {
+        "your_turn": "Your turn",
+        "their_turn": "Waiting",
+        "awaiting_review": "On its way",
+        "closed": "Ended"
+      },
+      "onItsWay": "“On its way”: a person is reading your letter before delivering it, up to 48 hours.",
+      "kept": "Letters are kept for 60 days."
+    },
+    "empty": {
+      "headline": "No letters yet.",
+      "subcopy": "Maybe no one writes, and that's okay too. Your trace is still here, lit.",
+      "kept": "If a letter arrives, it waits here for 60 days."
+    },
+    "letter": {
+      "number": "Letter {number}",
+      "yours": "Your letter",
+      "fromVisitor": "— someone who saw themselves in your phrase",
+      "fromAuthor": "— whoever left the phrase",
+      "held": "On its way",
+      "heldNote": "A person reads it before delivering it. It can take up to 48 hours.",
+      "rejected": "Not delivered",
+      "rejectedHeadline": "This letter didn't reach them.",
+      "rejectedBody": "The person who reads letters before delivering them decided not to send it. It doesn't use up your turn: you can write another.",
+      "erasedHeadline": "This letter no longer keeps its text.",
+      "erasedTheirs": "Letters are kept for 60 days. What remains is that someone wrote to you.",
+      "erasedYours": "Letters are kept for 60 days. What remains is that you wrote to them.",
+      "previous": "Previous letter",
+      "next": "Next letter",
+      "goTo": "Go to letter {number}",
+      "turns": "Up to three letters each way, taking turns.",
+      "back": "Back to my envelopes"
+    },
+    "close": "Close my mailbox",
+    "backToStart": "Back to start"
+  },
   "contribute": {
     "tagline": "A quick contribution.",
     "headline": "Leave a phrase for Refugio's wall.",
