@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { isRateLimitedMock, submitEntryMock, logRequestOutcomeMock, getOrCreateSessionIdMock } = vi.hoisted(
-  () => ({
+const { isRateLimitedMock, submitEntryMock, logRequestOutcomeMock, getOrCreateSessionIdMock, isPhraseConnectableNowMock } =
+  vi.hoisted(() => ({
     isRateLimitedMock: vi.fn(),
     submitEntryMock: vi.fn(),
     logRequestOutcomeMock: vi.fn(),
     getOrCreateSessionIdMock: vi.fn().mockResolvedValue("session-1"),
-  })
-);
+    isPhraseConnectableNowMock: vi.fn(),
+  }));
 
 vi.mock("@/lib/rate-limit", () => ({
   isRateLimited: isRateLimitedMock,
@@ -15,6 +15,10 @@ vi.mock("@/lib/rate-limit", () => ({
 
 vi.mock("@/lib/entries", () => ({
   submitEntry: submitEntryMock,
+}));
+
+vi.mock("@/lib/correspondences", () => ({
+  isPhraseConnectableNow: isPhraseConnectableNowMock,
 }));
 
 vi.mock("@/lib/logging", () => ({
@@ -122,5 +126,56 @@ describe("POST /api/entries", () => {
     expect(submitEntryMock).toHaveBeenCalledWith("un día normal", "session-1", undefined, "es");
     expect(unsupported.status).toBe(400);
     expect(submitEntryMock).toHaveBeenCalledTimes(1);
+  });
+
+  describe("a matched entry says whether Mirror may offer a letter (ADR-004 #212)", () => {
+    const MATCHED = {
+      type: "matched",
+      entryId: "entry-1",
+      phrase: { id: "phrase-1", text: "Hay días en que sonrío para que nadie pregunte.", similarity: 0.71 },
+    };
+
+    function submitMatched() {
+      isRateLimitedMock.mockResolvedValueOnce(false);
+      submitEntryMock.mockResolvedValueOnce(MATCHED);
+      return POST(postRequest({ text: "sonrío para que no pregunten", formRenderedAt: Date.now() - 5000, locale: "es" }));
+    }
+
+    it.each([true, false])("adds connectable: %s to the matched phrase, keeping the rest as is", async (connectable) => {
+      isPhraseConnectableNowMock.mockResolvedValueOnce(connectable);
+
+      const response = await submitMatched();
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ...MATCHED, phrase: { ...MATCHED.phrase, connectable } });
+      expect(isPhraseConnectableNowMock).toHaveBeenCalledWith("phrase-1");
+    });
+
+    it("still answers the match, with connectable: false, when that lookup fails", async () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      isPhraseConnectableNowMock.mockRejectedValueOnce(new Error("connection failure"));
+
+      const response = await submitMatched();
+
+      expect(response.status).toBe(200);
+      expect((await response.json()).phrase.connectable).toBe(false);
+      expect(consoleError).toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
+
+    it.each([
+      { type: "no_match", entryId: "entry-1" },
+      { type: "crisis", entryId: "entry-1" },
+      { type: "general_flagged", entryId: "entry-1" },
+      { type: "cap_reached", entryId: "entry-1" },
+    ])("doesn't look anything up for $type", async (outcome) => {
+      isRateLimitedMock.mockResolvedValueOnce(false);
+      submitEntryMock.mockResolvedValueOnce(outcome);
+
+      const response = await POST(postRequest({ text: "hola", formRenderedAt: Date.now() - 5000 }));
+
+      expect(await response.json()).toEqual(outcome);
+      expect(isPhraseConnectableNowMock).not.toHaveBeenCalled();
+    });
   });
 });

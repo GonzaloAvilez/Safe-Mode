@@ -12,11 +12,12 @@ const { moderateTextMock } = vi.hoisted(() => ({ moderateTextMock: vi.fn() }));
 
 vi.mock("@/lib/openai", () => ({ moderateText: moderateTextMock }));
 
-import { startCorrespondence } from "@/lib/correspondences";
+import { createVisitorReturnKey, startCorrespondence } from "@/lib/correspondences";
 import { confirmReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
 import { submitUserPhraseAcceptingLetters } from "@/lib/phrases";
 import { createResponse } from "@/lib/responses";
 import { supabaseAdmin } from "@/lib/supabase";
+import { keepVisitorSeal } from "./keep-visitor-seal";
 
 const PHRASE = "Lo que no dije también pesa.";
 
@@ -86,14 +87,20 @@ describe("a Leave a Trace author who accepts letters (integration)", () => {
     const entryId = await createMatchedEntry(session, phrase.id);
     moderateTextMock.mockResolvedValue(benignModerationCheckFixture);
 
-    const beforeConfirming = await startCorrespondence({ entryId, sessionId: session, body: "Gracias por tu frase." });
-    expect(beforeConfirming).toEqual({ type: "phrase_not_connectable" });
+    // Before the author confirms, a visitor can't even ask for a seal to write with.
+    expect(await createVisitorReturnKey({ entryId, sessionId: session })).toEqual({ type: "phrase_not_connectable" });
 
     expect(await confirmReturnKey(returnKey)).toBe(true);
-    const afterConfirming = await startCorrespondence({ entryId, sessionId: session, body: "Gracias por tu frase." });
+    const visitor = await keepVisitorSeal(entryId, session);
+    identityIds.push(visitor.identityId);
+    const afterConfirming = await startCorrespondence({
+      entryId,
+      sessionId: session,
+      returnKey: visitor.returnKey,
+      body: "Gracias por tu frase.",
+    });
 
     if (afterConfirming.type !== "started") throw new Error(`expected started, got ${afterConfirming.type}`);
-    identityIds.push((await resolveIdentityFromReturnKey(afterConfirming.returnKey))!);
     expect(afterConfirming.letter).toEqual({ type: "held" });
   });
 

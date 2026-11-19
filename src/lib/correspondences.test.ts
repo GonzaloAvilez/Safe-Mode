@@ -5,15 +5,15 @@ const {
   createIdentityWithReturnKeyMock,
   resolveIdentityFromReturnKeyMock,
   hasConfirmedReturnKeyMock,
-  deleteIdentityMock,
   submitLetterMock,
+  isLettersOpenMock,
 } = vi.hoisted(() => ({
   fromMock: vi.fn(),
   createIdentityWithReturnKeyMock: vi.fn(),
   resolveIdentityFromReturnKeyMock: vi.fn(),
   hasConfirmedReturnKeyMock: vi.fn(),
-  deleteIdentityMock: vi.fn(),
   submitLetterMock: vi.fn(),
+  isLettersOpenMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({ supabaseAdmin: { from: fromMock } }));
@@ -21,13 +21,15 @@ vi.mock("@/lib/identity-keys", () => ({
   createIdentityWithReturnKey: createIdentityWithReturnKeyMock,
   resolveIdentityFromReturnKey: resolveIdentityFromReturnKeyMock,
   hasConfirmedReturnKey: hasConfirmedReturnKeyMock,
-  deleteIdentity: deleteIdentityMock,
 }));
 vi.mock("@/lib/letters", () => ({ submitLetter: submitLetterMock }));
+vi.mock("@/lib/settings", () => ({ isLettersOpen: isLettersOpenMock }));
 
 const {
+  createVisitorReturnKey,
   isAnsweredByFounder,
   isPhraseConnectable,
+  isPhraseConnectableNow,
   resolveLetterSender,
   startCorrespondence,
   submitLetterWithReturnKey,
@@ -69,7 +71,7 @@ function mockTables(tables: Record<string, ReturnType<typeof query>[]>) {
 
 const SEED_PHRASE = { id: "phrase-1", identity_id: null, source: "seed" };
 const ownedEntry = (phrase: unknown) => query({ data: { entries: { phrases: phrase } }, error: null });
-const INPUT = { entryId: "entry-1", sessionId: "session-1", body: "Gracias por tu frase." };
+const noRow = () => query({ data: null, error: null });
 
 describe("isAnsweredByFounder", () => {
   it.each([
@@ -95,25 +97,156 @@ describe("isPhraseConnectable", () => {
   });
 });
 
-describe("startCorrespondence", () => {
-  it("creates the identity, then the correspondence, then sends the first letter, and returns the key", async () => {
+// Which identities hold a confirmed return key, for hasConfirmedReturnKey.
+function confirmedIdentities(...identityIds: string[]) {
+  hasConfirmedReturnKeyMock.mockImplementation(async (identityId: string) => identityIds.includes(identityId));
+}
+
+describe("isPhraseConnectableNow", () => {
+  const phraseRow = (phrase: unknown) => query({ data: phrase, error: null });
+
+  it("reads the phrase by id and answers true for a seed phrase the founder answers", async () => {
+    isLettersOpenMock.mockResolvedValue(true);
+    const phrases = phraseRow({ identity_id: null, source: "seed" });
+    mockTables({ phrases: [phrases] });
+
+    expect(await isPhraseConnectableNow("phrase-1")).toBe(true);
+    expect(phrases.calls).toEqual([
+      ["select", ["identity_id, source"]],
+      ["eq", ["id", "phrase-1"]],
+    ]);
+  });
+
+  it.each([
+    ["an author who confirmed their key", { identity_id: "author-1", source: "user" }, ["author-1"], true],
+    ["an author who never confirmed their key", { identity_id: "author-1", source: "user" }, [], false],
+    ["a user phrase without an author (OD-5)", { identity_id: null, source: "user" }, [], false],
+  ])("for a phrase with %s answers %s", async (_label, phrase, confirmed, expected) => {
+    isLettersOpenMock.mockResolvedValue(true);
+    mockTables({ phrases: [phraseRow(phrase)] });
+    confirmedIdentities(...confirmed);
+
+    expect(await isPhraseConnectableNow("phrase-1")).toBe(expected);
+  });
+
+  it("answers false while letters are closed, without reading the phrase", async () => {
+    isLettersOpenMock.mockResolvedValue(false);
+
+    expect(await isPhraseConnectableNow("phrase-1")).toBe(false);
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("answers false for a phrase that no longer exists", async () => {
+    isLettersOpenMock.mockResolvedValue(true);
+    mockTables({ phrases: [noRow()] });
+
+    expect(await isPhraseConnectableNow("missing")).toBe(false);
+    expect(hasConfirmedReturnKeyMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when the lookup fails", async () => {
+    isLettersOpenMock.mockResolvedValue(true);
+    const error = { message: "connection failure" };
+    mockTables({ phrases: [query({ data: null, error })] });
+
+    await expect(isPhraseConnectableNow("phrase-1")).rejects.toEqual(error);
+  });
+});
+
+describe("createVisitorReturnKey", () => {
+  const INPUT = { entryId: "entry-1", sessionId: "session-1" };
+
+  it("creates a seal for this session's entry when letters can reach its phrase", async () => {
     const responses = ownedEntry(SEED_PHRASE);
-    const correspondences = query({ data: { id: "correspondence-1" }, error: null });
-    mockTables({ responses: [responses], correspondences: [correspondences] });
-    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
+    mockTables({ responses: [responses] });
+    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "visitor-1", returnKey: "the-key" });
+
+    expect(await createVisitorReturnKey(INPUT)).toEqual({ type: "created", returnKey: "the-key" });
+    expect(responses.calls).toContainEqual(["eq", ["entry_id", "entry-1"]]);
+    expect(responses.calls).toContainEqual(["eq", ["session_id", "session-1"]]); // ownership
+  });
+
+  it("ties the seal to nothing: no entry, phrase or correspondence is written with it", async () => {
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)] });
+    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "visitor-1", returnKey: "the-key" });
+
+    await createVisitorReturnKey(INPUT);
+
+    expect(createIdentityWithReturnKeyMock).toHaveBeenCalledWith();
+    expect(fromMock).toHaveBeenCalledTimes(1); // only the entry lookup, a read
+  });
+
+  it("creates a seal for a user phrase whose author confirmed their key", async () => {
+    mockTables({ responses: [ownedEntry({ id: "phrase-3", identity_id: "author-1", source: "user" })] });
+    confirmedIdentities("author-1");
+    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "visitor-1", returnKey: "the-key" });
+
+    expect(await createVisitorReturnKey(INPUT)).toEqual({ type: "created", returnKey: "the-key" });
+  });
+
+  it.each([
+    ["not this session's entry, or an unknown id", noRow()],
+    ["an entry that matched no phrase", ownedEntry(null)],
+  ])("answers entry_not_found for %s, creating no seal", async (_label, responses) => {
+    mockTables({ responses: [responses] });
+
+    expect(await createVisitorReturnKey(INPUT)).toEqual({ type: "entry_not_found" });
+    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a user phrase without an author", { id: "phrase-2", identity_id: null, source: "user" }],
+    ["a phrase whose author never confirmed their key", { id: "phrase-3", identity_id: "author-1", source: "user" }],
+  ])("answers phrase_not_connectable for %s, creating no seal", async (_label, phrase) => {
+    mockTables({ responses: [ownedEntry(phrase)] });
+    confirmedIdentities();
+
+    expect(await createVisitorReturnKey(INPUT)).toEqual({ type: "phrase_not_connectable" });
+    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when the seal can't be created", async () => {
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)] });
+    createIdentityWithReturnKeyMock.mockRejectedValue(new Error("insert failed"));
+
+    await expect(createVisitorReturnKey(INPUT)).rejects.toThrow("insert failed");
+  });
+});
+
+describe("startCorrespondence", () => {
+  const INPUT = { entryId: "entry-1", sessionId: "session-1", returnKey: "the-key", body: "Gracias por tu frase." };
+  const created = (id: string) => query({ data: { id }, error: null });
+  const existing = (id: string) => query({ data: { id }, error: null });
+  const uniqueViolation = (constraint: string) =>
+    query({
+      data: null,
+      error: { code: "23505", message: `duplicate key value violates unique constraint "${constraint}"` },
+    });
+  const ONE_PER_VISITOR_AND_PHRASE = "correspondences_phrase_id_visitor_identity_id_key";
+
+  // A visitor whose seal is real and confirmed, unless a test says otherwise.
+  function visitorWithConfirmedSeal(...alsoConfirmed: string[]) {
+    resolveIdentityFromReturnKeyMock.mockResolvedValue("visitor-1");
+    confirmedIdentities("visitor-1", ...alsoConfirmed);
+  }
+
+  it("creates the correspondence with the visitor's seal and sends the first letter into it", async () => {
+    visitorWithConfirmedSeal();
+    const lookup = noRow();
+    const insert = created("correspondence-1");
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [lookup, insert] });
     submitLetterMock.mockResolvedValue({ type: "held" });
 
     const result = await startCorrespondence(INPUT);
 
-    expect(result).toEqual({
-      type: "started",
-      correspondenceId: "correspondence-1",
-      returnKey: "the-key",
-      letter: { type: "held" },
-    });
-    expect(responses.calls).toContainEqual(["eq", ["entry_id", "entry-1"]]);
-    expect(responses.calls).toContainEqual(["eq", ["session_id", "session-1"]]); // ownership
-    expect(correspondences.calls).toContainEqual(["insert", [{ phrase_id: "phrase-1", visitor_identity_id: "identity-1" }]]);
+    expect(result).toEqual({ type: "started", correspondenceId: "correspondence-1", letter: { type: "held" } });
+    expect(resolveIdentityFromReturnKeyMock).toHaveBeenCalledWith("the-key");
+    expect(lookup.calls).toEqual([
+      ["select", ["id"]],
+      ["eq", ["phrase_id", "phrase-1"]],
+      ["eq", ["visitor_identity_id", "visitor-1"]],
+    ]);
+    expect(insert.calls).toContainEqual(["insert", [{ phrase_id: "phrase-1", visitor_identity_id: "visitor-1" }]]);
     expect(submitLetterMock).toHaveBeenCalledWith({
       correspondenceId: "correspondence-1",
       sender: "visitor",
@@ -121,99 +254,222 @@ describe("startCorrespondence", () => {
     });
   });
 
+  it("never hands the seal back: the visitor already holds it", async () => {
+    visitorWithConfirmedSeal();
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), created("c1")] });
+    submitLetterMock.mockResolvedValue({ type: "held" });
+
+    expect(JSON.stringify(await startCorrespondence(INPUT))).not.toContain("the-key");
+    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+  });
+
   it("never stores the entry with the correspondence (ADR-004 hard rule)", async () => {
-    const correspondences = query({ data: { id: "correspondence-1" }, error: null });
-    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [correspondences] });
-    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
+    visitorWithConfirmedSeal();
+    const insert = created("c1");
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), insert] });
     submitLetterMock.mockResolvedValue({ type: "held" });
 
     await startCorrespondence(INPUT);
 
-    const inserted = correspondences.calls.find(([method]) => method === "insert")![1][0];
+    const inserted = insert.calls.find(([method]) => method === "insert")![1][0];
     expect(JSON.stringify(inserted)).not.toContain("entry");
   });
 
-  it("still starts, and hands over the key, when the first letter is rejected (so the visitor can retry)", async () => {
-    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [query({ data: { id: "c1" }, error: null })] });
-    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
+  it("writes into the visitor's existing correspondence with that phrase instead of creating another", async () => {
+    visitorWithConfirmedSeal();
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [existing("correspondence-1")] });
+    submitLetterMock.mockResolvedValue({ type: "held" }); // e.g. after a rejected first letter
+
+    expect(await startCorrespondence(INPUT)).toEqual({
+      type: "started",
+      correspondenceId: "correspondence-1",
+      letter: { type: "held" },
+    });
+    expect(submitLetterMock).toHaveBeenCalledWith(expect.objectContaining({ correspondenceId: "correspondence-1" }));
+  });
+
+  it("passes the letter's own answer through, e.g. a second try while the first waits for review", async () => {
+    visitorWithConfirmedSeal();
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [existing("c1")] });
+    submitLetterMock.mockResolvedValue({ type: "not_allowed", reason: "awaiting_review" });
+
+    expect(await startCorrespondence(INPUT)).toEqual({
+      type: "started",
+      correspondenceId: "c1",
+      letter: { type: "not_allowed", reason: "awaiting_review" },
+    });
+  });
+
+  it("still starts when the first letter is rejected, so the visitor can retry into the same correspondence", async () => {
+    visitorWithConfirmedSeal();
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), created("c1")] });
     submitLetterMock.mockResolvedValue({ type: "rejected", reason: "contact_info", contactKinds: ["phone"] });
 
-    const result = await startCorrespondence(INPUT);
-
-    expect(result).toMatchObject({ type: "started", returnKey: "the-key", letter: { type: "rejected" } });
+    expect(await startCorrespondence(INPUT)).toMatchObject({ type: "started", correspondenceId: "c1", letter: { type: "rejected" } });
   });
 
-  it.each([
-    ["not this session's entry, or an unknown id", query({ data: null, error: null })],
-    ["an entry that matched no phrase", ownedEntry(null)],
-  ])("answers entry_not_found for %s, creating nothing", async (_label, responses) => {
-    mockTables({ responses: [responses] });
-
-    expect(await startCorrespondence(INPUT)).toEqual({ type: "entry_not_found" });
-    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
-  });
-
-  it("answers phrase_not_connectable for a user phrase without an author, creating nothing", async () => {
-    mockTables({ responses: [ownedEntry({ id: "phrase-2", identity_id: null, source: "user" })] });
-
-    expect(await startCorrespondence(INPUT)).toEqual({ type: "phrase_not_connectable" });
-    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
-    expect(hasConfirmedReturnKeyMock).not.toHaveBeenCalled();
-  });
-
-  it("answers phrase_not_connectable while the author hasn't confirmed their key, creating nothing", async () => {
-    mockTables({ responses: [ownedEntry({ id: "phrase-3", identity_id: "author-1", source: "user" })] });
-    hasConfirmedReturnKeyMock.mockResolvedValue(false);
-
-    expect(await startCorrespondence(INPUT)).toEqual({ type: "phrase_not_connectable" });
-    expect(hasConfirmedReturnKeyMock).toHaveBeenCalledWith("author-1");
-    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
-  });
-
-  it("starts with a phrase whose author confirmed their key", async () => {
-    mockTables({
-      responses: [ownedEntry({ id: "phrase-3", identity_id: "author-1", source: "user" })],
-      correspondences: [query({ data: { id: "c1" }, error: null })],
-    });
-    hasConfirmedReturnKeyMock.mockResolvedValue(true);
-    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
-    submitLetterMock.mockResolvedValue({ type: "held" });
-
-    expect(await startCorrespondence(INPUT)).toMatchObject({ type: "started", correspondenceId: "c1" });
-    expect(hasConfirmedReturnKeyMock).toHaveBeenCalledWith("author-1");
-  });
-
-  it("deletes the identity and hands over no key when the correspondence can't be created", async () => {
-    const insertError = { message: "connection failure" };
+  it("writes into the correspondence a racing try created first (double click)", async () => {
+    visitorWithConfirmedSeal();
     mockTables({
       responses: [ownedEntry(SEED_PHRASE)],
-      correspondences: [query({ data: null, error: insertError })],
+      correspondences: [noRow(), uniqueViolation(ONE_PER_VISITOR_AND_PHRASE), existing("winner-1")],
     });
-    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
+    submitLetterMock.mockResolvedValue({ type: "not_allowed", reason: "awaiting_review" });
 
-    await expect(startCorrespondence(INPUT)).rejects.toEqual(insertError);
-    expect(deleteIdentityMock).toHaveBeenCalledWith("identity-1");
-    expect(submitLetterMock).not.toHaveBeenCalled();
+    expect(await startCorrespondence(INPUT)).toMatchObject({ type: "started", correspondenceId: "winner-1" });
   });
 
-  it("undoes the whole start when the first letter couldn't be stored (moderation unavailable)", async () => {
+  it("never deletes the correspondence a racing try created when this try's letter fails", async () => {
+    visitorWithConfirmedSeal();
     mockTables({
       responses: [ownedEntry(SEED_PHRASE)],
-      correspondences: [query({ data: { id: "c1" }, error: null })],
+      correspondences: [noRow(), uniqueViolation(ONE_PER_VISITOR_AND_PHRASE), existing("winner-1")],
     });
-    createIdentityWithReturnKeyMock.mockResolvedValue({ identityId: "identity-1", returnKey: "the-key" });
     submitLetterMock.mockRejectedValue(new Error("OpenAI unavailable"));
 
     await expect(startCorrespondence(INPUT)).rejects.toThrow("OpenAI unavailable");
-    expect(deleteIdentityMock).toHaveBeenCalledWith("identity-1"); // cascades to the correspondence
+    expect(fromMock).toHaveBeenCalledTimes(4); // entry, lookup, insert, winner lookup: no delete
+  });
+
+  it("throws on a unique violation of any other constraint", async () => {
+    visitorWithConfirmedSeal();
+    const conflict = uniqueViolation("some_other_key");
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), conflict] });
+
+    await expect(startCorrespondence(INPUT)).rejects.toMatchObject({ code: "23505" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("throws on any other error, even one that names the same constraint", async () => {
+    visitorWithConfirmedSeal();
+    const notAUniqueViolation = query({
+      data: null,
+      error: { code: "23514", message: `check failed near "${ONE_PER_VISITOR_AND_PHRASE}"` },
+    });
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), notAUniqueViolation] });
+
+    await expect(startCorrespondence(INPUT)).rejects.toMatchObject({ code: "23514" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when the racing winner can't be found after the conflict", async () => {
+    visitorWithConfirmedSeal();
+    mockTables({
+      responses: [ownedEntry(SEED_PHRASE)],
+      correspondences: [noRow(), uniqueViolation(ONE_PER_VISITOR_AND_PHRASE), noRow()],
+    });
+
+    await expect(startCorrespondence(INPUT)).rejects.toMatchObject({ code: "23505" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("answers return_key_not_recognized for a seal that matches no identity, reading nothing else", async () => {
+    resolveIdentityFromReturnKeyMock.mockResolvedValue(null);
+
+    expect(await startCorrespondence(INPUT)).toEqual({ type: "return_key_not_recognized" });
+    expect(hasConfirmedReturnKeyMock).not.toHaveBeenCalled();
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("answers return_key_not_confirmed for a seal its holder never confirmed, reading no entry", async () => {
+    resolveIdentityFromReturnKeyMock.mockResolvedValue("visitor-1");
+    confirmedIdentities();
+
+    expect(await startCorrespondence(INPUT)).toEqual({ type: "return_key_not_confirmed" });
+    expect(hasConfirmedReturnKeyMock).toHaveBeenCalledWith("visitor-1");
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["not this session's entry, or an unknown id", noRow()],
+    ["an entry that matched no phrase", ownedEntry(null)],
+  ])("answers entry_not_found for %s, creating nothing", async (_label, responses) => {
+    visitorWithConfirmedSeal();
+    mockTables({ responses: [responses] });
+
+    expect(await startCorrespondence(INPUT)).toEqual({ type: "entry_not_found" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("answers phrase_not_connectable for a user phrase without an author, creating nothing", async () => {
+    visitorWithConfirmedSeal();
+    mockTables({ responses: [ownedEntry({ id: "phrase-2", identity_id: null, source: "user" })] });
+
+    expect(await startCorrespondence(INPUT)).toEqual({ type: "phrase_not_connectable" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("answers phrase_not_connectable while the author hasn't confirmed their key, creating nothing", async () => {
+    visitorWithConfirmedSeal();
+    mockTables({ responses: [ownedEntry({ id: "phrase-3", identity_id: "author-1", source: "user" })] });
+
+    expect(await startCorrespondence(INPUT)).toEqual({ type: "phrase_not_connectable" });
+    expect(hasConfirmedReturnKeyMock).toHaveBeenCalledWith("author-1");
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("starts with a phrase whose author confirmed their key", async () => {
+    visitorWithConfirmedSeal("author-1");
+    mockTables({
+      responses: [ownedEntry({ id: "phrase-3", identity_id: "author-1", source: "user" })],
+      correspondences: [noRow(), created("c1")],
+    });
+    submitLetterMock.mockResolvedValue({ type: "held" });
+
+    expect(await startCorrespondence(INPUT)).toMatchObject({ type: "started", correspondenceId: "c1" });
+  });
+
+  it("answers own_phrase when the seal belongs to the phrase's own author, creating nothing", async () => {
+    visitorWithConfirmedSeal(); // visitor-1 is also the author here, and confirmed
+    mockTables({ responses: [ownedEntry({ id: "phrase-3", identity_id: "visitor-1", source: "user" })] });
+
+    expect(await startCorrespondence(INPUT)).toEqual({ type: "own_phrase" });
+    expect(submitLetterMock).not.toHaveBeenCalled();
+    expect(fromMock).toHaveBeenCalledTimes(1); // the entry lookup only
+  });
+
+  it.each([
+    ["it just created", [noRow(), created("c1")], 3],
+    ["already there from an earlier try", [existing("c1")], 2],
+  ])(
+    "keeps the correspondence %s, deleting nothing, when the letter couldn't be stored",
+    async (_label, correspondences, queries) => {
+      visitorWithConfirmedSeal();
+      mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences });
+      submitLetterMock.mockRejectedValue(new Error("OpenAI unavailable"));
+
+      await expect(startCorrespondence(INPUT)).rejects.toThrow("OpenAI unavailable");
+      // A try running at the same time may have stored its letter in it (review of #255).
+      expect(fromMock).toHaveBeenCalledTimes(queries); // entry, lookup (and insert): never a delete
+    }
+  );
+
+  it("throws, sending no letter, when the correspondence can't be created", async () => {
+    visitorWithConfirmedSeal();
+    const insertError = { code: "08006", message: "connection failure" };
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), query({ data: null, error: insertError })] });
+
+    await expect(startCorrespondence(INPUT)).rejects.toEqual(insertError);
+    expect(submitLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when the correspondence lookup fails", async () => {
+    visitorWithConfirmedSeal();
+    const error = { message: "connection failure" };
+    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [query({ data: null, error })] });
+
+    await expect(startCorrespondence(INPUT)).rejects.toEqual(error);
+    expect(submitLetterMock).not.toHaveBeenCalled();
   });
 
   it("throws when the entry lookup fails", async () => {
+    visitorWithConfirmedSeal();
     const error = { message: "connection failure" };
     mockTables({ responses: [query({ data: null, error })] });
 
     await expect(startCorrespondence(INPUT)).rejects.toEqual(error);
-    expect(createIdentityWithReturnKeyMock).not.toHaveBeenCalled();
+    expect(submitLetterMock).not.toHaveBeenCalled();
   });
 });
 

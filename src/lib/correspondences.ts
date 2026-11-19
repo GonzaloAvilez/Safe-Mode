@@ -1,18 +1,14 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
-import {
-  createIdentityWithReturnKey,
-  deleteIdentity,
-  hasConfirmedReturnKey,
-  resolveIdentityFromReturnKey,
-} from "@/lib/identity-keys";
+import { createIdentityWithReturnKey, hasConfirmedReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
 import type { LetterSender } from "@/lib/letter-lifecycle";
 import { submitLetter, type SubmitLetterResult } from "@/lib/letters";
+import { isLettersOpen } from "@/lib/settings";
 
 // ADR-004 #211: starting a correspondence and writing in it. A visitor whose entry matched
-// a phrase writes the first letter to that phrase's author; the correspondence is created
-// together with that letter, never empty (founder decision 2026-11-11). After that, each
-// side writes its next letter with its return key.
+// a phrase keeps a seal first (#212, design B), then writes the first letter to that phrase's
+// author; the correspondence is created together with that letter (founder decision
+// 2026-11-11). After that, each side writes its next letter with its return key.
 //
 // Entries are never stored with a correspondence (ADR-004 hard rule): the entry is only
 // read here to prove the visitor owns it and to find the phrase it matched.
@@ -36,30 +32,16 @@ export function isPhraseConnectable(phrase: PhraseOwnership, authorKeyConfirmed:
   return (phrase.identity_id !== null && authorKeyConfirmed) || isAnsweredByFounder(phrase);
 }
 
-export type StartCorrespondenceResult =
-  // returnKey is the visitor's only way back to read the reply: shown once, stored hashed.
-  // The correspondence exists even if the first letter was rejected, so the visitor can
-  // retry with the same key (founder decision 2026-11-11).
-  | { type: "started"; correspondenceId: string; returnKey: string; letter: SubmitLetterResult }
-  // Not this session's entry, an unknown id, or an entry that didn't match any phrase.
-  // One answer for all three, so the route can't be used to probe which entries exist.
-  | { type: "entry_not_found" }
-  | { type: "phrase_not_connectable" };
-
-type StartCorrespondenceInput = {
-  entryId: string;
-  sessionId: string;
-  body: string;
-};
+type MatchedPhrase = { id: string } & PhraseOwnership;
 
 type OwnedEntryRow = {
-  entries: { phrases: ({ id: string } & PhraseOwnership) | null } | null;
+  entries: { phrases: MatchedPhrase | null } | null;
 };
 
 // The phrase this session's entry matched, or null if the entry isn't this session's or
 // didn't match. Ownership comes from responses.session_id, written when the entry was
 // submitted (same check as the wants_reply toggle, #236).
-async function findMatchedPhrase(entryId: string, sessionId: string) {
+async function findMatchedPhrase(entryId: string, sessionId: string): Promise<MatchedPhrase | null> {
   const { data, error } = await supabaseAdmin
     .from("responses")
     .select("entries(phrases(id, identity_id, source))")
@@ -70,42 +52,146 @@ async function findMatchedPhrase(entryId: string, sessionId: string) {
   return (data as OwnedEntryRow | null)?.entries?.phrases ?? null;
 }
 
-export async function startCorrespondence(input: StartCorrespondenceInput): Promise<StartCorrespondenceResult> {
-  const phrase = await findMatchedPhrase(input.entryId, input.sessionId);
-  if (!phrase) return { type: "entry_not_found" };
+async function canPhraseReceiveLetters(phrase: PhraseOwnership): Promise<boolean> {
   const authorKeyConfirmed = phrase.identity_id !== null && (await hasConfirmedReturnKey(phrase.identity_id));
-  if (!isPhraseConnectable(phrase, authorKeyConfirmed)) return { type: "phrase_not_connectable" };
+  return isPhraseConnectable(phrase, authorKeyConfirmed);
+}
 
-  // Key handoff order (#211): every write the key depends on happens before the key is
-  // returned. If any of them fails, the identity is deleted and no key leaves the server,
-  // so nobody ever holds a key that points to nothing.
-  const { identityId, returnKey } = await createIdentityWithReturnKey();
+type PhraseToWriteTo =
+  | { type: "found"; phrase: MatchedPhrase }
+  // Not this session's entry, an unknown id, or an entry that didn't match any phrase.
+  // One answer for all three, so the routes can't be used to probe which entries exist.
+  | { type: "entry_not_found" }
+  | { type: "phrase_not_connectable" };
 
-  let correspondenceId: string;
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("correspondences")
-      .insert({ phrase_id: phrase.id, visitor_identity_id: identityId })
-      .select("id")
-      .single();
-    if (error) throw error;
-    correspondenceId = data.id;
-  } catch (error) {
-    await deleteIdentity(identityId);
-    throw error;
+// The one gate for a visitor writing from Mirror: they wrote an entry in this session, it
+// matched a phrase, and letters can reach that phrase's author. Asking for a seal and sending
+// the first letter both pass through it, so neither can be reached without the other's proof.
+async function findPhraseToWriteTo(entryId: string, sessionId: string): Promise<PhraseToWriteTo> {
+  const phrase = await findMatchedPhrase(entryId, sessionId);
+  if (!phrase) return { type: "entry_not_found" };
+  if (!(await canPhraseReceiveLetters(phrase))) return { type: "phrase_not_connectable" };
+  return { type: "found", phrase };
+}
+
+// Whether Mirror can offer to write to this phrase right now: letters are open and the
+// phrase is connectable. Read when an entry matches, so the visitor is only offered a letter
+// that could really be sent. A phrase that no longer exists can't be written to.
+export async function isPhraseConnectableNow(phraseId: string): Promise<boolean> {
+  if (!(await isLettersOpen())) return false;
+
+  const { data, error } = await supabaseAdmin
+    .from("phrases")
+    .select("identity_id, source")
+    .eq("id", phraseId)
+    .maybeSingle();
+  if (error) throw error;
+
+  return data ? canPhraseReceiveLetters(data as PhraseOwnership) : false;
+}
+
+export type CreateVisitorReturnKeyResult =
+  // returnKey is shown once and stored hashed. It isn't confirmed yet: nothing can be
+  // written with it until its holder shows they kept it (POST /api/return-key/confirm).
+  | { type: "created"; returnKey: string }
+  | Exclude<PhraseToWriteTo, { type: "found" }>;
+
+type CreateVisitorReturnKeyInput = {
+  entryId: string;
+  sessionId: string;
+};
+
+// ADR-004 #212, seal first (design B, 2026-11-19): a visitor keeps their seal before writing,
+// so their first letter only leaves once a reply could really be read. The entry is only the
+// proof they may ask for one: nothing ties the seal to the entry or to the phrase, and the
+// seal is never stored with either (ADR-004 hard rule).
+export async function createVisitorReturnKey(input: CreateVisitorReturnKeyInput): Promise<CreateVisitorReturnKeyResult> {
+  const found = await findPhraseToWriteTo(input.entryId, input.sessionId);
+  if (found.type !== "found") return found;
+
+  const { returnKey } = await createIdentityWithReturnKey();
+  return { type: "created", returnKey };
+}
+
+export type StartCorrespondenceResult =
+  // The visitor's letter went into their correspondence with this phrase: created now, or
+  // already there from an earlier try with the same seal (a rejected first letter, a double
+  // click). One visitor and one phrase always share one correspondence. `letter` says what
+  // happened to the letter itself.
+  | { type: "started"; correspondenceId: string; letter: SubmitLetterResult }
+  | Exclude<PhraseToWriteTo, { type: "found" }>
+  | { type: "return_key_not_recognized" }
+  // The seal exists but was never confirmed: its holder hasn't shown they kept it, so a reply
+  // might never be read. Confirm it first.
+  | { type: "return_key_not_confirmed" }
+  // The seal belongs to the phrase's own author: nobody writes a letter to themselves.
+  | { type: "own_phrase" };
+
+type StartCorrespondenceInput = {
+  entryId: string;
+  sessionId: string;
+  returnKey: string;
+  body: string;
+};
+
+// Unique constraint on correspondences (phrase_id, visitor_identity_id), from the migration
+// that created the table.
+const ONE_CORRESPONDENCE_PER_VISITOR_AND_PHRASE = "correspondences_phrase_id_visitor_identity_id_key";
+const UNIQUE_VIOLATION = "23505";
+
+async function findCorrespondenceId(phraseId: string, visitorIdentityId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from("correspondences")
+    .select("id")
+    .eq("phrase_id", phraseId)
+    .eq("visitor_identity_id", visitorIdentityId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+async function findOrCreateCorrespondence(phraseId: string, visitorIdentityId: string): Promise<string> {
+  const existingId = await findCorrespondenceId(phraseId, visitorIdentityId);
+  if (existingId) return existingId;
+
+  const { data, error } = await supabaseAdmin
+    .from("correspondences")
+    .insert({ phrase_id: phraseId, visitor_identity_id: visitorIdentityId })
+    .select("id")
+    .single();
+  if (!error) return (data as { id: string }).id;
+
+  // Expected, not a bug: two tries raced past the lookup above (double click, two tabs) and
+  // the unique constraint let only the first one in. This one writes into that one.
+  if (error.code === UNIQUE_VIOLATION && error.message.includes(ONE_CORRESPONDENCE_PER_VISITOR_AND_PHRASE)) {
+    const winnerId = await findCorrespondenceId(phraseId, visitorIdentityId);
+    if (winnerId) return winnerId;
   }
+  throw error;
+}
 
-  let letter: SubmitLetterResult;
-  try {
-    letter = await submitLetter({ correspondenceId, sender: "visitor", body: input.body });
-  } catch (error) {
-    // Nothing was stored for the letter (e.g. the moderation call failed, fail-closed).
-    // Undo the whole start so no empty correspondence is left behind; the visitor retries.
-    await deleteIdentity(identityId);
-    throw error;
-  }
+// ADR-004 #211 and #212: a visitor writes the first letter to the author of the phrase their
+// entry matched, with a seal they already kept and confirmed (createVisitorReturnKey). The
+// correspondence is created together with that letter (founder decision 2026-11-11).
+//
+// If the letter can't be stored (the moderation call failed, fail-closed), the error goes up
+// and the correspondence stays, without letters, for the visitor's next try with the same
+// seal. It's never deleted here: a try running at the same time may already have stored its
+// letter in it, and deleting would take that letter with it (review of #255). Only its visitor
+// sees it, as their turn, the same as after a rejected first letter; its author only sees a
+// correspondence once a letter reaches them (isCorrespondenceVisibleTo).
+export async function startCorrespondence(input: StartCorrespondenceInput): Promise<StartCorrespondenceResult> {
+  const visitorIdentityId = await resolveIdentityFromReturnKey(input.returnKey);
+  if (!visitorIdentityId) return { type: "return_key_not_recognized" };
+  if (!(await hasConfirmedReturnKey(visitorIdentityId))) return { type: "return_key_not_confirmed" };
 
-  return { type: "started", correspondenceId, returnKey, letter };
+  const found = await findPhraseToWriteTo(input.entryId, input.sessionId);
+  if (found.type !== "found") return found;
+  if (found.phrase.identity_id === visitorIdentityId) return { type: "own_phrase" };
+
+  const correspondenceId = await findOrCreateCorrespondence(found.phrase.id, visitorIdentityId);
+  const letter = await submitLetter({ correspondenceId, sender: "visitor", body: input.body });
+  return { type: "started", correspondenceId, letter };
 }
 
 type CorrespondenceIdentitiesRow = {

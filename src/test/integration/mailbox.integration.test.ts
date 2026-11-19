@@ -19,6 +19,7 @@ import { approveLetter, rejectLetter } from "@/lib/letter-review";
 import { getMailboxWithReturnKey, type Mailbox } from "@/lib/mailbox";
 import { createResponse } from "@/lib/responses";
 import { supabaseAdmin } from "@/lib/supabase";
+import { keepVisitorSeal } from "./keep-visitor-seal";
 
 let phraseIds: string[] = [];
 let entryIds: string[] = [];
@@ -78,7 +79,14 @@ async function startWith(phraseId: string, firstLetter: string) {
   entryIds.push(entry.id);
   await createResponse(entry.id, session);
 
-  const result = await startCorrespondence({ entryId: entry.id, sessionId: session, body: firstLetter });
+  const visitor = await keepVisitorSeal(entry.id, session);
+  identityIds.push(visitor.identityId);
+  const result = await startCorrespondence({
+    entryId: entry.id,
+    sessionId: session,
+    returnKey: visitor.returnKey,
+    body: firstLetter,
+  });
   if (result.type !== "started") throw new Error(`expected started, got ${result.type}`);
   const { data: correspondence } = await supabaseAdmin
     .from("correspondences")
@@ -86,7 +94,7 @@ async function startWith(phraseId: string, firstLetter: string) {
     .eq("id", result.correspondenceId)
     .single();
   identityIds.push(correspondence!.visitor_identity_id);
-  return { correspondenceId: result.correspondenceId, visitorKey: result.returnKey };
+  return { correspondenceId: result.correspondenceId, visitorKey: visitor.returnKey };
 }
 
 async function heldLetterOf(correspondenceId: string): Promise<string> {

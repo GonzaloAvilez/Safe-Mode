@@ -79,6 +79,19 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
   alone can't be used to guess keys. Guessing through the API is rate-limited. The secret can
   never change, because changing or losing it locks every key holder out. Keys in the earlier
   43-character format (#209) are still accepted, hashed as before.
+- **The visitor keeps their seal before writing (decided 2026-11-19, #212, design B).** Before,
+  the visitor's key was created together with the first letter and handed over afterwards, so a
+  letter could leave with a key nobody had kept. Now the order is the author's: ask for a seal
+  (`POST /api/return-key`), keep it, confirm it, then write the first letter with it
+  (`POST /api/correspondences`, the seal in `Authorization: Bearer`). The request for a seal
+  needs this session's entry that matched a connectable phrase. That only proves the visitor
+  may ask: the seal is never stored with the entry or the phrase. One visitor and one phrase
+  share one correspondence, so trying again with the same seal (after a rejected letter, or a
+  double click) writes into it. A seal never writes to its own phrase. If a letter can't be
+  stored (moderation unavailable), the correspondence stays without letters for the retry:
+  deleting it could take with it a letter another try stored at the same time. Only its
+  visitor sees it, as their turn; its author only learns of a correspondence once a letter
+  reaches them.
 
 **Alternatives considered:**
 
