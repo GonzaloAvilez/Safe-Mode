@@ -26,8 +26,9 @@ export function KeepTraceSealStep() {
   }, [key, phase, setPhase]);
   if (!key) return null;
 
-  // On to sealing, still holding the seal: sealing checks one of its groups and confirms it.
-  function goSeal() {
+  // Only moves on to the sealing step, still holding the seal: that step checks one of its groups
+  // and confirms it.
+  function goToSealingStep() {
     setPhase("sealing");
   }
 
@@ -46,7 +47,7 @@ export function KeepTraceSealStep() {
       alreadyKept={lastAsked !== null}
       body={t("keep.body")}
       leaveLabel={t("keep.withoutLetters")}
-      onKept={goSeal}
+      onKept={goToSealingStep}
       onLeave={leaveWithoutLetters}
     />
   );

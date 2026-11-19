@@ -28,8 +28,9 @@ export function SealTraceStep() {
   }, [key, phase, setPhase]);
   if (!key) return null;
 
-  // The seal leaves memory as the ritual closes: from here only whoever kept it has it.
-  function closeSealed() {
+  // Once the seal is confirmed: it leaves memory as the ritual moves on to the sealed closing.
+  // From here only whoever kept it has it.
+  function finishSealing() {
     setKey(null);
     setLastAsked(null);
     setPhase("sealed");
@@ -53,7 +54,7 @@ export function SealTraceStep() {
       hint={t("seal.hint")}
       failedMessage={t("seal.failed")}
       leaveLabel={t("keep.withoutLetters")}
-      onConfirmed={closeSealed}
+      onConfirmed={finishSealing}
       onSeeSealAgain={seeSealAgain}
       onLeave={leaveWithoutLetters}
     />
