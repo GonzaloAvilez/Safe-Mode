@@ -280,9 +280,4 @@ describe("MailboxScreen, reading", () => {
     expect(screen.getByText(T.list.headline)).toBeTruthy();
   });
 
-  it("offers no way to reply yet", () => {
-    renderMailbox(<MailboxScreen />, opened([exchange], "reading", "c1"));
-
-    expect(screen.queryByRole("button", { name: /responder/i })).toBeNull();
-  });
 });

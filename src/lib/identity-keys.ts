@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, createHmac, randomInt } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase";
 import { unwrap } from "@/lib/supabase-result";
+import { parseSeal } from "@/lib/return-key-groups";
 
 // ADR-004 layer 3 (#209): anonymous identities and their return keys. Used by both sides
 // of a letter: the phrase author and the visitor who writes to them.
@@ -16,10 +17,6 @@ import { unwrap } from "@/lib/supabase-result";
 // of the key.
 
 const SEAL_DIGITS = 15;
-const SEAL_PATTERN = /^[0-9]{15}$/;
-// What people may type between the digit groups: spaces, hyphens, dots, and the middle dot
-// the card shows.
-const SEAL_SEPARATORS = /[\s.·-]/g;
 
 // The format before the seal (#209): 32 random bytes as base64url, always 43 characters.
 // Still accepted so any key already handed out keeps working; never generated anymore.
@@ -33,12 +30,14 @@ export function generateReturnKey(): string {
 
 // The one form a key is hashed in, however the person typed it: a seal keeps only its
 // digits, a legacy key stays as is (it's case-sensitive). null when it's neither.
+//
+// A seal is read by parseSeal, the same function the mailbox uses in the browser, so what the
+// screen accepts and what the server accepts can't drift apart.
 export function normalizeReturnKey(input: string): string | null {
   const trimmed = input.trim();
   if (LEGACY_KEY_PATTERN.test(trimmed)) return trimmed;
 
-  const digits = trimmed.replace(SEAL_SEPARATORS, "");
-  return SEAL_PATTERN.test(digits) ? digits : null;
+  return parseSeal(trimmed);
 }
 
 export function isWellFormedReturnKey(key: string): boolean {

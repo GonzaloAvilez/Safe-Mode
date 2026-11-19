@@ -229,7 +229,42 @@
       "next": "Carta siguiente",
       "goTo": "Ir a la carta {number}",
       "turns": "Hasta tres cartas de cada lado, por turnos.",
-      "back": "Volver a mis sobres"
+      "back": "Volver a mis sobres",
+      "reply": "Responder",
+      "writeAnother": "Escribir otra carta"
+    },
+    "write": {
+      "headline": "Tu carta",
+      "paperLabel": "Carta {number} · La tuya",
+      "fieldLabel": "Tu carta",
+      "placeholder": "Escribe lo que quieras decirle...",
+      "noContact": "Sin nombres, teléfonos ni redes.",
+      "review": "Una persona lee cada carta antes de entregarla. Puede tardar hasta 48 horas.",
+      "send": "Cerrar el sobre",
+      "notNow": "Ahora no",
+      "moderation": "Esta carta no puede salir así. Puedes reescribirla con calma.",
+      "contactFound": "Tu carta tiene {things}.",
+      "contactRemove": "{count, plural, one {Quítalo} other {Quítalos}} y la carta podrá salir. Aquí nadie comparte cómo contactarse: así las dos personas siguen a salvo.",
+      "contactKind": {
+        "phone": "un número de teléfono",
+        "email": "un correo",
+        "url": "un enlace",
+        "handle": "un usuario de redes"
+      },
+      "lettersClosed": "Las cartas están en pausa por ahora. Tu carta sigue aquí.",
+      "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
+      "failed": "No pudimos enviar tu carta. Vuelve a intentarlo."
+    },
+    "send": {
+      "sealing": "Cerrando el sobre…",
+      "headline": "El sobre salió.",
+      "review": "Una persona lo lee antes de entregarlo. Puede tardar hasta 48 horas.",
+      "comeBack": "Vuelve con tu sello cuando quieras ver si te respondieron."
+    },
+    "crisis": {
+      "headline": "Antes que tu carta,\nimportas tú.",
+      "intro": "No estás solo. Si sientes que necesitas hablar con alguien ahora, aquí hay ayuda:",
+      "notSent": "Esta carta no se enviará. No es un castigo: cuando estés con más calma, puedes volver a escribir."
     },
     "close": "Cerrar mi buzón",
     "backToStart": "Volver al inicio"

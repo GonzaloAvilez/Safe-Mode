@@ -218,3 +218,187 @@
     --text-quote-secondary: clamp(14px, 0.875rem + 0.2vw, 16px);
   }
 }
+
+/* The envelope leaving the mailbox (ADR-004 #213, design B6), choreographed like Observe's
+   transition: the paper slides in, a light runs around the contour from the stamp while the letter
+   is sent, the lit contour breathes twice, the envelope becomes a star that leaves with a trail,
+   and the words appear. Every element's resting style is its END state and each animation runs
+   from its start with `both`, so with reduced motion (animation: none) everything simply shows
+   where it ends. */
+@keyframes letter-send-sheet {
+  from {
+    transform: translateY(-96px);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+
+@keyframes letter-send-trace {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* While the server hasn't answered yet: the lit contour waits, softly. */
+@keyframes letter-send-waiting {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(242, 192, 99, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(242, 192, 99, 0.7));
+  }
+}
+
+@keyframes letter-send-breathe {
+  0%,
+  50%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(242, 192, 99, 0.35));
+  }
+  25%,
+  75% {
+    filter: drop-shadow(0 0 16px rgba(242, 192, 99, 0.8));
+  }
+}
+
+@keyframes letter-send-shrink {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.05);
+    opacity: 0;
+  }
+}
+
+@keyframes letter-send-star {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3) rotate(0deg);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(64px, -232px) scale(0.7) rotate(240deg);
+  }
+}
+
+@keyframes letter-send-trail {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  40% {
+    opacity: 0.5;
+    transform: translate(6px, -20px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(64px, -232px);
+  }
+}
+
+@keyframes letter-send-twinkle {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes letter-send-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes letter-send-fade {
+  from {
+    opacity: 1;
+  }
+}
+
+.letter-send-sheet {
+  opacity: 0;
+  animation: letter-send-sheet 600ms ease-in-out both;
+}
+.letter-send-trace {
+  stroke-dashoffset: 0;
+  animation:
+    letter-send-trace 1100ms linear 600ms both,
+    letter-send-waiting 1600ms ease-in-out 1700ms infinite;
+}
+.letter-send-envelope-leaving {
+  opacity: 0;
+  transform: scale(0.05);
+  animation:
+    letter-send-breathe 2000ms ease-in-out both,
+    letter-send-shrink 700ms ease-in 2000ms both;
+}
+.letter-send-star {
+  transform: translate(64px, -232px) scale(0.7) rotate(240deg);
+  animation: letter-send-star 1600ms cubic-bezier(0.22, 0.61, 0.36, 1) 2000ms both;
+}
+.letter-send-star-glow {
+  animation: letter-send-twinkle 2600ms ease-in-out 3600ms infinite;
+}
+.letter-send-trail {
+  opacity: 0;
+  animation: letter-send-trail 1600ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.letter-send-reveal {
+  animation: letter-send-reveal 700ms ease-out 3600ms both;
+}
+.letter-send-fade {
+  opacity: 0;
+  animation: letter-send-fade 600ms ease-out both;
+}
+/* Arriving on the envelope that already left (a language switch): no replay, just the end. */
+.letter-send-still,
+.letter-send-still * {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .letter-send-sheet,
+  .letter-send-trace,
+  .letter-send-envelope-leaving,
+  .letter-send-star,
+  .letter-send-star-glow,
+  .letter-send-trail,
+  .letter-send-reveal,
+  .letter-send-fade {
+    animation: none;
+  }
+}
+
+/* The way out of the sent envelope (back to the envelopes, back to the start) appears with the
+   words, not before. Opacity only: a transform here would unpin the fixed "back to start". */
+@keyframes letter-send-reveal-soft {
+  from {
+    opacity: 0;
+  }
+}
+.letter-send-reveal-soft {
+  animation: letter-send-reveal-soft 700ms ease-out 3600ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .letter-send-reveal-soft {
+    animation: none;
+  }
+}

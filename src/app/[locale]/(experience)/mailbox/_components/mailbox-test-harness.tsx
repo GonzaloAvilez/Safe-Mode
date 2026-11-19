@@ -5,6 +5,7 @@ import { ExperienceProviders } from "@/app/_components/experience-state/provider
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useMailboxState, type MailboxPhase } from "@/app/_components/experience-state/mailbox";
 import type { Mailbox, MailboxCorrespondence, MailboxLetter } from "@/lib/mailbox";
+import type { SendLetterResult } from "./send-letter";
 import en from "../../../../../../messages/en.json";
 import es from "../../../../../../messages/es.json";
 
@@ -39,6 +40,9 @@ type Seed = {
   mailbox?: Mailbox | null;
   phase?: MailboxPhase;
   openCorrespondenceId?: string | null;
+  // The draft of the open correspondence, to start from.
+  letterDraft?: string;
+  letterOutcome?: SendLetterResult | null;
 };
 
 function Seeded({ seed, children }: { seed: Seed; children: ReactNode }) {
@@ -52,6 +56,8 @@ function Seeded({ seed, children }: { seed: Seed; children: ReactNode }) {
     state.setMailbox(seed.mailbox ?? null);
     state.setMailboxPhase(seed.phase ?? "showing_seal");
     state.setOpenCorrespondenceId(seed.openCorrespondenceId ?? null);
+    if (seed.openCorrespondenceId && seed.letterDraft !== undefined) state.setLetterDraft(seed.openCorrespondenceId, seed.letterDraft);
+    state.setLetterOutcome(seed.letterOutcome ?? null);
     // Test-only: the mailbox state has no initial value to pass in, so it is seeded here and the
     // step is shown on the next render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -71,6 +77,9 @@ function StateReadout() {
       <output data-testid="key">{state.mailboxReturnKey ?? ""}</output>
       <output data-testid="opened">{state.mailbox ? String(state.mailbox.correspondences.length) : ""}</output>
       <output data-testid="openCorrespondence">{state.openCorrespondenceId ?? ""}</output>
+      <output data-testid="draft">{state.openCorrespondenceId ? (state.letterDrafts[state.openCorrespondenceId] ?? "") : ""}</output>
+      <output data-testid="drafts">{JSON.stringify(state.letterDrafts)}</output>
+      <output data-testid="outcome">{state.letterOutcome?.type ?? ""}</output>
       <output data-testid="locked">{String(locked)}</output>
     </div>
   );

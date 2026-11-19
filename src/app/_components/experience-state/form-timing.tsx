@@ -3,7 +3,8 @@
 import { useCallback, useRef, type ReactNode } from "react";
 import { createStrictContext } from "./create-strict-context";
 
-export type ExperienceForm = "write" | "leave-a-trace" | "contribute";
+// "letter" is the mailbox's letter (ADR-004 #213): outside the ritual, so a new ritual keeps it.
+export type ExperienceForm = "write" | "leave-a-trace" | "contribute" | "letter";
 
 type FormTiming = {
   getRenderedAt: (form: ExperienceForm) => number;
