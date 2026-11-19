@@ -10,10 +10,6 @@ import type { ContactInfoKind } from "@/lib/safety/contact-info";
 // ContactInfoKind), not a copy of them: a result or a contact kind added there fails the build
 // here until this screen knows what to show for it.
 
-// The longest letter the server accepts (LETTER_MAX_LENGTH in src/lib/letters.ts, which is
-// server-only; a test keeps the two equal).
-export const LETTER_MAX_CHARACTERS = 1200;
-
 export type LetterContactKind = ContactInfoKind;
 
 // Every kind of contact the server can find, each listed once (`satisfies` fails the build if the

@@ -134,18 +134,27 @@
     "keep": {
       "tagline": "Esto es solo para ti.",
       "body": "Así vas a volver a tus cartas: con esta imagen o con estos números. Nadie más los tiene, ni nosotros.",
+      "withoutLetters": "Mejor sin cartas"
+    },
+    "seal": {
+      "tagline": "Un último gesto.",
+      "hint": "Las tres luces juntas abren tus cartas.",
+      "failed": "No pudimos sellar tu huella. Vuelve a intentarlo."
+    },
+    "sealedSubcopy": "Si alguien te escribe, tu sello abrirá su carta.\nTu buzón está en el sobre del inicio."
+  },
+  "returnKey": {
+    "keep": {
       "save": "Guardar imagen",
       "saved": "Tu imagen está lista.",
       "iosHint": "En iPhone, si se abre la imagen, mantenla presionada y elige «Guardar en Fotos».",
       "wroteByHand": "Lo anoté a mano",
       "wroteConfirm": "Ya lo anoté completo",
       "continue": "Continuar",
-      "withoutLetters": "Mejor sin cartas",
       "imageError": "No pudimos preparar la imagen. Puedes anotar tu sello a mano.",
       "fileName": "refugio-sello.png"
     },
-    "seal": {
-      "tagline": "Un último gesto.",
+    "confirm": {
       "headline": "Enciende la luz que falta.",
       "ask": {
         "first": "Escribe el grupo del principio de tu sello.",
@@ -159,13 +168,16 @@
       },
       "submit": "Encender",
       "back": "Volver a ver mi sello",
-      "hint": "Las tres luces juntas abren tus cartas.",
       "wrong": "Ese no es el grupo. Puedes volver a ver tu sello.",
       "lit": "Las tres luces están encendidas.",
-      "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
-      "failed": "No pudimos sellar tu huella. Vuelve a intentarlo."
-    },
-    "sealedSubcopy": "Si alguien te escribe, tu sello abrirá su carta.\nTu buzón está en el sobre del inicio."
+      "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo."
+    }
+  },
+  "letterPaper": {
+    "label": "Carta {number} · La tuya",
+    "fieldLabel": "Tu carta",
+    "placeholder": "Escribe lo que quieras decirle...",
+    "noContact": "Sin nombres, teléfonos ni redes."
   },
   "returnKeyCard": {
     "brand": "REFUGIO",
@@ -236,10 +248,6 @@
     },
     "write": {
       "headline": "Tu carta",
-      "paperLabel": "Carta {number} · La tuya",
-      "fieldLabel": "Tu carta",
-      "placeholder": "Escribe lo que quieras decirle...",
-      "noContact": "Sin nombres, teléfonos ni redes.",
       "review": "Una persona lee cada carta antes de entregarla. Puede tardar hasta 48 horas.",
       "send": "Cerrar el sobre",
       "notNow": "Ahora no",

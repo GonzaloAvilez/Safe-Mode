@@ -11,7 +11,12 @@ vi.mock("../../_shared/screen-cta", () => ({ ScreenCta: ({ label }: { label: str
 import { LeaveATraceScreen } from "./leave-a-trace-screen";
 import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 
-const T = es.leaveATrace;
+// Leave a Trace's own words, with the ones its seal steps share with every other seal step.
+const T = {
+  ...es.leaveATrace,
+  keep: { ...es.leaveATrace.keep, ...es.returnKey.keep },
+  seal: { ...es.leaveATrace.seal, ...es.returnKey.confirm },
+};
 
 afterEach(() => {
   cleanup();

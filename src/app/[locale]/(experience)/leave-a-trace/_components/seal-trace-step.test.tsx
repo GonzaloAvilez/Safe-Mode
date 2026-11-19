@@ -5,16 +5,18 @@ import es from "../../../../../../messages/es.json";
 
 const { confirmMock, pickMock } = vi.hoisted(() => ({ confirmMock: vi.fn(), pickMock: vi.fn() }));
 
-vi.mock("./confirm-return-key", () => ({ confirmReturnKey: confirmMock }));
+vi.mock("../../_shared/return-key/confirm-return-key", () => ({ confirmReturnKey: confirmMock }));
 vi.mock("@/lib/return-key-groups", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/return-key-groups")>()),
   pickAskedGroup: pickMock,
 }));
 
-import { LIT_LIGHT_HOLD_MS, SealTraceStep } from "./seal-trace-step";
+import { LIT_LIGHT_HOLD_MS } from "../../_shared/return-key/confirm-return-key-step";
+import { SealTraceStep } from "./seal-trace-step";
 import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 
-const S = es.leaveATrace.seal;
+// Leave a Trace's own words for this step, and the ones every seal step shares.
+const S = { ...es.leaveATrace.seal, ...es.returnKey.confirm };
 const GROUPS = ["48213", "39017", "56229"];
 const SEALING = { phase: "sealing" as const, key: { returnKey: SEAL, sentence: SENTENCE } };
 
@@ -59,6 +61,12 @@ describe("SealTraceStep", () => {
     expect(screen.getByText(S.headline)).toBeTruthy();
     expect(screen.getByText(question)).toBeTruthy();
     expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it("says, in Leave a Trace's words, what the three lights do", () => {
+    renderStep(<SealTraceStep />, SEALING);
+
+    expect(screen.getByText(S.hint)).toBeTruthy();
   });
 
   it("asks a group other than the last one asked, after looking at the seal again", () => {

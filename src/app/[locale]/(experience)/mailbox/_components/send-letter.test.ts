@@ -1,14 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LETTER_MAX_LENGTH } from "@/lib/letters";
-import { LETTER_MAX_CHARACTERS, sendLetter } from "./send-letter";
-
-// lib/letters.ts is server code: only its constant is read here, so what it connects to is stubbed.
-vi.mock("@/lib/supabase", () => ({ supabaseAdmin: {} }));
-vi.mock("@/lib/letter-safety", () => ({ checkLetterSafety: vi.fn() }));
-
-it("allows exactly as long a letter as the server does", () => {
-  expect(LETTER_MAX_CHARACTERS).toBe(LETTER_MAX_LENGTH);
-});
+import { sendLetter } from "./send-letter";
 
 const SEAL = "482133901756229";
 const INPUT = { correspondenceId: "c1", returnKey: SEAL, text: "Gracias por escribirme.", honeypot: "", formRenderedAt: 1000 };

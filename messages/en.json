@@ -134,18 +134,27 @@
     "keep": {
       "tagline": "This is only for you.",
       "body": "This is how you'll get back to your letters: with this image or with these numbers. No one else has them, not even us.",
+      "withoutLetters": "Better without letters"
+    },
+    "seal": {
+      "tagline": "One last gesture.",
+      "hint": "The three lights together open your letters.",
+      "failed": "We couldn't seal your trace. Please try again."
+    },
+    "sealedSubcopy": "If someone writes to you, your seal will open their letter.\nYour mailbox is in the envelope on the home screen."
+  },
+  "returnKey": {
+    "keep": {
       "save": "Save image",
       "saved": "Your image is ready.",
       "iosHint": "On iPhone, if the image opens, press and hold it and choose “Save to Photos”.",
       "wroteByHand": "I wrote it down",
       "wroteConfirm": "I've written it all down",
       "continue": "Continue",
-      "withoutLetters": "Better without letters",
       "imageError": "We couldn't prepare the image. You can write your seal down by hand.",
       "fileName": "refugio-seal.png"
     },
-    "seal": {
-      "tagline": "One last gesture.",
+    "confirm": {
       "headline": "Light the missing light.",
       "ask": {
         "first": "Type the first group of your seal.",
@@ -159,13 +168,16 @@
       },
       "submit": "Light it",
       "back": "See my seal again",
-      "hint": "The three lights together open your letters.",
       "wrong": "That's not the group. You can see your seal again.",
       "lit": "The three lights are on.",
-      "tooMany": "Too many tries. Wait a moment and try again.",
-      "failed": "We couldn't seal your trace. Please try again."
-    },
-    "sealedSubcopy": "If someone writes to you, your seal will open their letter.\nYour mailbox is in the envelope on the home screen."
+      "tooMany": "Too many tries. Wait a moment and try again."
+    }
+  },
+  "letterPaper": {
+    "label": "Letter {number} · Yours",
+    "fieldLabel": "Your letter",
+    "placeholder": "Write what you'd like to tell them...",
+    "noContact": "No names, phone numbers or social media."
   },
   "returnKeyCard": {
     "brand": "REFUGIO",
@@ -236,10 +248,6 @@
     },
     "write": {
       "headline": "Your letter",
-      "paperLabel": "Letter {number} · Yours",
-      "fieldLabel": "Your letter",
-      "placeholder": "Write what you'd like to tell them...",
-      "noContact": "No names, phone numbers or social media.",
       "review": "A person reads every letter before delivering it. It can take up to 48 hours.",
       "send": "Seal the envelope",
       "notNow": "Not now",

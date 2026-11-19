@@ -7,11 +7,12 @@ import { useMailboxState } from "@/app/_components/experience-state/mailbox";
 import type { Mailbox, MailboxCorrespondence } from "@/lib/mailbox";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
+import { LetterDraftPaper } from "../../_shared/letter-draft-paper";
 import { Link } from "@/i18n/navigation";
 import { playTransition } from "../../_shared/handpan-audio";
 import { fetchMailboxWithReturnKey } from "./fetch-mailbox-with-return-key";
 import { LETTER_FADE_MS, LETTER_TRACE_MS, LetterSendScene, type LetterSendStage } from "./letter-send-scene";
-import { LETTER_MAX_CHARACTERS, sendLetter, type SendLetterResult } from "./send-letter";
+import { sendLetter, type SendLetterResult } from "./send-letter";
 
 // ADR-004 #213, design B5 and B6 (and C5, C6): writing the next letter, on paper, and sending it.
 //
@@ -275,26 +276,12 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
     <form onSubmit={send} className="flex w-full max-w-sm flex-col items-center gap-5">
       <h1 className="text-[22px] font-light tracking-[5px] text-white/82">{t("write.headline")}</h1>
 
-      <label className="block w-full -rotate-[0.4deg] rounded-[4px] bg-[#f2ede3] bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_27px,rgba(42,38,32,0.08)_27px,rgba(42,38,32,0.08)_28px)] px-5 pt-5 pb-3 text-[#2a2620] shadow-[0_18px_40px_rgba(0,0,0,0.45)]">
-        <span aria-hidden="true" className="block text-[10px] tracking-[1.5px] text-[rgba(42,38,32,0.55)] uppercase">
-          {t("write.paperLabel", { number: correspondence.letters.length + 1 })}
-        </span>
-        <textarea
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          maxLength={LETTER_MAX_CHARACTERS}
-          placeholder={t("write.placeholder")}
-          aria-label={t("write.fieldLabel")}
-          aria-describedby="letter-notice"
-          className="mt-2.5 block h-[280px] w-full resize-none bg-transparent p-0 text-[15px] leading-[28px] text-[#2a2620] outline-none placeholder:text-[rgba(42,38,32,0.4)]"
-        />
-        <span className="mt-2 flex justify-between text-[10px] text-[rgba(42,38,32,0.5)]">
-          <span>{t("write.noContact")}</span>
-          <span className="font-mono">
-            {draft.length} / {LETTER_MAX_CHARACTERS}
-          </span>
-        </span>
-      </label>
+      <LetterDraftPaper
+        letterNumber={correspondence.letters.length + 1}
+        value={draft}
+        onChange={setDraft}
+        noticeId="letter-notice"
+      />
       <HoneypotField value={honeypot} onChange={setHoneypot} />
 
       <p id="letter-notice" role="status" className="min-h-[1.6em] text-center text-[13px] leading-[1.6] text-white/80">
