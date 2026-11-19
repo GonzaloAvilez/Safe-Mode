@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useMailboxState } from "@/app/_components/experience-state/mailbox";
 import type { Mailbox, MailboxCorrespondence } from "@/lib/mailbox";
-import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { LetterDraftPaper } from "../../_shared/letter-draft-paper";
 import { Link } from "@/i18n/navigation";
 import { playTransition } from "../../_shared/handpan-audio";
 import { fetchMailboxWithReturnKey } from "./fetch-mailbox-with-return-key";
-import { LETTER_FADE_MS, LETTER_TRACE_MS, LetterSendScene, type LetterSendStage } from "./letter-send-scene";
-import { sendLetter, type SendLetterResult } from "./send-letter";
+import { LetterCrisisHelp } from "../../_shared/letters/letter-crisis-help";
+import { LETTER_FADE_MS, LETTER_TRACE_MS, LetterSendScene, type LetterSendStage } from "../../_shared/letters/letter-send-scene";
+import { sendLetter, type SendLetterResult } from "../../_shared/letters/send-letter";
+import { isLetterNoticeOutcome, useLetterNotice } from "../../_shared/letters/use-letter-notice";
 
 // ADR-004 #213, design B5 and B6 (and C5, C6): writing the next letter, on paper, and sending it.
 //
@@ -51,46 +52,10 @@ function withLetterOnItsWay(mailbox: Mailbox | null, correspondenceId: string, b
   };
 }
 
-function CrisisHelp({ onBack }: { onBack: () => void }) {
-  const t = useTranslations("mailbox");
-  const [first, second] = t("crisis.headline").split("\n");
-
-  return (
-    <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
-      <div aria-hidden="true" className="relative mb-3 flex size-24 items-center justify-center">
-        <span className="absolute size-24 rounded-full border border-[rgba(242,192,99,0.22)] bg-[rgba(242,192,99,0.06)]" />
-        <span className="size-4 rounded-full bg-[#f2c063] shadow-[0_0_24px_8px_rgba(242,192,99,0.32)]" />
-      </div>
-      <h1 className="text-[22px] leading-[1.4] font-light tracking-[3px] text-white/90">
-        {first}
-        <br />
-        {second}
-      </h1>
-      <p className="text-[14px] leading-[1.65] text-white/70">{t("crisis.intro")}</p>
-      <a
-        href={CRISIS_RESOURCE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-[15px] text-[rgba(242,192,99,0.9)] underline underline-offset-4"
-      >
-        {CRISIS_RESOURCE_URL.replace(/^https:\/\//, "")}
-      </a>
-      <p className="mt-3 text-[12px] leading-[1.6] text-white/45">{t("crisis.notSent")}</p>
-      <button
-        type="button"
-        onClick={onBack}
-        className="mt-4 text-[12px] tracking-[.5px] text-white/50 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/80"
-      >
-        {t("letter.back")}
-      </button>
-    </div>
-  );
-}
-
 export function WriteLetterStep({ correspondence }: { correspondence: MailboxCorrespondence }) {
   const t = useTranslations("mailbox");
-  const tc = useTranslations("common");
-  const locale = useLocale();
+  const tp = useTranslations("letterPaper");
+  const letterNotice = useLetterNotice();
   const {
     mailboxReturnKey: returnKey,
     setMailbox,
@@ -219,7 +184,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
   if (phase === "sent") {
     return (
       <>
-        <LetterSendScene stage={stage === "leaving" ? "leaving" : "left"} />
+        <LetterSendScene stage={stage === "leaving" ? "leaving" : "left"} comeBack={t("send.comeBack")} />
         {/* The way out appears with the words, once the envelope has left. */}
         <div data-way-out className={`flex flex-col items-center gap-7 ${stage === "leaving" ? "letter-send-reveal-soft" : ""}`}>
           <button
@@ -249,32 +214,17 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
     );
   }
 
-  if (phase === "sending") return <LetterSendScene stage={stage === "fading" ? "fading" : "tracing"} />;
-
-  if (outcome?.type === "crisis") return <CrisisHelp onBack={backToEnvelopes} />;
-
-  let notice: string | null = null;
-  if (outcome?.type === "rejected" && outcome.reason === "contact_info") {
-    const things = new Intl.ListFormat(locale, { type: "conjunction" }).format(
-      outcome.contactKinds.map((kind) => t(`write.contactKind.${kind}`))
-    );
-    notice = `${t("write.contactFound", { things })} ${t("write.contactRemove", { count: outcome.contactKinds.length })}`;
-  } else if (outcome?.type === "rejected") {
-    notice = t("write.moderation");
-  } else if (outcome?.type === "letters_closed") {
-    notice = t("write.lettersClosed");
-  } else if (outcome?.type === "error") {
-    notice =
-      outcome.reason === "too_many"
-        ? t("write.tooMany")
-        : outcome.reason === "offline"
-          ? tc("errors.couldntConnect")
-          : t("write.failed");
+  if (phase === "sending") {
+    return <LetterSendScene stage={stage === "fading" ? "fading" : "tracing"} comeBack={t("send.comeBack")} />;
   }
+
+  if (outcome?.type === "crisis") return <LetterCrisisHelp backLabel={t("letter.back")} onBack={backToEnvelopes} />;
+
+  const notice = outcome && isLetterNoticeOutcome(outcome) ? letterNotice(outcome) : null;
 
   return (
     <form onSubmit={send} className="flex w-full max-w-sm flex-col items-center gap-5">
-      <h1 className="text-[22px] font-light tracking-[5px] text-white/82">{t("write.headline")}</h1>
+      <h1 className="text-[22px] font-light tracking-[5px] text-white/82">{tp("headline")}</h1>
 
       <LetterDraftPaper
         letterNumber={correspondence.letters.length + 1}
@@ -287,7 +237,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
       <p id="letter-notice" role="status" className="min-h-[1.6em] text-center text-[13px] leading-[1.6] text-white/80">
         {notice}
       </p>
-      <p className="-mt-3 text-center text-[12px] leading-[1.55] text-white/55">{t("write.review")}</p>
+      <p className="-mt-3 text-center text-[12px] leading-[1.55] text-white/55">{tp("review")}</p>
 
       <div className="flex flex-col items-center gap-3.5">
         <button
@@ -295,7 +245,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
           disabled={draft.trim() === ""}
           className="rounded-full border border-[rgba(210,158,32,0.6)] px-9 py-2.5 text-[13px] tracking-[1px] text-white/85 transition-colors duration-300 hover:text-white disabled:pointer-events-none disabled:opacity-30"
         >
-          {t("write.send")}
+          {tp("send")}
         </button>
         <button
           type="button"
@@ -305,7 +255,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
           }}
           className="text-[12px] tracking-[.5px] text-white/45 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/75"
         >
-          {t("write.notNow")}
+          {tp("notNow")}
         </button>
       </div>
     </form>

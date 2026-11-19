@@ -8,6 +8,7 @@ import { ScreenHeader } from "../../_shared/screen-header";
 import { readMirrorHandoff } from "../../_shared/mirror-handoff";
 import { playRandomNote } from "../../_shared/handpan-audio";
 import { MirrorCanvas } from "../mirror-canvas";
+import { FirstLetterDoor, FirstLetterFlow, useMirrorLetterFor } from "./first-letter-flow";
 import { QuoteReveal } from "./quote-reveal";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useRitualState } from "@/app/_components/experience-state/ritual";
@@ -46,6 +47,8 @@ export function MirrorScreen() {
   const handoff = useSyncExternalStore(subscribeToHandoff, readMirrorHandoff, getServerHandoffSnapshot);
   const { mirrorInteraction, setMirrorInteraction } = useRitualState();
   const { unlock: unlockLocaleSwitch } = useLocaleTransition();
+  // Called before the early return below, with whatever entry there is, so the hooks keep their order.
+  const letter = useMirrorLetterFor(handoff?.entryId ?? "");
 
   // Deliberately not keyed on `handoff` — the hydration resync above commits in two
   // steps (server-matching null, then the real client value), and this effect would
@@ -66,6 +69,12 @@ export function MirrorScreen() {
   }
 
   const matched = handoff.outcome === "matched";
+
+  // ADR-004 #212: writing a letter to whoever left this phrase takes the whole screen, until the
+  // visitor goes back to the phrase.
+  if (handoff.outcome === "matched" && letter && !letter.backOnPhrase) {
+    return <FirstLetterFlow entryId={handoff.entryId} phraseText={handoff.text} />;
+  }
   const interaction =
     mirrorInteraction.entryId === handoff.entryId
       ? mirrorInteraction
@@ -166,7 +175,10 @@ export function MirrorScreen() {
           {matched ? t("subcopyMatched") : t("subcopyNoMatch")}
         </div>
 
-        {matched && (
+        {/* When letters can reach its author, the letter takes the place of "Me encantaría conectar". */}
+        {handoff.outcome === "matched" && handoff.connectable && <FirstLetterDoor entryId={handoff.entryId} />}
+
+        {handoff.outcome === "matched" && !handoff.connectable && (
           <button
             type="button"
             onClick={handleConnect}

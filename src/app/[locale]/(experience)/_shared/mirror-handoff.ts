@@ -4,8 +4,10 @@
 // Shared so the two sides of the handoff can't drift into mismatched key/shape.
 const MIRROR_HANDOFF_KEY = "sm:mirrorHandoff";
 
+// `connectable`: letters are open and can reach this phrase's author (ADR-004 #212), read by the
+// server when the entry matched. Mirror offers a letter only then.
 export type MirrorHandoff =
-  | { outcome: "matched"; text: string; entryId: string; phraseId: string }
+  | { outcome: "matched"; text: string; entryId: string; phraseId: string; connectable: boolean }
   | { outcome: "no_match"; entryId: string };
 
 export function writeMirrorHandoff(handoff: MirrorHandoff): void {
@@ -47,7 +49,9 @@ export function readMirrorHandoff(): MirrorHandoff | null {
       typeof parsed.entryId === "string" &&
       typeof parsed.phraseId === "string"
     ) {
-      return (cachedHandoff = parsed);
+      // A handoff stored before letters existed says nothing about them: never offer a letter
+      // that might not be able to leave.
+      return (cachedHandoff = { ...parsed, connectable: parsed.connectable === true });
     }
     if (parsed?.outcome === "no_match" && typeof parsed.entryId === "string") {
       return (cachedHandoff = parsed);

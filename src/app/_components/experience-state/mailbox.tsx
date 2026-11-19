@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import type { SendLetterResult } from "@/app/[locale]/(experience)/mailbox/_components/send-letter";
+import type { SendLetterResult } from "@/app/[locale]/(experience)/_shared/letters/send-letter";
 import type { Mailbox } from "@/lib/mailbox";
 import { createStrictContext } from "./create-strict-context";
 

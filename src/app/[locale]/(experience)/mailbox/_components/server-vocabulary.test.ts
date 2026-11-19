@@ -3,7 +3,7 @@ import en from "../../../../../../messages/en.json";
 import es from "../../../../../../messages/es.json";
 import { POSTMARKS } from "./correspondence-list";
 import { LETTER_POSTMARKS } from "./letter-paper";
-import { LETTER_CONTACT_KINDS } from "./send-letter";
+import { LETTER_CONTACT_KINDS } from "../../_shared/letters/send-letter";
 
 // The build already makes the screen handle every state, status and contact kind the server has
 // (`satisfies` against the server's types). This checks the other half: each of them has words to
@@ -26,7 +26,7 @@ describe("every server state has its words", () => {
 
   it.each(Object.entries(catalogs))("in %s, every kind of contact the server finds can be named", (_locale, messages) => {
     for (const kind of LETTER_CONTACT_KINDS) {
-      expect(messages.mailbox.write.contactKind[kind]).toBeTruthy();
+      expect(messages.letterNotice.contactKind[kind]).toBeTruthy();
     }
   });
 });

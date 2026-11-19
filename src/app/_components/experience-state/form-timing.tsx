@@ -4,7 +4,8 @@ import { useCallback, useRef, type ReactNode } from "react";
 import { createStrictContext } from "./create-strict-context";
 
 // "letter" is the mailbox's letter (ADR-004 #213): outside the ritual, so a new ritual keeps it.
-export type ExperienceForm = "write" | "leave-a-trace" | "contribute" | "letter";
+// "mirror-letter" is the first letter, written from Mirror (#212): part of the ritual.
+export type ExperienceForm = "write" | "leave-a-trace" | "contribute" | "letter" | "mirror-letter";
 
 type FormTiming = {
   getRenderedAt: (form: ExperienceForm) => number;
@@ -47,8 +48,10 @@ export function FormTimingProvider({ children }: { children: ReactNode }) {
   const resetRitualTimings = useCallback(() => {
     delete renderedAtByForm.current.write;
     delete renderedAtByForm.current["leave-a-trace"];
+    delete renderedAtByForm.current["mirror-letter"];
     delete honeypotByForm.current.write;
     delete honeypotByForm.current["leave-a-trace"];
+    delete honeypotByForm.current["mirror-letter"];
   }, []);
 
   return (
