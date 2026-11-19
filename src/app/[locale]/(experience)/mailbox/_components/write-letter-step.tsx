@@ -7,7 +7,8 @@ import { useMailboxState } from "@/app/_components/experience-state/mailbox";
 import type { Mailbox, MailboxCorrespondence } from "@/lib/mailbox";
 import { CRISIS_RESOURCE_URL } from "@/lib/safety/crisis-resource";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
-import { ScreenCta } from "../../_shared/screen-cta";
+import { Link } from "@/i18n/navigation";
+import { playTransition } from "../../_shared/handpan-audio";
 import { fetchMailboxWithReturnKey } from "./fetch-mailbox-with-return-key";
 import { LETTER_FADE_MS, LETTER_TRACE_MS, LetterSendScene, type LetterSendStage } from "./letter-send-scene";
 import { LETTER_MAX_CHARACTERS, sendLetter, type SendLetterResult } from "./send-letter";
@@ -219,7 +220,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
       <>
         <LetterSendScene stage={stage === "leaving" ? "leaving" : "left"} />
         {/* The way out appears with the words, once the envelope has left. */}
-        <div data-way-out className={stage === "leaving" ? "letter-send-reveal-soft" : ""}>
+        <div data-way-out className={`flex flex-col items-center gap-7 ${stage === "leaving" ? "letter-send-reveal-soft" : ""}`}>
           <button
             type="button"
             onClick={backToEnvelopes}
@@ -227,9 +228,21 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
           >
             {t("letter.back")}
           </button>
-          <ScreenCta href="/" label={t("backToStart")} accentRgb="210,158,32" onClick={clearMailboxState} />
-          {/* Room under the link for the fixed "back to start", so on a short phone it never covers it. */}
-          <div aria-hidden="true" className="h-24" />
+          {/* In the flow, not pinned to the bottom like Home's: under a letter that just left there
+              isn't always room for both, and a pinned one would cover "back to my envelopes". */}
+          <Link
+            href="/"
+            onClick={() => {
+              playTransition();
+              clearMailboxState();
+            }}
+            className="group/enter flex flex-col items-center gap-2.5"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 transition-all duration-400 group-hover/enter:scale-110 group-hover/enter:border-[rgba(210,158,32,0.7)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-[rgba(210,158,32,0.55)] transition-colors group-hover/enter:bg-[rgba(210,158,32,0.9)]" />
+            </span>
+            <span className="text-[13px] tracking-[1px] text-white/40">{t("backToStart")}</span>
+          </Link>
         </div>
       </>
     );

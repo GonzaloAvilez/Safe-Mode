@@ -13,8 +13,8 @@ vi.mock("../../_shared/screen-cta", () => ({
   ),
 }));
 vi.mock("@/i18n/navigation", () => ({
-  Link: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
-    <a href="#home" onClick={(event) => (event.preventDefault(), onClick?.())}>
+  Link: ({ children, onClick, className }: { children: React.ReactNode; onClick?: () => void; className?: string }) => (
+    <a href="#home" className={className} onClick={(event) => (event.preventDefault(), onClick?.())}>
       {children}
     </a>
   ),
@@ -583,5 +583,20 @@ describe("WriteLetterStep, asking for the mailbox again fails (#252 review)", ()
 
     await screen.findByText(T.show.headline);
     expect(screen.getByTestId("key").textContent).toBe("");
+  });
+});
+
+describe("WriteLetterStep, the way out of a letter that left", () => {
+  it("“Volver al inicio” sits in the page, after “Volver a mis sobres”, never pinned over it", async () => {
+    answerWith(Response.json({ type: "held" }, { status: 201 }));
+    renderMailbox(<MailboxScreen />, writing());
+    writeAndSend("Gracias.");
+    await screen.findByText(T.send.headline);
+
+    const wayOut = document.querySelector("[data-way-out]")!;
+    const back = within(wayOut as HTMLElement).getByText(T.letter.back);
+    const home = within(wayOut as HTMLElement).getByText(T.backToStart);
+    expect(back.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(home.closest("a")!.className).not.toContain("fixed");
   });
 });

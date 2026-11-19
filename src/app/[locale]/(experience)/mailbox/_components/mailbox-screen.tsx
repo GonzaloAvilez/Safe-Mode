@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useMailboxState } from "@/app/_components/experience-state/mailbox";
 import { Link } from "@/i18n/navigation";
@@ -159,6 +159,13 @@ export function MailboxScreen() {
     setLetterOutcome,
     clearMailboxState,
   } = useMailboxState();
+
+  // Every step of the mailbox starts at its top. Moving on from a long one (the picture chosen at the
+  // bottom of the seal step, a reply sent from under a letter) would otherwise land the next one
+  // halfway down, its beginning hidden under the fixed header.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [phase, openCorrespondenceId]);
 
   // Nothing opened yet, or the seal is no longer in memory: the mailbox asks for it.
   if (phase === "showing_seal" || !mailbox || !mailboxReturnKey) {

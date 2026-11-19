@@ -56,19 +56,28 @@ describe("LeaveATraceScreen", () => {
     expect(screen.getByText(T.seal.tagline)).toBeTruthy();
   });
 
-  it.each([
-    ["sealed", T.sealedSubcopy],
-    ["skipped", T.skippedSubcopy],
-  ] as const)("the %s closing carries its own line", (phase, line) => {
-    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase });
+  // The sealed closing has two sentences, one per line: what the seal does, where the mailbox is.
+  const [sealedSeal, sealedMailbox] = T.sealedSubcopy.split("\n");
 
-    expect(screen.getByText(line)).toBeTruthy();
+  it("the sealed closing says what the seal does and, on a line of its own, where the mailbox is", () => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "sealed" });
+
+    expect(screen.getByText(sealedSeal)).toBeTruthy();
+    expect(screen.getByText(sealedMailbox)).toBeTruthy();
+    expect(sealedMailbox).toBe("Tu buzón está en el sobre del inicio.");
+  });
+
+  it("the skipped closing carries its own line", () => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "skipped" });
+
+    expect(screen.getByText(T.skippedSubcopy)).toBeTruthy();
   });
 
   it("only whoever sealed it is told the seal will open a letter", () => {
     renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "submitted" });
 
-    expect(screen.queryByText(T.sealedSubcopy)).toBeNull();
+    expect(screen.queryByText(sealedSeal)).toBeNull();
+    expect(screen.queryByText(sealedMailbox)).toBeNull();
     expect(screen.queryByText(T.skippedSubcopy)).toBeNull();
   });
 
@@ -96,7 +105,7 @@ describe("LeaveATraceScreen", () => {
     fireEvent.change(screen.getByPlaceholderText("00000"), { target: { value: ["48213", "39017", "56229"][asked] } });
     fireEvent.click(screen.getByRole("button", { name: T.seal.submit }));
 
-    await screen.findByText(T.sealedSubcopy, {}, { timeout: 4000 });
+    await screen.findByText(sealedMailbox, {}, { timeout: 4000 });
     expect(screen.getByTestId("closing-scene")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/return-key/confirm", expect.objectContaining({ headers: { Authorization: `Bearer ${SEAL}` } }));
     expect(screen.getByTestId("key").textContent).toBe("");
