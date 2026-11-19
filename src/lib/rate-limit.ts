@@ -142,3 +142,30 @@ export async function isReturnKeyConfirmRateLimited({ ip, sessionId }: RateLimit
     return false;
   }
 }
+
+// Asking for a visitor's seal (POST /api/return-key). Each request creates an identity, so
+// this keeps one session or IP from filling the table: a visitor needs one seal for the
+// phrase they're writing to, and coming back to it in the same visit reuses the one in
+// memory. 5 per 10 minutes leaves room for a reload or two.
+const RETURN_KEY_CREATE_RATE_LIMIT_MAX_REQUESTS = 5;
+const RETURN_KEY_CREATE_RATE_LIMIT_WINDOW = "10 m";
+
+const returnKeyCreateRatelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(RETURN_KEY_CREATE_RATE_LIMIT_MAX_REQUESTS, RETURN_KEY_CREATE_RATE_LIMIT_WINDOW),
+  prefix: "ratelimit:return-key-create",
+});
+
+export async function isReturnKeyCreateRateLimited({ ip, sessionId }: RateLimitIdentifiers): Promise<boolean> {
+  try {
+    const [ipResult, sessionResult] = await Promise.all([
+      returnKeyCreateRatelimit.limit(`ip:${ip}`),
+      returnKeyCreateRatelimit.limit(`session:${sessionId}`),
+    ]);
+    return !ipResult.success || !sessionResult.success;
+  } catch (error) {
+    logRequestOutcome(ip, "rate_limit_unavailable");
+    console.error("Upstash rate limit check failed, failing open:", error);
+    return false;
+  }
+}

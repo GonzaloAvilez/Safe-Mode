@@ -24,12 +24,16 @@ const { POST } = await import("@/app/api/correspondences/route");
 const ENTRY_ID = "6f1c2c8e-8a7b-4c1e-9d5a-2b3c4d5e6f70";
 const VALID = { entryId: ENTRY_ID, text: "Gracias por tu frase.", honeypot: "", formRenderedAt: 0 };
 
-function start(body: unknown) {
-  return startWithRawBody(JSON.stringify(body));
+const SEAL = "48213 39017 56229";
+
+function start(body: unknown, authorization: string | null = `Bearer ${SEAL}`) {
+  return startWithRawBody(JSON.stringify(body), authorization);
 }
 
-function startWithRawBody(raw: string) {
-  return POST(new Request("http://localhost/api/correspondences", { method: "POST", body: raw }));
+function startWithRawBody(raw: string, authorization: string | null = `Bearer ${SEAL}`) {
+  const headers = new Headers();
+  if (authorization !== null) headers.set("authorization", authorization);
+  return POST(new Request("http://localhost/api/correspondences", { method: "POST", headers, body: raw }));
 }
 
 beforeEach(() => {
@@ -43,25 +47,53 @@ afterEach(() => {
 });
 
 describe("POST /api/correspondences", () => {
-  it("starts a correspondence and returns the key with 201, never cacheable", async () => {
-    const started = { type: "started", correspondenceId: "c1", returnKey: "the-key", letter: { type: "held" } };
+  it("starts a correspondence with the seal from the Authorization header and answers 201", async () => {
+    const started = { type: "started", correspondenceId: "c1", letter: { type: "held" } };
     startCorrespondenceMock.mockResolvedValueOnce(started);
 
     const response = await start(VALID);
 
     expect(response.status).toBe(201);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toEqual(started);
-    expect(startCorrespondenceMock).toHaveBeenCalledWith({ entryId: ENTRY_ID, sessionId: "session-1", body: VALID.text });
+    expect(startCorrespondenceMock).toHaveBeenCalledWith({
+      entryId: ENTRY_ID,
+      sessionId: "session-1",
+      returnKey: SEAL,
+      body: VALID.text,
+    });
+  });
+
+  it.each([
+    ["no Authorization header", null],
+    ["another auth scheme", `Basic ${SEAL}`],
+  ])("answers 401 and starts nothing with %s", async (_label, authorization) => {
+    const response = await start(VALID, authorization);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "return key required" });
+    expect(startCorrespondenceMock).not.toHaveBeenCalled();
+  });
+
+  it("checks the seal is present before reading the body", async () => {
+    const response = await startWithRawBody("{", null);
+
+    expect(response.status).toBe(401);
   });
 
   it.each([
     [{ type: "entry_not_found" }, 404],
     [{ type: "phrase_not_connectable" }, 403],
+    [{ type: "return_key_not_recognized" }, 401],
+    [{ type: "return_key_not_confirmed" }, 403],
+    [{ type: "own_phrase" }, 403],
+    [{ type: "started", correspondenceId: "c1", letter: { type: "rejected", reason: "moderation" } }, 201],
   ])("maps %j to %s", async (result, status) => {
     startCorrespondenceMock.mockResolvedValueOnce(result);
 
-    expect((await start(VALID)).status).toBe(status);
+    const response = await start(VALID);
+
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual(result);
   });
 
   it("answers 503 and starts nothing while letters are closed, before spending any rate limit", async () => {
