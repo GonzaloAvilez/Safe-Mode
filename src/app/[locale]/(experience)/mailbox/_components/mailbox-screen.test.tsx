@@ -281,3 +281,16 @@ describe("MailboxScreen, reading", () => {
   });
 
 });
+
+describe("MailboxScreen, every step starts at its top", () => {
+  it("moves to the top when the step changes, so the next one never starts under the header", () => {
+    const scrollTo = vi.fn();
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+    renderMailbox(<MailboxScreen />, opened([correspondence({ id: "a" })]));
+    scrollTo.mockClear();
+
+    fireEvent.click(screen.getByText("“Lo que no dije también pesa.”"));
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+  });
+});

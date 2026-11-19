@@ -20,7 +20,8 @@
   },
   "home": {
     "tagline": "Ecosystem of presences.",
-    "enterCta": "Enter"
+    "enterCta": "Enter",
+    "mailboxDoor": "My mailbox"
   },
   "arrivalIntro": {
     "progress": "Introduction, step {step} of {total}",
@@ -164,7 +165,7 @@
       "tooMany": "Too many tries. Wait a moment and try again.",
       "failed": "We couldn't seal your trace. Please try again."
     },
-    "sealedSubcopy": "If someone writes to you, your seal will open their letter."
+    "sealedSubcopy": "If someone writes to you, your seal will open their letter.\nYour mailbox is in the envelope on the home screen."
   },
   "returnKeyCard": {
     "brand": "REFUGIO",

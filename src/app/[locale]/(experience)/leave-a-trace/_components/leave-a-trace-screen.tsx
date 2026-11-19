@@ -99,7 +99,18 @@ export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
               </>
             }
             subcopy={
-              phase === "skipped" ? t("skippedSubcopy") : phase === "sealed" ? t("sealedSubcopy") : undefined
+              phase === "skipped" ? (
+                t("skippedSubcopy")
+              ) : phase === "sealed" ? (
+                // Two sentences, two lines: what the seal does, then where the mailbox is.
+                t("sealedSubcopy")
+                  .split("\n")
+                  .map((line, index) => (
+                    <span key={index} className="block">
+                      {line}
+                    </span>
+                  ))
+              ) : undefined
             }
           />
         </div>

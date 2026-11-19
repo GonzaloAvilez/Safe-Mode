@@ -13,6 +13,9 @@ import es from "../../../../../../messages/es.json";
 // asks for, and prints the parts of that state a test wants to look at.
 export const SEAL = "482133901756229";
 
+// jsdom has no scrolling: the mailbox moves each step to its top, and tests see that as a call.
+if (typeof window !== "undefined") window.scrollTo = (() => {}) as typeof window.scrollTo;
+
 export function letter(overrides: Partial<MailboxLetter> = {}): MailboxLetter {
   return {
     sender: "visitor",

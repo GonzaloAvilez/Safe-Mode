@@ -1,10 +1,11 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import { Suspense, useSyncExternalStore, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Locale } from "@/lib/locale";
 import { ScreenCta } from "../_shared/screen-cta";
+import { MailboxDoor } from "./mailbox-door";
 import { RulesGate } from "./rules-gate";
 import { ArrivalIntro } from "./arrival-intro";
 
@@ -74,6 +75,12 @@ export function HomeGate({ introPhrase, lettersOpen }: { introPhrase: ReactNode;
     <>
       {stage === "rules-required" && <RulesGate lettersOpen={lettersOpen} onAcknowledge={handleAcknowledge} />}
       <ScreenCta href="/arrive" label={t("enterCta")} accentRgb="200,160,30" disabled={stage !== "ready"} />
+      {/* The door to the mailbox shows once Home is Home: never over the rules or the welcome. */}
+      {stage === "ready" && (
+        <Suspense fallback={null}>
+          <MailboxDoor lettersOpen={lettersOpen} />
+        </Suspense>
+      )}
     </>
   );
 }

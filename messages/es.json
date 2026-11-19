@@ -20,7 +20,8 @@
   },
   "home": {
     "tagline": "Ecosistema de presencias.",
-    "enterCta": "Entrar"
+    "enterCta": "Entrar",
+    "mailboxDoor": "Mi buzón"
   },
   "arrivalIntro": {
     "progress": "Introducción, paso {step} de {total}",
@@ -164,7 +165,7 @@
       "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
       "failed": "No pudimos sellar tu huella. Vuelve a intentarlo."
     },
-    "sealedSubcopy": "Si alguien te escribe, tu sello abrirá su carta."
+    "sealedSubcopy": "Si alguien te escribe, tu sello abrirá su carta.\nTu buzón está en el sobre del inicio."
   },
   "returnKeyCard": {
     "brand": "REFUGIO",
