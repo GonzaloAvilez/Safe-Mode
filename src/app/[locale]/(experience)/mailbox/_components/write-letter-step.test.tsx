@@ -52,7 +52,7 @@ function answerWith(...responses: Response[]) {
   return fetchMock;
 }
 
-const field = () => screen.getByLabelText(T.write.fieldLabel) as HTMLTextAreaElement;
+const field = () => screen.getByLabelText(es.letterPaper.fieldLabel) as HTMLTextAreaElement;
 const letterPosts = (fetchMock: ReturnType<typeof vi.fn>) => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/letters"));
 const sendButton = () => screen.getByRole("button", { name: T.write.send }) as HTMLButtonElement;
 const notice = () => document.getElementById("letter-notice")!.textContent;
@@ -131,6 +131,13 @@ describe("WriteLetterStep, the paper", () => {
 
     expect(screen.getByText("5 / 1200")).toBeTruthy();
     expect(field().maxLength).toBe(1200);
+  });
+
+  it("reads what happened to the last try together with the paper", () => {
+    renderMailbox(<MailboxScreen />, writing({ letterOutcome: { type: "rejected", reason: "moderation" } }));
+
+    const described = document.getElementById(field().getAttribute("aria-describedby")!);
+    expect(described?.textContent).toBe(T.write.moderation);
   });
 
   it("keeps the draft in memory, outside this screen", () => {
@@ -340,7 +347,7 @@ describe("WriteLetterStep, sending", () => {
     expect(link.getAttribute("href")).toBe("https://findahelpline.com");
     expect(screen.getByText(T.crisis.notSent)).toBeTruthy();
     expect(screen.getByTestId("draft").textContent).toBe("");
-    expect(screen.queryByLabelText(T.write.fieldLabel)).toBeNull();
+    expect(screen.queryByLabelText(es.letterPaper.fieldLabel)).toBeNull();
 
     fireEvent.click(screen.getByText(T.letter.back));
     expect(phase()).toBe("correspondences");

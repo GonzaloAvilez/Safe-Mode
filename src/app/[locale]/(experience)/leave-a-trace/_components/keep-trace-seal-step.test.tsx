@@ -13,12 +13,13 @@ vi.mock("@/lib/return-key-card", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/return-key-card")>()),
   drawReturnKeyCardImage: drawImageMock,
 }));
-vi.mock("./download-blob", () => ({ downloadBlob: downloadMock, isIosDevice: isIosMock }));
+vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: downloadMock, isIosDevice: isIosMock }));
 
-import { KeepReturnKeyStep } from "./keep-return-key-step";
+import { KeepTraceSealStep } from "./keep-trace-seal-step";
 import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 
-const KEEP = es.leaveATrace.keep;
+// Leave a Trace's own words for this step, and the ones every seal step shares.
+const KEEP = { ...es.leaveATrace.keep, ...es.returnKey.keep };
 const PICTURE = new Blob(["png"], { type: "image/png" });
 const KEPT = { phase: "keeping" as const, key: { returnKey: SEAL, sentence: SENTENCE } };
 const phase = () => screen.getByTestId("phase").textContent;
@@ -36,9 +37,9 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-describe("KeepReturnKeyStep", () => {
+describe("KeepTraceSealStep", () => {
   it("shows the seal as three lights over the private card, and what it's for", () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     // Each group appears twice: under its light and on the card.
     for (const group of ["48213", "39017", "56229"]) expect(screen.getAllByText(group).length).toBeGreaterThanOrEqual(1);
@@ -49,7 +50,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("offers no way to go on until the person has saved the image or said they wrote the seal down", () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     expect(button(KEEP.continue)).toBeNull();
     expect(button(KEEP.save)).toBeTruthy();
@@ -57,7 +58,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("saves the picture of the card, tells the person it's ready, and only then offers to continue", async () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
 
@@ -74,7 +75,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("asks for the card's own fonts, so the picture matches the screen", async () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
 
@@ -84,7 +85,7 @@ describe("KeepReturnKeyStep", () => {
 
   it("on iPhone, tells the person how to save the picture if it opens instead of downloading", async () => {
     isIosMock.mockReturnValue(true);
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
 
@@ -92,7 +93,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("doesn't mention iPhone to anyone else", async () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
 
@@ -101,7 +102,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("“Lo anoté a mano” asks the person to confirm they wrote it all down, and only then can they go on", () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.wroteByHand }));
     expect(button(KEEP.continue)).toBeNull();
@@ -116,7 +117,7 @@ describe("KeepReturnKeyStep", () => {
 
   it("lets the person write the seal down if the picture can't be made, and says so", async () => {
     drawImageMock.mockRejectedValue(new Error("canvas is not available"));
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
 
@@ -128,7 +129,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("continuing goes on to sealing, still holding the seal", async () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
     await screen.findByText(KEEP.saved);
 
@@ -139,7 +140,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("someone back from sealing to look at the seal again can go on without saving it twice", () => {
-    renderStep(<KeepReturnKeyStep />, { ...KEPT, lastAsked: 1 });
+    renderStep(<KeepTraceSealStep />, { ...KEPT, lastAsked: 1 });
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.continue }));
 
@@ -148,7 +149,7 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("“Mejor sin cartas” is always there: it goes to the closing without saving anything, and lets go of the seal", async () => {
-    renderStep(<KeepReturnKeyStep />, { ...KEPT, lastAsked: 2 });
+    renderStep(<KeepTraceSealStep />, { ...KEPT, lastAsked: 2 });
 
     fireEvent.click(screen.getByRole("button", { name: KEEP.withoutLetters }));
 
@@ -159,14 +160,14 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("letting go of the seal from elsewhere doesn't pull a later step back to the closing", async () => {
-    renderStep(<KeepReturnKeyStep />, { phase: "sealed", key: null });
+    renderStep(<KeepTraceSealStep />, { phase: "sealed", key: null });
 
     await act(async () => {});
     expect(phase()).toBe("sealed");
   });
 
   it("never puts the seal in the browser's storage or the address", () => {
-    renderStep(<KeepReturnKeyStep />, KEPT);
+    renderStep(<KeepTraceSealStep />, KEPT);
 
     expect(JSON.stringify({ ...localStorage })).not.toContain(SEAL);
     expect(JSON.stringify({ ...sessionStorage })).not.toContain(SEAL);
@@ -175,13 +176,13 @@ describe("KeepReturnKeyStep", () => {
   });
 
   it("holds no link and nothing to share", () => {
-    const { container } = renderStep(<KeepReturnKeyStep />, KEPT);
+    const { container } = renderStep(<KeepTraceSealStep />, KEPT);
 
     expect(container.querySelector("a, [href], [data-share]")).toBeNull();
   });
 
   it("with no seal in memory (the ritual was reset) shows nothing and goes to the closing", async () => {
-    const { container } = renderStep(<KeepReturnKeyStep />, { phase: "keeping", key: null });
+    const { container } = renderStep(<KeepTraceSealStep />, { phase: "keeping", key: null });
 
     await waitFor(() => expect(phase()).toBe("submitted"));
     expect(container.querySelector("[role=img]")).toBeNull();

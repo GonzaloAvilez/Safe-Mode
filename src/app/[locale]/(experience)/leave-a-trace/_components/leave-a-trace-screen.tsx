@@ -8,7 +8,7 @@ import { ScreenCta } from "../../_shared/screen-cta";
 import { ScreenHeader } from "../../_shared/screen-header";
 import { ScreenPrompt } from "../../_shared/screen-prompt";
 import { GratitudeCanvas } from "../../gratitude/gratitude-canvas";
-import { KeepReturnKeyStep } from "./keep-return-key-step";
+import { KeepTraceSealStep } from "./keep-trace-seal-step";
 import { LettersChoiceStep } from "./letters-choice-step";
 import { SealTraceStep } from "./seal-trace-step";
 import { TraceForm } from "./trace-form";
@@ -64,7 +64,7 @@ export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
   if (phase === "keeping") {
     return (
       <TraceStepShell tagline={t("keep.tagline")} spacing="pt-40 pb-16">
-        <KeepReturnKeyStep />
+        <KeepTraceSealStep />
       </TraceStepShell>
     );
   }

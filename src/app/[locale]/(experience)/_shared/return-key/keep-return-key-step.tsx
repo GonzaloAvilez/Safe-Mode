@@ -1,32 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRitualState } from "@/app/_components/experience-state/ritual";
 import { drawReturnKeyCardImage } from "@/lib/return-key-card";
 import { splitReturnKeyGroups } from "@/lib/return-key-groups";
 import { downloadBlob, isIosDevice } from "./download-blob";
 import { ReturnKeyCard, readCardFonts } from "./return-key-card";
 
-// ADR-004 #212: where someone who chose letters keeps their seal (design: option C, C2). The card
-// is private (nothing on it can be shared) and the seal is shown only here, once: the server keeps
-// only its hash, so a lost seal can't be recovered by anyone, the founder included.
+// ADR-004 #212: where whoever is about to receive letters keeps their seal (design: option C, C2):
+// the author leaving a trace, and the visitor about to write from Mirror. The card is private
+// (nothing on it can be shared) and the seal is shown only here: the server keeps only its hash,
+// so a lost seal can't be recovered by anyone, the founder included.
 //
 // Going on requires a gesture, because the seal can't be recovered. The page can require the
 // action but can't know the picture really landed in the gallery or a note really got written, so
-// this is care, not a lock: they save the image, or say they wrote it down. "Mejor sin cartas"
-// is always there: the trace is already left, it just never receives letters.
-export function KeepReturnKeyStep() {
-  const t = useTranslations("leaveATrace");
+// this is care, not a lock: they save the image, or say they wrote it down. A way out is always
+// there; what it says and where it goes belongs to the screen showing the step.
+type KeepReturnKeyStepProps = {
+  returnKey: string;
+  sentence: string;
+  // Back from confirming to look at the seal again: it was already kept once, so no second gate.
+  alreadyKept: boolean;
+  // What keeping the seal is for, in this screen's words.
+  body: string;
+  // The way out without the seal ("Mejor sin cartas", "Volver a su frase").
+  leaveLabel: string;
+  onKept: () => void;
+  onLeave: () => void;
+};
+
+export function KeepReturnKeyStep({ returnKey, sentence, alreadyKept, body, leaveLabel, onKept, onLeave }: KeepReturnKeyStepProps) {
+  const t = useTranslations("returnKey");
   const tc = useTranslations("returnKeyCard");
-  const {
-    leaveATraceKey: key,
-    setLeaveATraceKey: setKey,
-    leaveATracePhase: phase,
-    setLeaveATracePhase: setPhase,
-    leaveATraceLastAsked: lastAsked,
-    setLeaveATraceLastAsked: setLastAsked,
-  } = useRitualState();
   const cardRef = useRef<HTMLDivElement>(null);
   const [kept, setKept] = useState<"none" | "image" | "hand">("none");
   const [wroteItAll, setWroteItAll] = useState(false);
@@ -34,25 +39,16 @@ export function KeepReturnKeyStep() {
   const [error, setError] = useState<string | null>(null);
   const [iosHint, setIosHint] = useState(false);
 
-  // A seal that isn't in memory (the ritual was reset) can't be shown: nothing left to keep. Only
-  // while still on this step, so letting go of the seal on the way out never redirects anything.
-  useEffect(() => {
-    if (!key && phase === "keeping") setPhase("submitted");
-  }, [key, phase, setPhase]);
-  if (!key) return null;
-
-  // Someone back from sealing to look at their seal again already kept it once: no second gate.
-  const returning = lastAsked !== null;
-  const canContinue = returning || kept === "image" || (kept === "hand" && wroteItAll);
+  const canContinue = alreadyKept || kept === "image" || (kept === "hand" && wroteItAll);
 
   async function saveImage() {
-    if (!key || !cardRef.current) return;
+    if (!cardRef.current) return;
     setSaving(true);
     setError(null);
     try {
       const picture = await drawReturnKeyCardImage({
-        returnKey: key.returnKey,
-        sentence: key.sentence,
+        returnKey,
+        sentence,
         labels: { brand: tc("brand"), stamp: tc("stamp"), footer: tc("footer") },
         fonts: readCardFonts(cardRef.current),
       });
@@ -66,19 +62,7 @@ export function KeepReturnKeyStep() {
     }
   }
 
-  // On to sealing, still holding the seal: sealing checks one of its groups and confirms it.
-  function goSeal() {
-    setPhase("sealing");
-  }
-
-  // The seal leaves memory: the trace is left, it just never receives letters.
-  function leaveWithoutLetters() {
-    setKey(null);
-    setLastAsked(null);
-    setPhase("submitted");
-  }
-
-  const groups = splitReturnKeyGroups(key.returnKey);
+  const groups = splitReturnKeyGroups(returnKey);
 
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-5">
@@ -93,11 +77,11 @@ export function KeepReturnKeyStep() {
 
       <div className="relative h-[450px] w-[320px] max-[359px]:h-[383px] max-[359px]:w-[272px]">
         <div className="origin-top-left max-[359px]:scale-[0.85]">
-          <ReturnKeyCard ref={cardRef} returnKey={key.returnKey} sentence={key.sentence} />
+          <ReturnKeyCard ref={cardRef} returnKey={returnKey} sentence={sentence} />
         </div>
       </div>
 
-      <p className="max-w-[316px] text-center text-[13px] leading-[1.7] text-white/60">{t("keep.body")}</p>
+      <p className="max-w-[316px] text-center text-[13px] leading-[1.7] text-white/60">{body}</p>
 
       {error && <p className="text-center text-[13px] leading-[1.6] text-white/60">{error}</p>}
 
@@ -142,7 +126,7 @@ export function KeepReturnKeyStep() {
         {canContinue && (
           <button
             type="button"
-            onClick={goSeal}
+            onClick={onKept}
             className="mt-2 rounded-full border border-white/25 px-8 py-2.5 text-[13px] tracking-[1px] text-white/80 transition-colors duration-300 hover:border-[rgba(210,158,32,0.6)] hover:text-white"
           >
             {t("keep.continue")}
@@ -151,10 +135,10 @@ export function KeepReturnKeyStep() {
 
         <button
           type="button"
-          onClick={leaveWithoutLetters}
+          onClick={onLeave}
           className="mt-1 text-[12px] tracking-[.5px] text-white/35 underline decoration-white/10 underline-offset-4 transition-colors duration-300 hover:text-white/60"
         >
-          {t("keep.withoutLetters")}
+          {leaveLabel}
         </button>
       </div>
     </div>
