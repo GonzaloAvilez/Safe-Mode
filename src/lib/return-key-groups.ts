@@ -32,12 +32,14 @@ export function pickAskedGroup(previous: SealGroupIndex | null = null, random: (
 }
 
 // What can stand between the digit groups when a seal is typed or read: spaces, hyphens, dots,
-// and the middle dot the card shows. The same separators the server accepts (identity-keys.ts).
+// and the middle dot the card shows.
 const SEAL_SEPARATORS = /[\s.·-]/g;
 
-// The seal in someone's text, the way the mailbox reads it (#213): typed by hand, or read from the
-// QR on the saved picture. Only a whole seal counts: null for anything else, so nothing short of
-// 15 digits is ever sent.
+// The seal in someone's text: typed by hand, or read from the QR on the saved picture. Only a
+// whole seal counts: null for anything else, so nothing short of 15 digits is ever sent.
+//
+// The one place a seal is read. The mailbox uses it in the browser and the server uses it before
+// hashing (normalizeReturnKey in identity-keys.ts), so both always accept the same seals.
 export function parseSeal(text: string): string | null {
   const digits = text.replace(SEAL_SEPARATORS, "");
   return SEAL_PATTERN.test(digits) ? digits : null;

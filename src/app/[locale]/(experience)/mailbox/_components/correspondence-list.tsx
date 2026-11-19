@@ -1,7 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { MailboxCorrespondence } from "@/lib/mailbox";
+import type { MailboxCorrespondence, MailboxCorrespondenceState } from "@/lib/mailbox";
+
+// The postmark for each state the server can give a correspondence (MailboxCorrespondenceState).
+// `satisfies` makes a state added there a build error here until it has a postmark.
+export const POSTMARKS = {
+  your_turn: "postmark.your_turn",
+  their_turn: "postmark.their_turn",
+  awaiting_review: "postmark.awaiting_review",
+  closed: "postmark.closed",
+} as const satisfies Record<MailboxCorrespondenceState, string>;
 
 // ADR-004 #213, design B3: each correspondence is an envelope. On its front, the phrase both sides
 // share; on the postmark, whose turn it is. There's no "new letter" mark: reading isn't tracked
@@ -49,7 +58,7 @@ function CorrespondenceEnvelope({
               : "border-[1.5px] border-dashed border-[rgba(42,38,32,0.45)] text-[rgba(42,38,32,0.65)]"
         }`}
       >
-        {t(`postmark.${correspondence.state}`)}
+        {t(POSTMARKS[correspondence.state])}
       </span>
     </button>
   );

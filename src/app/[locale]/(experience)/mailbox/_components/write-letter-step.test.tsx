@@ -43,14 +43,17 @@ function reduceMotion(reduce: boolean) {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: reduce && query.includes("reduce"), media: query }));
 }
 
+// Answers the given responses in order; anything asked after them (the mailbox the screen asks for
+// once a letter is on its way) finds the server out of reach.
 function answerWith(...responses: Response[]) {
-  const fetchMock = vi.fn();
+  const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(null, { status: 503 })));
   responses.forEach((response) => fetchMock.mockResolvedValueOnce(response));
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
 const field = () => screen.getByLabelText(T.write.fieldLabel) as HTMLTextAreaElement;
+const letterPosts = (fetchMock: ReturnType<typeof vi.fn>) => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/letters"));
 const sendButton = () => screen.getByRole("button", { name: T.write.send }) as HTMLButtonElement;
 const notice = () => document.getElementById("letter-notice")!.textContent;
 const phase = () => screen.getByTestId("phase").textContent;
@@ -156,8 +159,8 @@ describe("WriteLetterStep, sending", () => {
 
     writeAndSend("Gracias por escribirme.");
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
-    const [url, init] = fetchMock.mock.calls[0];
+    await waitFor(() => expect(letterPosts(fetchMock)).toHaveLength(1));
+    const [url, init] = letterPosts(fetchMock)[0];
     expect(url).toBe("/api/correspondences/c1/letters");
     expect(init.headers.Authorization).toBe(`Bearer ${SEAL}`);
     const body = JSON.parse(init.body);
@@ -166,7 +169,7 @@ describe("WriteLetterStep, sending", () => {
     expect(typeof body.formRenderedAt).toBe("number");
   });
 
-  it("a letter on its way: the envelope leaves, the draft is let go, and its envelope now says “En camino”", async () => {
+  it("a letter on its way: the envelope leaves, the draft is let go, and even with the server out of reach its envelope says “En camino”", async () => {
     answerWith(Response.json({ type: "held" }, { status: 201 }));
     renderMailbox(<MailboxScreen />, writing());
 
@@ -185,6 +188,73 @@ describe("WriteLetterStep, sending", () => {
     fireEvent.click(envelope);
     expect(screen.getByText("Gracias por escribirme.")).toBeTruthy();
     expect(screen.getByText(T.letter.held)).toBeTruthy();
+  });
+
+  describe("after a letter is on its way, the server says what the mailbox looks like", () => {
+    // What the server holds after the letter: written in the server's words, so the test can tell
+    // its version from the screen's stand-in.
+    const SERVER_MAILBOX = {
+      correspondences: [
+        {
+          ...THEIRS,
+          state: "awaiting_review",
+          letters: [THEIRS.letters[0], letter({ sender: "author", status: "held", body: "Así la guardó el servidor.", deliveredAt: null })],
+        },
+      ],
+    };
+
+    it("asks the server for the mailbox, with the seal in the header, and shows the server's version", async () => {
+      const fetchMock = answerWith(Response.json({ type: "held" }, { status: 201 }), Response.json(SERVER_MAILBOX));
+      renderMailbox(<MailboxScreen />, writing());
+
+      writeAndSend("Lo que escribí.");
+      await screen.findByText(T.send.headline);
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+      const [url, init] = fetchMock.mock.calls[1];
+      expect(url).toBe("/api/mailbox");
+      expect(init.headers.Authorization).toBe(`Bearer ${SEAL}`);
+      fireEvent.click(screen.getByText(T.letter.back));
+      fireEvent.click(screen.getAllByRole("button").find((button) => button.dataset.state)!);
+      expect(screen.getByText("Así la guardó el servidor.")).toBeTruthy();
+      expect(screen.queryByText("Lo que escribí.")).toBeNull();
+    });
+
+    it("the server's answer still counts if the person already went back to the envelopes", async () => {
+      let answer: (response: Response) => void = () => {};
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ type: "held" }, { status: 201 }))
+        .mockReturnValueOnce(new Promise<Response>((resolve) => (answer = resolve)));
+      vi.stubGlobal("fetch", fetchMock);
+      renderMailbox(<MailboxScreen />, writing());
+      writeAndSend("Lo que escribí.");
+      await screen.findByText(T.send.headline);
+
+      fireEvent.click(screen.getByText(T.letter.back));
+      await act(async () => answer(Response.json(SERVER_MAILBOX)));
+
+      fireEvent.click(screen.getAllByRole("button").find((button) => button.dataset.state)!);
+      expect(screen.getByText("Así la guardó el servidor.")).toBeTruthy();
+    });
+
+    it("an answer that arrives after the mailbox was closed doesn't reopen it", async () => {
+      let answer: (response: Response) => void = () => {};
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ type: "held" }, { status: 201 }))
+        .mockReturnValueOnce(new Promise<Response>((resolve) => (answer = resolve)));
+      vi.stubGlobal("fetch", fetchMock);
+      renderMailbox(<MailboxScreen />, writing());
+      writeAndSend("Lo que escribí.");
+      await screen.findByText(T.send.headline);
+
+      fireEvent.click(screen.getByText(T.backToStart));
+      await act(async () => answer(Response.json(SERVER_MAILBOX)));
+
+      expect(screen.getByTestId("opened").textContent).toBe("");
+      expect(screen.getByTestId("key").textContent).toBe("");
+    });
   });
 
   it("“Volver al inicio” after sending lets go of the seal", async () => {
@@ -317,7 +387,7 @@ describe("WriteLetterStep, sending", () => {
     fireEvent.submit(form);
 
     await screen.findByText(T.send.headline);
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(letterPosts(fetchMock)).toHaveLength(1);
   });
 });
 

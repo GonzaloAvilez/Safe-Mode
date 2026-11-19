@@ -28,8 +28,9 @@ function prefersReducedMotion(): boolean {
     : false;
 }
 
-// The mailbox as the server will show it next time: this side's letter waiting for review, and
-// the correspondence on its way. Saves asking the server again just to show the same thing.
+// Only a stand-in for the moment after sending: this side's letter waiting for review and the
+// correspondence on its way, until the server's own mailbox arrives (or if it can't be reached
+// right then, so the envelope doesn't keep saying "your turn"). The server stays the source of truth.
 function withLetterOnItsWay(mailbox: Mailbox | null, correspondenceId: string, body: string): Mailbox | null {
   if (!mailbox) return mailbox;
   return {
@@ -126,10 +127,20 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
     setPhase("correspondences");
   }
 
-  async function settle(result: SendLetterResult, text: string, isStillWanted: () => boolean) {
+  async function settle(
+    result: SendLetterResult,
+    text: string,
+    isStillWanted: () => boolean,
+    isCurrentMailbox: () => boolean
+  ) {
     if (result.type === "held") {
       setDraft("");
       setMailbox((mailbox) => withLetterOnItsWay(mailbox, correspondence.id, text));
+      // Then the mailbox as the server has it now, which replaces the stand-in. Not tied to this
+      // screen (going back to the envelopes meanwhile is fine), only to the mailbox staying open.
+      void fetchMailboxWithReturnKey(returnKey ?? "").then((fresh) => {
+        if (isCurrentMailbox() && fresh.type === "opened") setMailbox(fresh.mailbox);
+      });
       setStage("leaving");
       setPhase("sent");
       return;
@@ -180,7 +191,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
         wait(prefersReducedMotion() ? 0 : LETTER_TRACE_MS),
       ]);
       if (!isStillWanted()) return;
-      await settle(result, text, isStillWanted);
+      await settle(result, text, isStillWanted, isCurrentMailbox);
     } finally {
       unlockLocaleSwitch();
     }

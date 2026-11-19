@@ -100,3 +100,22 @@ describe("sendLetter", () => {
     expect(await sendLetter(INPUT)).toEqual({ type: "error", reason: "offline" });
   });
 });
+
+describe("sendLetter, the server's own results", () => {
+  it.each([
+    [409, { type: "not_allowed", reason: "not_your_turn" }, { type: "not_allowed" }],
+    [404, { type: "not_found" }, { type: "not_recognized" }],
+    [409, null, { type: "not_allowed" }],
+    [404, null, { type: "not_recognized" }],
+  ])("a %i with %j reads as %j", async (status, body, expected) => {
+    stubFetch(Response.json(body, { status }));
+
+    expect(await sendLetter(INPUT)).toEqual(expected);
+  });
+
+  it("a rejection for a reason this screen doesn't know fails rather than guessing", async () => {
+    stubFetch(Response.json({ type: "rejected", reason: "spam" }, { status: 201 }));
+
+    expect(await sendLetter(INPUT)).toEqual({ type: "error", reason: "failed" });
+  });
+});

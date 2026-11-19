@@ -5,6 +5,14 @@ import type { MailboxLetter } from "@/lib/mailbox";
 import type { LetterSender } from "@/lib/letter-lifecycle";
 import { formatLetterAge } from "./format-letter-age";
 
+// What the paper carries for each status a visible letter can have (MailboxLetter["status"]):
+// `satisfies` makes a status added on the server a build error here until the paper knows it.
+export const LETTER_POSTMARKS = {
+  delivered: null,
+  held: "held",
+  rejected: "rejected",
+} as const satisfies Record<MailboxLetter["status"], "held" | "rejected" | null>;
+
 // ADR-004 #213, design B4: one letter, on paper. What the paper says depends on the letter:
 //   - delivered: the text, signed by who wrote it (never a name: "someone who saw themselves in
 //     your phrase", or "whoever left the phrase");
@@ -39,8 +47,9 @@ export function LetterPaper({
   const locale = useLocale();
   const yours = letter.sender === yourSide;
   const erased = letter.body === null;
-  const rejected = letter.status === "rejected";
-  const held = letter.status === "held";
+  const postmark = LETTER_POSTMARKS[letter.status];
+  const rejected = postmark === "rejected";
+  const held = postmark === "held";
   const signature = yours ? null : yourSide === "author" ? t("fromVisitor") : t("fromAuthor");
 
   return (
