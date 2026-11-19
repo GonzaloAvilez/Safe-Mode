@@ -474,3 +474,114 @@ describe("WriteLetterStep, leaving mid-send", () => {
     expect(field().value).toBe("Gracias.");
   });
 });
+
+describe("WriteLetterStep, one draft per correspondence (#252 review)", () => {
+  const A = correspondence({ id: "a", phraseText: "La frase de A.", letters: [letter({ body: "Carta de A." })] });
+  const B = correspondence({ id: "b", phraseText: "La frase de B.", letters: [letter({ body: "Carta de B." })] });
+  const openEnvelope = (phrase: string) => fireEvent.click(screen.getByText(`“${phrase}”`));
+  const reply = () => fireEvent.click(screen.getByRole("button", { name: T.letter.reply }));
+  const notNow = () => fireEvent.click(screen.getByRole("button", { name: T.write.notNow }));
+  const backToEnvelopes = () => fireEvent.click(screen.getByText(T.letter.back));
+
+  function startOnEnvelopes() {
+    renderMailbox(<MailboxScreen />, { returnKey: SEAL, mailbox: { correspondences: [A, B] }, phase: "correspondences" });
+  }
+
+  it("what was begun for A never shows when answering B, and A's is still there when coming back", () => {
+    startOnEnvelopes();
+
+    openEnvelope("La frase de A.");
+    reply();
+    fireEvent.change(field(), { target: { value: "Solo para A." } });
+    notNow();
+    backToEnvelopes();
+
+    openEnvelope("La frase de B.");
+    reply();
+    expect(field().value).toBe("");
+    fireEvent.change(field(), { target: { value: "Solo para B." } });
+    notNow();
+    backToEnvelopes();
+
+    openEnvelope("La frase de A.");
+    reply();
+    expect(field().value).toBe("Solo para A.");
+    expect(JSON.parse(screen.getByTestId("drafts").textContent!)).toEqual({ a: "Solo para A.", b: "Solo para B." });
+  });
+
+  it("sending to B sends B's own text to B, and leaves A's draft alone", async () => {
+    const fetchMock = answerWith(Response.json({ type: "held" }, { status: 201 }));
+    startOnEnvelopes();
+    openEnvelope("La frase de A.");
+    reply();
+    fireEvent.change(field(), { target: { value: "Solo para A." } });
+    notNow();
+    backToEnvelopes();
+    openEnvelope("La frase de B.");
+    reply();
+
+    writeAndSend("Solo para B.");
+
+    await screen.findByText(T.send.headline);
+    const [url, init] = letterPosts(fetchMock)[0];
+    expect(url).toBe("/api/correspondences/b/letters");
+    expect(JSON.parse(init.body).text).toBe("Solo para B.");
+    expect(JSON.parse(screen.getByTestId("drafts").textContent!)).toEqual({ a: "Solo para A.", b: "" });
+  });
+});
+
+describe("WriteLetterStep, asking for the mailbox again fails (#252 review)", () => {
+  it("after “not your turn”, a seal the server no longer recognizes closes the mailbox", async () => {
+    answerWith(Response.json({ type: "not_allowed", reason: "not_your_turn" }, { status: 409 }), Response.json({}, { status: 401 }));
+    renderMailbox(<MailboxScreen />, writing());
+
+    writeAndSend("Gracias.");
+
+    await screen.findByText(T.show.headline);
+    expect(screen.getByTestId("key").textContent).toBe("");
+    expect(screen.getByTestId("opened").textContent).toBe("");
+  });
+
+  it.each([
+    ["a server error", new Response("boom", { status: 500 }), T.write.failed],
+    ["too many tries", Response.json({}, { status: 429 }), T.write.tooMany],
+  ])("after “not your turn”, %s gives the paper back with what happened, the draft kept, never old contents as new", async (_label, refresh, expected) => {
+    const fetchMock = answerWith(Response.json({ type: "not_allowed", reason: "not_your_turn" }, { status: 409 }), refresh);
+    renderMailbox(<MailboxScreen />, writing());
+
+    writeAndSend("Gracias.");
+
+    await waitFor(() => expect(notice()).toBe(expected));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(phase()).toBe("writing");
+    expect(field().value).toBe("Gracias.");
+    expect(screen.getByTestId("key").textContent).toBe(SEAL);
+  });
+
+  it("with no connection to ask again, says so, and the letter can be sent again", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ type: "not_allowed", reason: "not_your_turn" }, { status: 409 }))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(Response.json({ type: "held" }, { status: 201 }))
+      .mockResolvedValue(new Response(null, { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderMailbox(<MailboxScreen />, writing());
+
+    writeAndSend("Gracias.");
+    await waitFor(() => expect(notice()).toBe(es.common.errors.couldntConnect));
+    fireEvent.click(sendButton());
+
+    await screen.findByText(T.send.headline);
+  });
+
+  it("after a letter is on its way, a seal the server no longer recognizes closes the mailbox too", async () => {
+    answerWith(Response.json({ type: "held" }, { status: 201 }), Response.json({}, { status: 401 }));
+    renderMailbox(<MailboxScreen />, writing());
+
+    writeAndSend("Gracias.");
+
+    await screen.findByText(T.show.headline);
+    expect(screen.getByTestId("key").textContent).toBe("");
+  });
+});

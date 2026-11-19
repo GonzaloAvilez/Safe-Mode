@@ -95,8 +95,8 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
     mailboxPhase: phase,
     setMailboxPhase: setPhase,
     setOpenCorrespondenceId,
-    letterDraft: draft,
-    setLetterDraft: setDraft,
+    letterDrafts,
+    setLetterDraft,
     letterOutcome: outcome,
     setLetterOutcome: setOutcome,
     startMailboxOperation,
@@ -104,6 +104,9 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
   } = useMailboxState();
   const { lock: lockLocaleSwitch, unlock: unlockLocaleSwitch } = useLocaleTransition();
   const { honeypot, setHoneypot, formRenderedAt } = useHoneypot("letter");
+  // This correspondence's own draft: another correspondence's never shows here.
+  const draft = letterDrafts[correspondence.id] ?? "";
+  const setDraft = (text: string) => setLetterDraft(correspondence.id, text);
   // Which part of the envelope's way this screen is showing, while it's the one sending.
   const [stage, setStage] = useState<LetterSendStage | null>(null);
   const mounted = useRef(false);
@@ -127,7 +130,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
     setPhase("correspondences");
   }
 
-  async function settle(
+  async function handleSendResult(
     result: SendLetterResult,
     text: string,
     isStillWanted: () => boolean,
@@ -138,8 +141,12 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
       setMailbox((mailbox) => withLetterOnItsWay(mailbox, correspondence.id, text));
       // Then the mailbox as the server has it now, which replaces the stand-in. Not tied to this
       // screen (going back to the envelopes meanwhile is fine), only to the mailbox staying open.
+      // A seal the server no longer recognizes closes the mailbox, as anywhere else; if it can't be
+      // reached, the stand-in stays.
       void fetchMailboxWithReturnKey(returnKey ?? "").then((fresh) => {
-        if (isCurrentMailbox() && fresh.type === "opened") setMailbox(fresh.mailbox);
+        if (!isCurrentMailbox()) return;
+        if (fresh.type === "opened") setMailbox(fresh.mailbox);
+        else if (fresh.type === "not_recognized") clearMailboxState();
       });
       setStage("leaving");
       setPhase("sent");
@@ -158,12 +165,22 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
     }
     if (result.type === "not_allowed") {
       // Someone else's move changed the turn meanwhile (another tab, a letter in review): show the
-      // correspondence as it is now. The draft stays for when it's this side's turn again.
+      // correspondence as it is now, as the server has it. The draft stays for when it's this
+      // side's turn again. Never the old contents passed off as the new ones: a seal the server no
+      // longer recognizes closes the mailbox, and a mailbox that couldn't be asked for gives the
+      // paper back with what happened, to try again.
       const fresh = await fetchMailboxWithReturnKey(returnKey ?? "");
       if (!isStillWanted()) return;
       setStage(null);
-      if (fresh.type === "opened") setMailbox(fresh.mailbox);
-      setPhase("reading");
+      if (fresh.type === "opened") {
+        setMailbox(fresh.mailbox);
+        setPhase("reading");
+      } else if (fresh.type === "not_recognized") {
+        clearMailboxState();
+      } else {
+        setOutcome({ type: "error", reason: fresh.reason });
+        setPhase("writing");
+      }
       return;
     }
     setStage(null);
@@ -191,7 +208,7 @@ export function WriteLetterStep({ correspondence }: { correspondence: MailboxCor
         wait(prefersReducedMotion() ? 0 : LETTER_TRACE_MS),
       ]);
       if (!isStillWanted()) return;
-      await settle(result, text, isStillWanted, isCurrentMailbox);
+      await handleSendResult(result, text, isStillWanted, isCurrentMailbox);
     } finally {
       unlockLocaleSwitch();
     }

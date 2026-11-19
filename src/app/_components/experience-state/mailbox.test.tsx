@@ -29,13 +29,14 @@ describe("mailbox state", () => {
       result.current.setMailbox(MAILBOX);
       result.current.setMailboxPhase("reading");
       result.current.setOpenCorrespondenceId("c1");
-      result.current.setLetterDraft("A medias.");
+      result.current.setLetterDraft("c1", "A medias.");
+      result.current.setLetterDraft("c2", "Otra.");
       result.current.setLetterOutcome({ type: "crisis" });
     });
 
     act(() => result.current.clearMailboxState());
 
-    expect(result.current.letterDraft).toBe("");
+    expect(result.current.letterDrafts).toEqual({});
     expect(result.current.letterOutcome).toBeNull();
     expect(result.current.mailboxReturnKey).toBeNull();
     expect(result.current.mailbox).toBeNull();
@@ -67,5 +68,19 @@ describe("mailbox state", () => {
 
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
+  });
+});
+
+describe("mailbox state, drafts", () => {
+  it("keeps one draft per correspondence: writing to one never touches another's", () => {
+    const { result } = renderHook(() => useMailboxState(), { wrapper });
+
+    act(() => {
+      result.current.setLetterDraft("c1", "Para quien escribió primero.");
+      result.current.setLetterDraft("c2", "Para la otra persona.");
+    });
+    act(() => result.current.setLetterDraft("c1", ""));
+
+    expect(result.current.letterDrafts).toEqual({ c1: "", c2: "Para la otra persona." });
   });
 });

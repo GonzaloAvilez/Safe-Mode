@@ -182,17 +182,17 @@ export function MailboxScreen() {
     );
   }
 
-  const open = mailbox.correspondences.find((correspondence) => correspondence.id === openCorrespondenceId);
+  const activeCorrespondence = mailbox.correspondences.find((correspondence) => correspondence.id === openCorrespondenceId);
 
-  if (open && (phase === "writing" || phase === "sending" || phase === "sent")) {
+  if (activeCorrespondence && (phase === "writing" || phase === "sending" || phase === "sent")) {
     return (
       <MailboxShell tagline={t("insideTagline")}>
-        <WriteLetterStep correspondence={open} />
+        <WriteLetterStep correspondence={activeCorrespondence} />
       </MailboxShell>
     );
   }
 
-  const reading = phase === "reading" ? open : undefined;
+  const reading = phase === "reading" ? activeCorrespondence : undefined;
 
   if (reading) {
     return (

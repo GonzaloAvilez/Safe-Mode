@@ -22,10 +22,11 @@ type MailboxState = {
   setMailboxPhase: Dispatch<SetStateAction<MailboxPhase>>;
   openCorrespondenceId: string | null;
   setOpenCorrespondenceId: Dispatch<SetStateAction<string | null>>;
-  // The letter being written, kept like the ritual's drafts: memory only, and it survives a
-  // language switch.
-  letterDraft: string;
-  setLetterDraft: Dispatch<SetStateAction<string>>;
+  // The letters being written, one per correspondence (by its id), kept like the ritual's drafts:
+  // memory only, and they survive a language switch. Never one draft for the whole mailbox: what
+  // someone began writing to one person must never appear in a letter to another.
+  letterDrafts: Readonly<Record<string, string>>;
+  setLetterDraft: (correspondenceId: string, text: string) => void;
   // What the last send came back with, when the letter didn't leave (a crisis, a rejection, a
   // pause), so what it says to the person survives a language switch too.
   letterOutcome: SendLetterResult | null;
@@ -45,7 +46,11 @@ export function MailboxStateProvider({ children }: { children: ReactNode }) {
   const [mailbox, setMailbox] = useState<Mailbox | null>(null);
   const [mailboxPhase, setMailboxPhase] = useState<MailboxPhase>("showing_seal");
   const [openCorrespondenceId, setOpenCorrespondenceId] = useState<string | null>(null);
-  const [letterDraft, setLetterDraft] = useState("");
+  const [letterDrafts, setLetterDrafts] = useState<Readonly<Record<string, string>>>({});
+
+  const setLetterDraft = useCallback((correspondenceId: string, text: string) => {
+    setLetterDrafts((drafts) => ({ ...drafts, [correspondenceId]: text }));
+  }, []);
   const [letterOutcome, setLetterOutcome] = useState<SendLetterResult | null>(null);
   // Bumped every time the mailbox is closed. An operation started before that belongs to a
   // mailbox that no longer exists, so its result must not reopen it: whoever left mid-request
@@ -63,7 +68,7 @@ export function MailboxStateProvider({ children }: { children: ReactNode }) {
     setMailbox(null);
     setMailboxPhase("showing_seal");
     setOpenCorrespondenceId(null);
-    setLetterDraft("");
+    setLetterDrafts({});
     setLetterOutcome(null);
   }, []);
 
@@ -78,7 +83,7 @@ export function MailboxStateProvider({ children }: { children: ReactNode }) {
         setMailboxPhase,
         openCorrespondenceId,
         setOpenCorrespondenceId,
-        letterDraft,
+        letterDrafts,
         setLetterDraft,
         letterOutcome,
         setLetterOutcome,
