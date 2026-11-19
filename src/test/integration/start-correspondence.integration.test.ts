@@ -19,6 +19,7 @@ vi.mock("@/lib/settings", () => ({ isLettersOpen: isLettersOpenMock }));
 
 import { createVisitorReturnKey, isPhraseConnectableNow, startCorrespondence } from "@/lib/correspondences";
 import { confirmReturnKey, createIdentityWithReturnKey, resolveIdentityFromReturnKey } from "@/lib/identity-keys";
+import { getMailboxWithReturnKey } from "@/lib/mailbox";
 import { createResponse } from "@/lib/responses";
 import { supabaseAdmin } from "@/lib/supabase";
 import { keepVisitorSeal } from "./keep-visitor-seal";
@@ -315,18 +316,60 @@ describe("startCorrespondence (integration)", () => {
     expect(moderateTextMock).not.toHaveBeenCalled();
   });
 
-  it("leaves no correspondence or letter behind when moderation is unavailable, and keeps the seal", async () => {
+  it("keeps the correspondence, without letters, when moderation is unavailable; the retry writes into it", async () => {
     const session = randomUUID();
-    const entryId = await createMatchedEntry(session, await createPhrase("seed"));
+    const { phraseId, authorKey } = await createPhraseWithAuthor("user whose author confirmed their key");
+    const entryId = await createMatchedEntry(session, phraseId);
     const returnKey = await sealFor(entryId, session);
-    moderateTextMock.mockRejectedValue(new Error("OpenAI unavailable"));
-    const before = await Promise.all([countRows("correspondences"), countRows("letters")]);
+    moderateTextMock.mockRejectedValueOnce(new Error("OpenAI unavailable"));
+    const lettersBefore = await countRows("letters");
 
     await expect(startCorrespondence({ entryId, sessionId: session, returnKey, body: "hola" })).rejects.toThrow(
       "OpenAI unavailable"
     );
 
-    expect(await Promise.all([countRows("correspondences"), countRows("letters")])).toEqual(before);
-    expect(await resolveIdentityFromReturnKey(returnKey)).not.toBeNull(); // the visitor retries with it
+    expect(await countRows("letters")).toBe(lettersBefore);
+    // Only its visitor sees it, as their turn; its author never hears of it.
+    const visitorMailbox = await getMailboxWithReturnKey(returnKey);
+    expect(visitorMailbox!.correspondences.map(({ state, letters }) => [state, letters.length])).toEqual([["your_turn", 0]]);
+    expect(await getMailboxWithReturnKey(authorKey!)).toEqual({ correspondences: [] });
+
+    moderateTextMock.mockResolvedValue(benignModerationCheckFixture);
+    const retry = await startCorrespondence({ entryId, sessionId: session, returnKey, body: "Gracias por tu frase." });
+
+    if (retry.type !== "started") throw new Error(`expected started, got ${retry.type}`);
+    expect(retry.correspondenceId).toBe(visitorMailbox!.correspondences[0].id);
+    expect(await lettersOf(retry.correspondenceId)).toEqual([{ sender: "visitor", status: "held" }]);
+  });
+
+  it("never loses a letter stored by a concurrent try when the try that created the correspondence fails later", async () => {
+    // Review of #255: A creates the correspondence and waits in moderation; B finds it and
+    // stores its letter; then A's moderation fails. B's letter must survive.
+    const session = randomUUID();
+    const entryId = await createMatchedEntry(session, await createPhrase("seed"));
+    const returnKey = await sealFor(entryId, session);
+    const input = { entryId, sessionId: session, returnKey, body: "Gracias por tu frase." };
+
+    let failCreatorModeration!: (error: Error) => void;
+    let creatorReachedModeration!: () => void;
+    const creatorInModeration = new Promise<void>((resolve) => (creatorReachedModeration = resolve));
+    moderateTextMock.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failCreatorModeration = reject;
+          creatorReachedModeration();
+        })
+    );
+    moderateTextMock.mockResolvedValue(benignModerationCheckFixture);
+
+    const creator = startCorrespondence(input);
+    await creatorInModeration; // A has created the correspondence and is paused in moderation
+    const other = await startCorrespondence(input);
+    failCreatorModeration(new Error("OpenAI unavailable"));
+
+    await expect(creator).rejects.toThrow("OpenAI unavailable");
+    if (other.type !== "started") throw new Error(`expected started, got ${other.type}`);
+    expect(other.letter).toEqual({ type: "held" });
+    expect(await lettersOf(other.correspondenceId)).toEqual([{ sender: "visitor", status: "held" }]);
   });
 });

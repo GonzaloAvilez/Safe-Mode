@@ -7,8 +7,8 @@ import { isLettersOpen } from "@/lib/settings";
 
 // ADR-004 #211: starting a correspondence and writing in it. A visitor whose entry matched
 // a phrase keeps a seal first (#212, design B), then writes the first letter to that phrase's
-// author; the correspondence is created together with that letter, never empty (founder
-// decision 2026-11-11). After that, each side writes its next letter with its return key.
+// author; the correspondence is created together with that letter (founder decision
+// 2026-11-11). After that, each side writes its next letter with its return key.
 //
 // Entries are never stored with a correspondence (ADR-004 hard rule): the entry is only
 // read here to prove the visitor owns it and to find the phrase it matched.
@@ -52,7 +52,7 @@ async function findMatchedPhrase(entryId: string, sessionId: string): Promise<Ma
   return (data as OwnedEntryRow | null)?.entries?.phrases ?? null;
 }
 
-async function canLettersReach(phrase: PhraseOwnership): Promise<boolean> {
+async function canPhraseReceiveLetters(phrase: PhraseOwnership): Promise<boolean> {
   const authorKeyConfirmed = phrase.identity_id !== null && (await hasConfirmedReturnKey(phrase.identity_id));
   return isPhraseConnectable(phrase, authorKeyConfirmed);
 }
@@ -70,7 +70,7 @@ type PhraseToWriteTo =
 async function findPhraseToWriteTo(entryId: string, sessionId: string): Promise<PhraseToWriteTo> {
   const phrase = await findMatchedPhrase(entryId, sessionId);
   if (!phrase) return { type: "entry_not_found" };
-  if (!(await canLettersReach(phrase))) return { type: "phrase_not_connectable" };
+  if (!(await canPhraseReceiveLetters(phrase))) return { type: "phrase_not_connectable" };
   return { type: "found", phrase };
 }
 
@@ -87,7 +87,7 @@ export async function isPhraseConnectableNow(phraseId: string): Promise<boolean>
     .maybeSingle();
   if (error) throw error;
 
-  return data ? canLettersReach(data as PhraseOwnership) : false;
+  return data ? canPhraseReceiveLetters(data as PhraseOwnership) : false;
 }
 
 export type CreateVisitorReturnKeyResult =
@@ -150,40 +150,36 @@ async function findCorrespondenceId(phraseId: string, visitorIdentityId: string)
   return (data as { id: string } | null)?.id ?? null;
 }
 
-type FoundOrCreatedCorrespondence = { correspondenceId: string; createdNow: boolean };
-
-async function findOrCreateCorrespondence(phraseId: string, visitorIdentityId: string): Promise<FoundOrCreatedCorrespondence> {
+async function findOrCreateCorrespondence(phraseId: string, visitorIdentityId: string): Promise<string> {
   const existingId = await findCorrespondenceId(phraseId, visitorIdentityId);
-  if (existingId) return { correspondenceId: existingId, createdNow: false };
+  if (existingId) return existingId;
 
   const { data, error } = await supabaseAdmin
     .from("correspondences")
     .insert({ phrase_id: phraseId, visitor_identity_id: visitorIdentityId })
     .select("id")
     .single();
-  if (!error) return { correspondenceId: (data as { id: string }).id, createdNow: true };
+  if (!error) return (data as { id: string }).id;
 
   // Expected, not a bug: two tries raced past the lookup above (double click, two tabs) and
   // the unique constraint let only the first one in. This one writes into that one.
   if (error.code === UNIQUE_VIOLATION && error.message.includes(ONE_CORRESPONDENCE_PER_VISITOR_AND_PHRASE)) {
     const winnerId = await findCorrespondenceId(phraseId, visitorIdentityId);
-    if (winnerId) return { correspondenceId: winnerId, createdNow: false };
+    if (winnerId) return winnerId;
   }
   throw error;
 }
 
-// Undoes a correspondence created for a letter that couldn't be stored, so none is ever left
-// empty (founder decision 2026-11-11). Logged, not thrown: the caller is already failing with
-// the error that matters, and an empty correspondence only waits for the visitor's next try.
-async function deleteCorrespondence(correspondenceId: string): Promise<void> {
-  const { error } = await supabaseAdmin.from("correspondences").delete().eq("id", correspondenceId);
-  if (error) console.error("couldn't clean up a correspondence after a failure", error);
-}
-
 // ADR-004 #211 and #212: a visitor writes the first letter to the author of the phrase their
 // entry matched, with a seal they already kept and confirmed (createVisitorReturnKey). The
-// correspondence is created together with that letter, never empty (founder decision
-// 2026-11-11).
+// correspondence is created together with that letter (founder decision 2026-11-11).
+//
+// If the letter can't be stored (the moderation call failed, fail-closed), the error goes up
+// and the correspondence stays, without letters, for the visitor's next try with the same
+// seal. It's never deleted here: a try running at the same time may already have stored its
+// letter in it, and deleting would take that letter with it (review of #255). Only its visitor
+// sees it, as their turn, the same as after a rejected first letter; its author only sees a
+// correspondence once a letter reaches them (isCorrespondenceVisibleTo).
 export async function startCorrespondence(input: StartCorrespondenceInput): Promise<StartCorrespondenceResult> {
   const visitorIdentityId = await resolveIdentityFromReturnKey(input.returnKey);
   if (!visitorIdentityId) return { type: "return_key_not_recognized" };
@@ -193,17 +189,9 @@ export async function startCorrespondence(input: StartCorrespondenceInput): Prom
   if (found.type !== "found") return found;
   if (found.phrase.identity_id === visitorIdentityId) return { type: "own_phrase" };
 
-  const { correspondenceId, createdNow } = await findOrCreateCorrespondence(found.phrase.id, visitorIdentityId);
-
-  try {
-    const letter = await submitLetter({ correspondenceId, sender: "visitor", body: input.body });
-    return { type: "started", correspondenceId, letter };
-  } catch (error) {
-    // Nothing was stored for the letter (e.g. the moderation call failed, fail-closed). Only a
-    // correspondence this try created is removed: one from an earlier try keeps its letters.
-    if (createdNow) await deleteCorrespondence(correspondenceId);
-    throw error;
-  }
+  const correspondenceId = await findOrCreateCorrespondence(found.phrase.id, visitorIdentityId);
+  const letter = await submitLetter({ correspondenceId, sender: "visitor", body: input.body });
+  return { type: "started", correspondenceId, letter };
 }
 
 type CorrespondenceIdentitiesRow = {

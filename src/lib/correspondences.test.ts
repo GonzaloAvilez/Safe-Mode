@@ -319,7 +319,7 @@ describe("startCorrespondence", () => {
     expect(await startCorrespondence(INPUT)).toMatchObject({ type: "started", correspondenceId: "winner-1" });
   });
 
-  it("never deletes the correspondence a racing try created, even when this try's letter fails", async () => {
+  it("never deletes the correspondence a racing try created when this try's letter fails", async () => {
     visitorWithConfirmedSeal();
     mockTables({
       responses: [ownedEntry(SEED_PHRASE)],
@@ -429,39 +429,21 @@ describe("startCorrespondence", () => {
     expect(fromMock).toHaveBeenCalledTimes(1); // the entry lookup only
   });
 
-  it("removes the correspondence it just created when the first letter couldn't be stored", async () => {
-    visitorWithConfirmedSeal();
-    const cleanup = noRow();
-    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), created("c1"), cleanup] });
-    submitLetterMock.mockRejectedValue(new Error("OpenAI unavailable"));
+  it.each([
+    ["it just created", [noRow(), created("c1")], 3],
+    ["already there from an earlier try", [existing("c1")], 2],
+  ])(
+    "keeps the correspondence %s, deleting nothing, when the letter couldn't be stored",
+    async (_label, correspondences, queries) => {
+      visitorWithConfirmedSeal();
+      mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences });
+      submitLetterMock.mockRejectedValue(new Error("OpenAI unavailable"));
 
-    await expect(startCorrespondence(INPUT)).rejects.toThrow("OpenAI unavailable");
-    expect(cleanup.calls).toEqual([
-      ["delete", []],
-      ["eq", ["id", "c1"]],
-    ]);
-  });
-
-  it("keeps an existing correspondence and its letters when this try's letter couldn't be stored", async () => {
-    visitorWithConfirmedSeal();
-    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [existing("c1")] });
-    submitLetterMock.mockRejectedValue(new Error("OpenAI unavailable"));
-
-    await expect(startCorrespondence(INPUT)).rejects.toThrow("OpenAI unavailable");
-    expect(fromMock).toHaveBeenCalledTimes(2); // entry and lookup: no delete
-  });
-
-  it("still throws the letter's error, and logs, when removing the empty correspondence fails too", async () => {
-    visitorWithConfirmedSeal();
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    const cleanup = query({ data: null, error: { message: "delete failed" } });
-    mockTables({ responses: [ownedEntry(SEED_PHRASE)], correspondences: [noRow(), created("c1"), cleanup] });
-    submitLetterMock.mockRejectedValue(new Error("OpenAI unavailable"));
-
-    await expect(startCorrespondence(INPUT)).rejects.toThrow("OpenAI unavailable");
-    expect(consoleError).toHaveBeenCalledWith("couldn't clean up a correspondence after a failure", { message: "delete failed" });
-    consoleError.mockRestore();
-  });
+      await expect(startCorrespondence(INPUT)).rejects.toThrow("OpenAI unavailable");
+      // A try running at the same time may have stored its letter in it (review of #255).
+      expect(fromMock).toHaveBeenCalledTimes(queries); // entry, lookup (and insert): never a delete
+    }
+  );
 
   it("throws, sending no letter, when the correspondence can't be created", async () => {
     visitorWithConfirmedSeal();

@@ -87,7 +87,11 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
   needs this session's entry that matched a connectable phrase. That only proves the visitor
   may ask: the seal is never stored with the entry or the phrase. One visitor and one phrase
   share one correspondence, so trying again with the same seal (after a rejected letter, or a
-  double click) writes into it. A seal never writes to its own phrase.
+  double click) writes into it. A seal never writes to its own phrase. If a letter can't be
+  stored (moderation unavailable), the correspondence stays without letters for the retry:
+  deleting it could take with it a letter another try stored at the same time. Only its
+  visitor sees it, as their turn; its author only learns of a correspondence once a letter
+  reaches them.
 
 **Alternatives considered:**
 
