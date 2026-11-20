@@ -10,6 +10,7 @@ on:
   pull_request:
     branches: [master, preview]
     paths:
+      - .github/workflows/integration-tests.yml
       - src/test/integration/**
       - "supabase/migrations/**"
       - "src/lib/entries.ts"
@@ -23,6 +24,7 @@ on:
   push:
     branches: [master, preview]
     paths:
+      - ".github/workflows/integration-tests.yml"
       - "src/test/integration/**"
       - "supabase/migrations/**"
       - "src/lib/entries.ts"
@@ -47,9 +49,14 @@ jobs:
 
       - run: npm ci
 
+      # Pinned, not `latest`: resolving `latest` asks the GitHub API without a token, and GitHub's
+      # shared runners keep running into its rate limit ("Failed to resolve latest Supabase CLI
+      # release: rate limit exceeded", 2026-11-17 and 2026-11-19), failing the job before any test
+      # runs. The same version deploy-migrations.yml applies migrations with, so the tests run on
+      # the CLI production uses. Bump both together, deliberately.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.0.0
 
       # scripts/run-integration-tests.sh handles start -> migrate (automatic on start)
       # -> test -> stop, including teardown on failure.
