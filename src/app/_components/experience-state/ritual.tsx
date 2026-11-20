@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { SendFirstLetterResult } from "@/app/[locale]/(experience)/_shared/letters/send-letter";
 import type { SealGroupIndex } from "@/lib/return-key-groups";
 import { createStrictContext } from "./create-strict-context";
@@ -75,6 +75,9 @@ type RitualState = {
   setMirrorInteraction: Dispatch<SetStateAction<MirrorInteraction>>;
   mirrorLetter: MirrorLetter | null;
   setMirrorLetter: Dispatch<SetStateAction<MirrorLetter | null>>;
+  // Marks the start of a request whose answer goes into this state; the function it returns says
+  // whether the answer still belongs to the current ritual.
+  startRitualOperation: () => () => boolean;
   clearRitualState: () => void;
 };
 
@@ -98,7 +101,18 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
   const [mirrorInteraction, setMirrorInteraction] = useState<MirrorInteraction>(EMPTY_MIRROR_INTERACTION);
   const [mirrorLetter, setMirrorLetter] = useState<MirrorLetter | null>(null);
 
+  // Bumped by every new ritual. A request started before that belongs to a ritual that no longer
+  // exists, so its answer must not bring anything back: a seal asked for before returning home
+  // would otherwise reappear, for an entry that's gone (#257 review).
+  const generation = useRef(0);
+
+  const startRitualOperation = useCallback(() => {
+    const startedIn = generation.current;
+    return () => startedIn === generation.current;
+  }, []);
+
   const clearRitualState = useCallback(() => {
+    generation.current += 1;
     setWriteDraft("");
     setWriteOutcome(null);
     setLeaveATraceDraft("");
@@ -128,6 +142,7 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
         setMirrorInteraction,
         mirrorLetter,
         setMirrorLetter,
+        startRitualOperation,
         clearRitualState,
       }}
     >

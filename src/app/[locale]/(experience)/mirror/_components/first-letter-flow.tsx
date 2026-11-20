@@ -58,10 +58,18 @@ export function FirstLetterDoor({ entryId }: { entryId: string }) {
   const tc = useTranslations("common");
   const tn = useTranslations("letterNotice");
   const locale = useLocale();
-  const { setMirrorLetter } = useRitualState();
+  const { setMirrorLetter, startRitualOperation } = useRitualState();
   const letter = useMirrorLetterFor(entryId);
   const [requesting, setRequesting] = useState(false);
   const [message, setMessage] = useState<DoorMessage | null>(null);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   if (letter?.phase === "sent") {
     return (
@@ -89,8 +97,14 @@ export function FirstLetterDoor({ entryId }: { entryId: string }) {
 
     setRequesting(true);
     setMessage(null);
+    const isCurrentRitual = startRitualOperation();
     const result = await requestVisitorReturnKey({ entryId, locale });
+    // Left Mirror, or started a new ritual, while the seal was on its way: the answer is let go,
+    // so nothing opens on its own later. A seal created meanwhile was never confirmed, so it can
+    // write nothing. A door still on screen stops waiting either way.
+    if (!mounted.current) return;
     setRequesting(false);
+    if (!isCurrentRitual()) return;
 
     if (result.type === "created") {
       setMirrorLetter({
@@ -186,7 +200,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
   const tp = useTranslations("letterPaper");
   const letterNotice = useLetterNotice();
   const letter = useMirrorLetterFor(entryId);
-  const update = useUpdateMirrorLetter(entryId);
+  const updateMirrorLetter = useUpdateMirrorLetter(entryId);
   const { lock: lockLocaleSwitch, unlock: unlockLocaleSwitch } = useLocaleTransition();
   const { honeypot, setHoneypot, formRenderedAt } = useHoneypot("mirror-letter");
   // Which part of the envelope's way this screen is showing, while it's the one sending.
@@ -203,7 +217,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
   // A send this screen didn't start (it was left mid-way) can't be finished from here: the paper
   // comes back.
   useEffect(() => {
-    if (letter?.phase === "sending" && stage === null) update({ phase: "writing" });
+    if (letter?.phase === "sending" && stage === null) updateMirrorLetter({ phase: "writing" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [letter?.phase, stage]);
 
@@ -211,7 +225,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
   const { key } = letter;
 
   function backToPhrase() {
-    update({ backOnPhrase: true });
+    updateMirrorLetter({ backOnPhrase: true });
   }
 
   async function send(event: SubmitEvent) {
@@ -221,7 +235,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
     const text = letter.draft;
     if (text.trim() === "" || letter.outcome?.type === "unavailable") return;
 
-    update({ phase: "sending", outcome: null });
+    updateMirrorLetter({ phase: "sending", outcome: null });
     setStage("tracing");
     lockLocaleSwitch();
     try {
@@ -232,7 +246,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
 
       if (result.type === "held" || result.type === "already_on_its_way") {
         // The letter is on its way: the seal leaves memory, only whoever kept it has it now.
-        update({ phase: "sent", key: null, draft: "", outcome: null });
+        updateMirrorLetter({ phase: "sent", key: null, draft: "", outcome: null });
         if (mounted.current) setStage(result.type === "held" ? "leaving" : "left");
         return;
       }
@@ -241,7 +255,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
       if (mounted.current) setStage("fading");
       await wait(prefersReducedMotion() ? 0 : LETTER_FADE_MS);
       if (mounted.current) setStage(null);
-      update({ phase: "writing", outcome: result, ...(result.type === "crisis" ? { draft: "" } : {}) });
+      updateMirrorLetter({ phase: "writing", outcome: result, ...(result.type === "crisis" ? { draft: "" } : {}) });
     } finally {
       unlockLocaleSwitch();
     }
@@ -257,7 +271,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
           alreadyKept={letter.lastAsked !== null}
           body={t("keepBody")}
           leaveLabel={t("backToPhrase")}
-          onKept={() => update({ phase: "confirming" })}
+          onKept={() => updateMirrorLetter({ phase: "confirming" })}
           onLeave={backToPhrase}
         />
       </FirstLetterShell>
@@ -273,8 +287,8 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
           hint={t("confirmHint")}
           failedMessage={t("confirmFailed")}
           leaveLabel={t("backToPhrase")}
-          onConfirmed={() => update({ phase: "writing" })}
-          onSeeSealAgain={(asked) => update({ phase: "keeping", lastAsked: asked })}
+          onConfirmed={() => updateMirrorLetter({ phase: "writing" })}
+          onSeeSealAgain={(asked) => updateMirrorLetter({ phase: "keeping", lastAsked: asked })}
           onLeave={backToPhrase}
         />
       </FirstLetterShell>
@@ -309,7 +323,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
   if (letter.outcome?.type === "crisis") {
     return (
       <FirstLetterShell tagline={t("writingTagline")}>
-        <LetterCrisisHelp backLabel={t("backToPhrase")} onBack={() => update({ outcome: null, backOnPhrase: true })} />
+        <LetterCrisisHelp backLabel={t("backToPhrase")} onBack={() => updateMirrorLetter({ outcome: null, backOnPhrase: true })} />
       </FirstLetterShell>
     );
   }
@@ -345,7 +359,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
             {t("forPhrase", { phrase: phraseText })}
           </p>
 
-          <LetterDraftPaper letterNumber={1} value={letter.draft} onChange={(draft) => update({ draft })} noticeId="first-letter-notice" />
+          <LetterDraftPaper letterNumber={1} value={letter.draft} onChange={(draft) => updateMirrorLetter({ draft })} noticeId="first-letter-notice" />
           <HoneypotField value={honeypot} onChange={setHoneypot} />
 
           <p id="first-letter-notice" role="status" className="min-h-[1.6em] text-center text-[13px] leading-[1.6] text-white/80">

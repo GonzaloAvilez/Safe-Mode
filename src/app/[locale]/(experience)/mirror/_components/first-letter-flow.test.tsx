@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { NextIntlClientProvider } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ExperienceProviders } from "@/app/_components/experience-state/providers";
+import { ExperienceProviders, useResetRitual } from "@/app/_components/experience-state/providers";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useRitualState, type MirrorLetter } from "@/app/_components/experience-state/ritual";
 import type { MirrorHandoff } from "../../_shared/mirror-handoff";
@@ -92,12 +92,33 @@ function Readout() {
   );
 }
 
+// Test-only controls: returning home (a new ritual), and leaving Mirror while the providers,
+// which sit above every screen, stay.
+function Stage() {
+  const resetRitual = useResetRitual();
+  const [onMirror, setOnMirror] = useState(true);
+  return (
+    <>
+      {onMirror && <MirrorScreen />}
+      <button type="button" onClick={resetRitual}>
+        test: new ritual
+      </button>
+      <button type="button" onClick={() => setOnMirror(false)}>
+        test: leave Mirror
+      </button>
+      <button type="button" onClick={() => setOnMirror(true)}>
+        test: back to Mirror
+      </button>
+    </>
+  );
+}
+
 function renderMirror(letter: MirrorLetter | null = null, locale: "es" | "en" = "es") {
   return render(
     <NextIntlClientProvider locale={locale} messages={locale === "es" ? es : en}>
       <ExperienceProviders>
         <Seeded letter={letter}>
-          <MirrorScreen />
+          <Stage />
         </Seeded>
         <Readout />
       </ExperienceProviders>
@@ -232,6 +253,63 @@ describe("Mirror's door to a letter", () => {
 
     await act(async () => answer(created()));
     expect(state("phase")).toBe("keeping");
+  });
+
+  it.each([
+    ["a new ritual starts", "test: new ritual"],
+    ["the visitor leaves Mirror", "test: leave Mirror"],
+  ])("lets go of a seal that arrives after %s, so nothing opens on its own", async (_label, control) => {
+    let answer!: (response: Response) => void;
+    answers["/api/return-key"] = [() => new Promise<Response>((resolve) => (answer = resolve))];
+    renderMirror();
+    await settle();
+    fireEvent.click(door()!);
+    await settle();
+
+    fireEvent.click(button(control)!);
+    await act(async () => answer(created()));
+    await settle();
+
+    expect(state("phase")).toBe("");
+    expect(state("key")).toBe("");
+    expect(document.body.textContent).not.toContain("48213");
+  });
+
+  it("a door still on screen when a new ritual starts stops waiting, and can be opened again", async () => {
+    let answer!: (response: Response) => void;
+    answers["/api/return-key"] = [() => new Promise<Response>((resolve) => (answer = resolve))];
+    renderMirror();
+    await settle();
+    fireEvent.click(door()!);
+    await settle();
+
+    fireEvent.click(button("test: new ritual")!);
+    await act(async () => answer(created()));
+    await settle();
+
+    expect(state("key")).toBe("");
+    expect((door() as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("lets go of a seal from before a new ritual even when the new one asks for its own", async () => {
+    const answersInOrder: ((response: Response) => void)[] = [];
+    answers["/api/return-key"] = [() => new Promise<Response>((resolve) => answersInOrder.push(resolve))];
+    renderMirror();
+    await settle();
+    fireEvent.click(door()!);
+    await settle();
+    fireEvent.click(button("test: new ritual")!);
+    fireEvent.click(button("test: leave Mirror")!);
+    fireEvent.click(button("test: back to Mirror")!);
+    fireEvent.click(door()!);
+    await settle();
+
+    const otherSeal = "111112222233333";
+    await act(async () => answersInOrder[1](Response.json({ returnKey: otherSeal, returnKeySentence: SENTENCE }, { status: 201 })));
+    await act(async () => answersInOrder[0](created()));
+    await settle();
+
+    expect(state("key")).toBe(otherSeal);
   });
 
   it.each([

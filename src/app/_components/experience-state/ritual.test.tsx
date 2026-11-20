@@ -57,6 +57,18 @@ describe("ritual state, Leave a Trace", () => {
     expect(result.current.mirrorLetter).toBeNull();
   });
 
+  it("tells a request apart from one started before a new ritual", () => {
+    const { result } = renderHook(() => useRitualState(), { wrapper });
+    const isBeforeReset = result.current.startRitualOperation();
+    expect(isBeforeReset()).toBe(true);
+
+    act(() => result.current.clearRitualState());
+    const isAfterReset = result.current.startRitualOperation();
+
+    expect(isBeforeReset()).toBe(false);
+    expect(isAfterReset()).toBe(true);
+  });
+
   it("keeps the seal in memory only: nothing is written to the browser's storage", () => {
     localStorage.clear();
     sessionStorage.clear();
