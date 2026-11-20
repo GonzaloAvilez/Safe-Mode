@@ -93,8 +93,8 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
   visitor sees it, as their turn; its author only learns of a correspondence once a letter
   reaches them.
 - **Seals asked for and never confirmed are deleted after a day** (daily cron
-  `/api/cron/delete-abandoned-identities`, 50 per run). Only when the identity holds nothing: no
-  phrase, no correspondence, no confirmed seal. An author who left a trace without confirming keeps
+  `/api/cron/delete-abandoned-identities`, 50 per run, reading past the ones that stay). Only when
+  the identity holds nothing: no phrase, no correspondence, no confirmed seal. An author who left a trace without confirming keeps
   their identity, and so does a visitor who confirmed but never wrote.
 
 **Alternatives considered:**

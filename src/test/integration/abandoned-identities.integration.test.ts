@@ -6,7 +6,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { realPhraseFixtures } from "@/test/fixtures/real-phrase-embeddings";
 import { LEAVE_A_TRACE_ORIGIN } from "@/lib/phrase-origin";
-import { ABANDONED_IDENTITY_BATCH, deleteAbandonedIdentities } from "@/lib/abandoned-identities";
+import { ABANDONED_IDENTITY_BATCH_SIZE, deleteAbandonedIdentities } from "@/lib/abandoned-identities";
 import { supabaseAdmin } from "@/lib/supabase";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -145,14 +145,32 @@ describe("deleteAbandonedIdentities (integration)", () => {
 
   it("removes more than one run's worth over several runs, a batch at a time", async () => {
     const abandoned = await Promise.all(
-      Array.from({ length: ABANDONED_IDENTITY_BATCH + 3 }, () => createIdentity({ sealHoursAgo: 30 }))
+      Array.from({ length: ABANDONED_IDENTITY_BATCH_SIZE + 3 }, () => createIdentity({ sealHoursAgo: 30 }))
     );
 
-    expect(await deleteAbandonedIdentities()).toBeLessThanOrEqual(ABANDONED_IDENTITY_BATCH);
+    expect(await deleteAbandonedIdentities()).toBeLessThanOrEqual(ABANDONED_IDENTITY_BATCH_SIZE);
     await deleteUntilNoneLeft();
 
     const remaining = await Promise.all(abandoned.map(identityExists));
     expect(remaining.filter(Boolean)).toHaveLength(0);
+  });
+
+  // #258 review: identities that must stay can never fill every run's window.
+  it("reaches an abandoned seal behind a full batch of older ones whose identities stay, in one run", async () => {
+    await deleteUntilNoneLeft();
+    const authors = await Promise.all(
+      Array.from({ length: ABANDONED_IDENTITY_BATCH_SIZE + 2 }, async () => {
+        const author = await createIdentity({ sealHoursAgo: 100 });
+        await createPhrase(author);
+        return author;
+      })
+    );
+    const abandoned = await createIdentity({ sealHoursAgo: 30 });
+
+    expect(await deleteAbandonedIdentities()).toBe(1);
+
+    expect(await identityExists(abandoned)).toBe(false);
+    expect((await Promise.all(authors.map(identityExists))).every(Boolean)).toBe(true);
   });
 
   it("does nothing, and never fails, when there's nothing to delete", async () => {

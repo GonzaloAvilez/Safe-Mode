@@ -13,10 +13,11 @@ import { unwrap } from "@/lib/supabase-result";
 
 export const ABANDONED_IDENTITY_HOURS = 24;
 
-// The candidates' ids travel in the URL of the next requests (`.in(...)`). A cap keeps that URL
-// short, so a day with many abandoned seals (a bot asking for them) can't break every run after it;
-// whatever's left waits for the next run.
-export const ABANDONED_IDENTITY_BATCH = 50;
+// How many identities one run deletes at most, and how many seals it reads per page. Ids travel in
+// the URL of the next requests (`.in(...)`): a cap keeps that URL short, so a day with many
+// abandoned seals (a bot asking for them) can't break every run after it; whatever's left waits for
+// the next run.
+export const ABANDONED_IDENTITY_BATCH_SIZE = 50;
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -44,6 +45,42 @@ async function findIdentitiesToKeep(identityIds: string[]): Promise<Set<string>>
   ]);
 }
 
+// Up to a batch of identities to delete: those of unconfirmed seals older than `cutoff` that hold
+// nothing. Reads the old unconfirmed seals a page at a time, oldest first, past the ones that stay,
+// so identities that must stay (an author who never confirmed holds their phrase forever) can never
+// fill every run's window and starve the abandoned ones after them (#258 review).
+//
+// Offsets are enough: nothing is deleted while reading, and a seal confirmed meanwhile only shifts
+// the pages, so at worst a candidate waits for the next run.
+async function findAbandonedIdentities(cutoff: string): Promise<string[]> {
+  const candidates = new Set<string>();
+
+  for (let offset = 0; candidates.size < ABANDONED_IDENTITY_BATCH_SIZE; offset += ABANDONED_IDENTITY_BATCH_SIZE) {
+    const { data, error } = await supabaseAdmin
+      .from("identity_keys")
+      .select("identity_id")
+      .eq("kind", "return_key")
+      .is("confirmed_at", null)
+      .lt("created_at", cutoff)
+      .order("created_at")
+      .order("id")
+      .range(offset, offset + ABANDONED_IDENTITY_BATCH_SIZE - 1);
+    const page = unwrap(data, error).map((row) => row.identity_id as string);
+    if (page.length === 0) break;
+
+    const found = unique(page);
+    const keep = await findIdentitiesToKeep(found);
+    for (const identityId of found) {
+      if (!keep.has(identityId) && candidates.size < ABANDONED_IDENTITY_BATCH_SIZE) candidates.add(identityId);
+    }
+
+    // A page shorter than a full one was the last.
+    if (page.length < ABANDONED_IDENTITY_BATCH_SIZE) break;
+  }
+
+  return [...candidates];
+}
+
 // Returns how many identities were removed: a count, never which ones (ADR-004 layer 8).
 //
 // Three steps, because PostgREST can't delete with a subquery. Each one checks again what matters,
@@ -55,19 +92,7 @@ async function findIdentitiesToKeep(identityIds: string[]): Promise<Set<string>>
 export async function deleteAbandonedIdentities(now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - ABANDONED_IDENTITY_HOURS * HOUR_MS).toISOString();
 
-  const { data: oldUnconfirmed, error: lookupError } = await supabaseAdmin
-    .from("identity_keys")
-    .select("identity_id")
-    .eq("kind", "return_key")
-    .is("confirmed_at", null)
-    .lt("created_at", cutoff)
-    .order("created_at")
-    .limit(ABANDONED_IDENTITY_BATCH);
-  const found = unique(unwrap(oldUnconfirmed, lookupError).map((row) => row.identity_id as string));
-  if (found.length === 0) return 0;
-
-  const keep = await findIdentitiesToKeep(found);
-  const candidates = found.filter((identityId) => !keep.has(identityId));
+  const candidates = await findAbandonedIdentities(cutoff);
   if (candidates.length === 0) return 0;
 
   const { data: deletedKeys, error: keysError } = await supabaseAdmin
