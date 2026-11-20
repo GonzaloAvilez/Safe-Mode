@@ -148,12 +148,6 @@ function OutcomeMessage({ outcome }: { outcome: WriteOutcome }) {
           </a>
         </div>
       );
-    case "general_flagged":
-      return (
-        <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/55">
-          {t("generalFlagged")}
-        </p>
-      );
     case "cap_reached":
       return (
         <p className="text-[16px] leading-[1.8] tracking-[.3px] text-white/55">

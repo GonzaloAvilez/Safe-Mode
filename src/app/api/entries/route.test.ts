@@ -166,7 +166,6 @@ describe("POST /api/entries", () => {
     it.each([
       { type: "no_match", entryId: "entry-1" },
       { type: "crisis", entryId: "entry-1" },
-      { type: "general_flagged", entryId: "entry-1" },
       { type: "cap_reached", entryId: "entry-1" },
     ])("doesn't look anything up for $type", async (outcome) => {
       isRateLimitedMock.mockResolvedValueOnce(false);
