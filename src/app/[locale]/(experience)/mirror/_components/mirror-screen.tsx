@@ -120,7 +120,9 @@ export function MirrorScreen() {
 
       <ScreenHeader tagline={matched ? t("taglineMatched") : t("taglineNoMatch")} />
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center">
+      {/* On short screens (700px tall or less) the content starts right under the fixed header and
+          leaves room at the bottom, so its buttons never sit under the fixed "Continuar". */}
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center [@media(max-height:700px)]:pt-32 [@media(max-height:700px)]:pb-32">
         <div
           className="w-full max-w-[360px] rounded-2xl border px-6 py-6 backdrop-blur-sm"
           style={
