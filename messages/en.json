@@ -118,7 +118,7 @@
       "lettersClosed": "Letters are paused for now.",
       "keepTagline": "This is only for you.",
       "keepHeadline": "So they can answer you,\nyour seal comes first.",
-      "keepBody": "Your letter and their reply will live in a mailbox that only opens with this. No one else has it, not even us.",
+      "keepBody": "Your letter and their reply will live for 60 days in a mailbox that only opens with this seal. No one else will have access, and not even we can recover it: keep it safe.",
       "backToPhrase": "Back to their phrase",
       "confirmTagline": "A gesture before writing.",
       "confirmHint": "With the three lights on, you write your letter.",
@@ -152,7 +152,7 @@
     },
     "keep": {
       "tagline": "This is only for you.",
-      "body": "This is how you'll get back to your letters: with this image or with these numbers. No one else has them, not even us.",
+      "body": "This is how you'll get back to your letters: with this image or with these numbers. No one else has them, and not even we can recover them: keep them safe.",
       "withoutLetters": "Better without letters"
     },
     "seal": {
