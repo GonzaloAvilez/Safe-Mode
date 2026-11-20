@@ -118,7 +118,7 @@
       "lettersClosed": "Las cartas están en pausa por ahora.",
       "keepTagline": "Esto es solo para ti.",
       "keepHeadline": "Para que pueda responderte,\nprimero tu sello.",
-      "keepBody": "Tu carta y su respuesta vivirán en un buzón que solo se abre con esto. Nadie más lo tiene, ni nosotros.",
+      "keepBody": "Tu carta y su respuesta vivirán 60 días en un buzón que solo se abre con este sello. Solo tú lo tienes: si lo pierdes, ni Refugio puede recuperarlo. Guárdalo muy bien.",
       "backToPhrase": "Volver a su frase",
       "confirmTagline": "Un gesto antes de escribir.",
       "confirmHint": "Con las tres luces encendidas, escribes tu carta.",
@@ -152,7 +152,7 @@
     },
     "keep": {
       "tagline": "Esto es solo para ti.",
-      "body": "Así vas a volver a tus cartas: con esta imagen o con estos números. Nadie más los tiene, ni nosotros.",
+      "body": "Así vas a volver a tus cartas: con esta imagen o con estos números. Solo tú los tienes: si los pierdes, ni Refugio puede recuperarlos. Guárdalos muy bien.",
       "withoutLetters": "Mejor sin cartas"
     },
     "seal": {
