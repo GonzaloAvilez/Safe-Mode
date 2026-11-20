@@ -5,7 +5,7 @@ import { ExperienceProviders } from "@/app/_components/experience-state/provider
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useMailboxState, type MailboxPhase } from "@/app/_components/experience-state/mailbox";
 import type { Mailbox, MailboxCorrespondence, MailboxLetter } from "@/lib/mailbox";
-import type { SendLetterResult } from "./send-letter";
+import type { SendLetterResult } from "../../_shared/letters/send-letter";
 import en from "../../../../../../messages/en.json";
 import es from "../../../../../../messages/es.json";
 

@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl";
 
-// ADR-004 #213, design B6: the envelope leaving the mailbox, choreographed like the transition
-// before Observe (keyframes in globals.css, `letter-send-*`).
+// ADR-004 #213, design B6: the envelope leaving, choreographed like the transition before Observe
+// (keyframes in globals.css, `letter-send-*`). The same scene for every letter that leaves: the next
+// one from the mailbox, and the first one from Mirror (#212). Where to come back for the reply is
+// the screen's own line (`comeBack`).
 //
 //   tracing  the paper slides in and a light runs around the contour from the stamp, while the
 //            letter is being sent; if the answer takes longer, the lit contour waits, breathing
@@ -23,8 +25,8 @@ export const LETTER_FADE_MS = 600;
 
 const CONTOUR = "M200 1 H243 Q249 1 249 7 V153 Q249 159 243 159 H7 Q1 159 1 153 V7 Q1 1 7 1 H200";
 
-export function LetterSendScene({ stage }: { stage: LetterSendStage }) {
-  const t = useTranslations("mailbox.send");
+export function LetterSendScene({ stage, comeBack }: { stage: LetterSendStage; comeBack: string }) {
+  const t = useTranslations("letterSend");
   const gone = stage === "leaving" || stage === "left";
 
   return (
@@ -93,7 +95,7 @@ export function LetterSendScene({ stage }: { stage: LetterSendStage }) {
           <div className="letter-send-reveal flex flex-col items-center gap-3.5">
             <p className="text-[22px] font-light tracking-[3px] text-white/90">{t("headline")}</p>
             <p className="max-w-[320px] text-[14px] leading-[1.6] text-white/65">{t("review")}</p>
-            <p className="max-w-[320px] text-[13px] leading-[1.6] text-[rgba(242,192,99,0.85)]">{t("comeBack")}</p>
+            <p className="max-w-[320px] text-[13px] leading-[1.6] whitespace-pre-line text-[rgba(242,192,99,0.85)]">{comeBack}</p>
           </div>
         )}
       </div>

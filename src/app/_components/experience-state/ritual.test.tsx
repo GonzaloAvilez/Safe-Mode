@@ -37,6 +37,38 @@ describe("ritual state, Leave a Trace", () => {
     expect(result.current.leaveATraceLastAsked).toBeNull();
   });
 
+  it("returning home also lets go of a letter from Mirror, its seal and its draft", () => {
+    const { result } = renderHook(() => useRitualState(), { wrapper });
+    act(() =>
+      result.current.setMirrorLetter({
+        entryId: "entry-1",
+        phase: "writing",
+        backOnPhrase: false,
+        key: { returnKey: "482133901756229", sentence: "Estuviste aquí." },
+        lastAsked: 1,
+        draft: "Leí tu frase.",
+        outcome: null,
+      })
+    );
+    expect(result.current.mirrorLetter).not.toBeNull();
+
+    act(() => result.current.clearRitualState());
+
+    expect(result.current.mirrorLetter).toBeNull();
+  });
+
+  it("tells a request apart from one started before a new ritual", () => {
+    const { result } = renderHook(() => useRitualState(), { wrapper });
+    const isBeforeReset = result.current.startRitualOperation();
+    expect(isBeforeReset()).toBe(true);
+
+    act(() => result.current.clearRitualState());
+    const isAfterReset = result.current.startRitualOperation();
+
+    expect(isBeforeReset()).toBe(false);
+    expect(isAfterReset()).toBe(true);
+  });
+
   it("keeps the seal in memory only: nothing is written to the browser's storage", () => {
     localStorage.clear();
     sessionStorage.clear();

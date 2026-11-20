@@ -122,3 +122,83 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
   if (response.status === 429) return { type: "error", reason: "too_many" };
   return FAILED;
 }
+
+// ADR-004 #211 and #212: the visitor's first letter, from Mirror (POST /api/correspondences), with
+// the seal they just kept and confirmed. Trying again with the same seal writes into the same
+// correspondence, so a paper that came back can simply be sent again.
+export type SendFirstLetterResult =
+  | { type: "held" }
+  | { type: "crisis" }
+  | { type: "rejected"; reason: "moderation" }
+  | { type: "rejected"; reason: "contact_info"; contactKinds: LetterContactKind[] }
+  // A letter of theirs to this phrase already left (another tab, a double send): nothing to
+  // write now, their letter is on its way.
+  | { type: "already_on_its_way" }
+  // This phrase can't receive their letter anymore (its author let go of letters, or the entry
+  // or seal no longer counts).
+  | { type: "unavailable" }
+  | { type: "letters_closed" }
+  | { type: "error"; reason: "too_many" | "failed" | "offline" };
+
+const FIRST_LETTER_FAILED: SendFirstLetterResult = { type: "error", reason: "failed" };
+
+export type SendFirstLetterInput = {
+  entryId: string;
+  returnKey: string;
+  text: string;
+  honeypot: string;
+  formRenderedAt: number;
+};
+
+function fromFirstLetterResult(letter: SubmitLetterResult): SendFirstLetterResult {
+  const result = fromServerResult(letter);
+  switch (result.type) {
+    case "held":
+    case "crisis":
+    case "rejected":
+    case "error":
+      return result;
+    // Any turn rule: their correspondence with this phrase already holds a letter of theirs.
+    case "not_allowed":
+      return { type: "already_on_its_way" };
+    default:
+      return FIRST_LETTER_FAILED;
+  }
+}
+
+// The letter inside a 201 from POST /api/correspondences ({ type: "started", correspondenceId,
+// letter }), or null when the body isn't that.
+function readStartedLetter(body: unknown): SubmitLetterResult | null {
+  if (typeof body !== "object" || body === null) return null;
+  const started = body as { type?: unknown; correspondenceId?: unknown; letter?: unknown };
+  if (started.type !== "started" || typeof started.correspondenceId !== "string") return null;
+  return readServerResult(started.letter);
+}
+
+export async function sendFirstLetter(input: SendFirstLetterInput): Promise<SendFirstLetterResult> {
+  let response: Response;
+  try {
+    response = await fetch("/api/correspondences", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${input.returnKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entryId: input.entryId,
+        text: input.text,
+        honeypot: input.honeypot,
+        formRenderedAt: input.formRenderedAt,
+      }),
+    });
+  } catch {
+    return { type: "error", reason: "offline" };
+  }
+
+  if (response.status === 201) {
+    const letter = readStartedLetter(await response.json().catch(() => null));
+    return letter ? fromFirstLetterResult(letter) : FIRST_LETTER_FAILED;
+  }
+  // The entry, the phrase or the seal no longer allows this letter (404, 403, 401).
+  if (response.status === 404 || response.status === 403 || response.status === 401) return { type: "unavailable" };
+  if (response.status === 503) return { type: "letters_closed" };
+  if (response.status === 429) return { type: "error", reason: "too_many" };
+  return FIRST_LETTER_FAILED;
+}

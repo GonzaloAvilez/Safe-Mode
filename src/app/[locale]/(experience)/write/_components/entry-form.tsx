@@ -54,6 +54,7 @@ export function EntryForm({ outcome, onOutcomeChange }: EntryFormProps) {
           text: body.phrase.text,
           entryId: body.entryId,
           phraseId: body.phrase.id,
+          connectable: body.phrase.connectable === true,
         });
         setText("");
         router.push("/mirror");

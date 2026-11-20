@@ -21,9 +21,9 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 
 import { MailboxScreen } from "./mailbox-screen";
-import { LETTER_FADE_MS, LETTER_TRACE_MS } from "./letter-send-scene";
+import { LETTER_FADE_MS, LETTER_TRACE_MS } from "../../_shared/letters/letter-send-scene";
 import { SEAL, correspondence, letter, renderMailbox } from "./mailbox-test-harness";
-import type { SendLetterResult } from "./send-letter";
+import type { SendLetterResult } from "../../_shared/letters/send-letter";
 
 const T = es.mailbox;
 const THEIRS = correspondence({ id: "c1", state: "your_turn", letters: [letter({ sender: "visitor", body: "Primera carta." })] });
@@ -54,7 +54,7 @@ function answerWith(...responses: Response[]) {
 
 const field = () => screen.getByLabelText(es.letterPaper.fieldLabel) as HTMLTextAreaElement;
 const letterPosts = (fetchMock: ReturnType<typeof vi.fn>) => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/letters"));
-const sendButton = () => screen.getByRole("button", { name: T.write.send }) as HTMLButtonElement;
+const sendButton = () => screen.getByRole("button", { name: es.letterPaper.send }) as HTMLButtonElement;
 const notice = () => document.getElementById("letter-notice")!.textContent;
 const phase = () => screen.getByTestId("phase").textContent;
 
@@ -137,7 +137,7 @@ describe("WriteLetterStep, the paper", () => {
     renderMailbox(<MailboxScreen />, writing({ letterOutcome: { type: "rejected", reason: "moderation" } }));
 
     const described = document.getElementById(field().getAttribute("aria-describedby")!);
-    expect(described?.textContent).toBe(T.write.moderation);
+    expect(described?.textContent).toBe(es.letterNotice.moderation);
   });
 
   it("keeps the draft in memory, outside this screen", () => {
@@ -151,7 +151,7 @@ describe("WriteLetterStep, the paper", () => {
   it("“Ahora no” goes back to the letter, the draft kept", () => {
     renderMailbox(<MailboxScreen />, writing({ letterDraft: "A medias." }));
 
-    fireEvent.click(screen.getByRole("button", { name: T.write.notNow }));
+    fireEvent.click(screen.getByRole("button", { name: es.letterPaper.notNow }));
 
     expect(phase()).toBe("reading");
     expect(screen.getByTestId("draft").textContent).toBe("A medias.");
@@ -182,7 +182,7 @@ describe("WriteLetterStep, sending", () => {
 
     writeAndSend("Gracias por escribirme.");
 
-    await screen.findByText(T.send.headline);
+    await screen.findByText(es.letterSend.headline);
     expect(phase()).toBe("sent");
     expect(document.querySelector("[data-stage]")!.getAttribute("data-stage")).toBe("leaving");
     expect(screen.getByTestId("draft").textContent).toBe("");
@@ -215,7 +215,7 @@ describe("WriteLetterStep, sending", () => {
       renderMailbox(<MailboxScreen />, writing());
 
       writeAndSend("Lo que escribí.");
-      await screen.findByText(T.send.headline);
+      await screen.findByText(es.letterSend.headline);
       await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
 
       const [url, init] = fetchMock.mock.calls[1];
@@ -236,7 +236,7 @@ describe("WriteLetterStep, sending", () => {
       vi.stubGlobal("fetch", fetchMock);
       renderMailbox(<MailboxScreen />, writing());
       writeAndSend("Lo que escribí.");
-      await screen.findByText(T.send.headline);
+      await screen.findByText(es.letterSend.headline);
 
       fireEvent.click(screen.getByText(T.letter.back));
       await act(async () => answer(Response.json(SERVER_MAILBOX)));
@@ -254,7 +254,7 @@ describe("WriteLetterStep, sending", () => {
       vi.stubGlobal("fetch", fetchMock);
       renderMailbox(<MailboxScreen />, writing());
       writeAndSend("Lo que escribí.");
-      await screen.findByText(T.send.headline);
+      await screen.findByText(es.letterSend.headline);
 
       fireEvent.click(screen.getByText(T.backToStart));
       await act(async () => answer(Response.json(SERVER_MAILBOX)));
@@ -268,7 +268,7 @@ describe("WriteLetterStep, sending", () => {
     answerWith(Response.json({ type: "held" }, { status: 201 }));
     renderMailbox(<MailboxScreen />, writing());
     writeAndSend("Gracias.");
-    await screen.findByText(T.send.headline);
+    await screen.findByText(es.letterSend.headline);
 
     fireEvent.click(screen.getByText(T.backToStart));
 
@@ -282,7 +282,7 @@ describe("WriteLetterStep, sending", () => {
 
     writeAndSend("Gracias.");
 
-    await screen.findByText(T.send.sealing);
+    await screen.findByText(es.letterSend.sealing);
     expect(phase()).toBe("sending");
     expect(screen.getByTestId("locked").textContent).toBe("true");
     await act(async () => answer(Response.json({ type: "held" }, { status: 201 })));
@@ -290,7 +290,7 @@ describe("WriteLetterStep, sending", () => {
   });
 
   it.each([
-    ["moderation", { type: "rejected", reason: "moderation" }, T.write.moderation],
+    ["moderation", { type: "rejected", reason: "moderation" }, es.letterNotice.moderation],
     [
       "one kind of contact",
       { type: "rejected", reason: "contact_info", contactKinds: ["phone"] },
@@ -310,13 +310,13 @@ describe("WriteLetterStep, sending", () => {
     await waitFor(() => expect(notice()).toBe(expected));
     expect(phase()).toBe("writing");
     expect(field().value).toBe("Mi número es 55 1234 5678, @yo");
-    expect(screen.queryByText(T.send.headline)).toBeNull();
+    expect(screen.queryByText(es.letterSend.headline)).toBeNull();
   });
 
   it.each([
-    ["letters are paused", Response.json({ error: "letters are closed" }, { status: 503 }), T.write.lettersClosed],
-    ["too many tries", Response.json({}, { status: 429 }), T.write.tooMany],
-    ["a server error", new Response("boom", { status: 500 }), T.write.failed],
+    ["letters are paused", Response.json({ error: "letters are closed" }, { status: 503 }), es.letterNotice.lettersClosed],
+    ["too many tries", Response.json({}, { status: 429 }), es.letterNotice.tooMany],
+    ["a server error", new Response("boom", { status: 500 }), es.letterNotice.failed],
   ])("when %s, the paper comes back saying so, the draft kept", async (_label, response, expected) => {
     answerWith(response);
     renderMailbox(<MailboxScreen />, writing());
@@ -342,10 +342,10 @@ describe("WriteLetterStep, sending", () => {
 
     writeAndSend("No puedo más.");
 
-    await screen.findByText(T.crisis.intro);
+    await screen.findByText(es.letterCrisis.intro);
     const link = screen.getByRole("link", { name: "findahelpline.com" });
     expect(link.getAttribute("href")).toBe("https://findahelpline.com");
-    expect(screen.getByText(T.crisis.notSent)).toBeTruthy();
+    expect(screen.getByText(es.letterCrisis.notSent)).toBeTruthy();
     expect(screen.getByTestId("draft").textContent).toBe("");
     expect(screen.queryByLabelText(es.letterPaper.fieldLabel)).toBeNull();
 
@@ -357,7 +357,7 @@ describe("WriteLetterStep, sending", () => {
   it("the help stays after a language switch: it lives with the mailbox, not the screen", () => {
     renderMailbox(<MailboxScreen />, writing({ letterOutcome: { type: "crisis" } }));
 
-    expect(screen.getByText(T.crisis.intro)).toBeTruthy();
+    expect(screen.getByText(es.letterCrisis.intro)).toBeTruthy();
   });
 
   it("when it's no longer this side's turn, shows the correspondence as it is now, the draft kept", async () => {
@@ -393,7 +393,7 @@ describe("WriteLetterStep, sending", () => {
     fireEvent.submit(form);
     fireEvent.submit(form);
 
-    await screen.findByText(T.send.headline);
+    await screen.findByText(es.letterSend.headline);
     expect(letterPosts(fetchMock)).toHaveLength(1);
   });
 });
@@ -438,14 +438,14 @@ describe("WriteLetterStep, the envelope's timing", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(LETTER_FADE_MS);
     });
-    expect(notice()).toBe(T.write.moderation);
+    expect(notice()).toBe(es.letterNotice.moderation);
   });
 
   it("coming back to an envelope that already left (a language switch) shows where it ended, without replaying", () => {
     renderMailbox(<MailboxScreen />, { ...writing(), phase: "sent" });
 
     expect(document.querySelector("[data-stage]")!.getAttribute("data-stage")).toBe("left");
-    expect(screen.getByText(T.send.headline)).toBeTruthy();
+    expect(screen.getByText(es.letterSend.headline)).toBeTruthy();
   });
 });
 
@@ -468,7 +468,7 @@ describe("WriteLetterStep, leaving mid-send", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((resolve) => (answer = resolve))));
     renderMailbox(<Leavable />, writing());
     writeAndSend("Gracias.");
-    await screen.findByText(T.send.sealing);
+    await screen.findByText(es.letterSend.sealing);
 
     fireEvent.click(screen.getByText("ir y volver"));
     await act(async () => answer(Response.json({ type: "held" }, { status: 201 })));
@@ -487,7 +487,7 @@ describe("WriteLetterStep, one draft per correspondence (#252 review)", () => {
   const B = correspondence({ id: "b", phraseText: "La frase de B.", letters: [letter({ body: "Carta de B." })] });
   const openEnvelope = (phrase: string) => fireEvent.click(screen.getByText(`“${phrase}”`));
   const reply = () => fireEvent.click(screen.getByRole("button", { name: T.letter.reply }));
-  const notNow = () => fireEvent.click(screen.getByRole("button", { name: T.write.notNow }));
+  const notNow = () => fireEvent.click(screen.getByRole("button", { name: es.letterPaper.notNow }));
   const backToEnvelopes = () => fireEvent.click(screen.getByText(T.letter.back));
 
   function startOnEnvelopes() {
@@ -529,7 +529,7 @@ describe("WriteLetterStep, one draft per correspondence (#252 review)", () => {
 
     writeAndSend("Solo para B.");
 
-    await screen.findByText(T.send.headline);
+    await screen.findByText(es.letterSend.headline);
     const [url, init] = letterPosts(fetchMock)[0];
     expect(url).toBe("/api/correspondences/b/letters");
     expect(JSON.parse(init.body).text).toBe("Solo para B.");
@@ -550,8 +550,8 @@ describe("WriteLetterStep, asking for the mailbox again fails (#252 review)", ()
   });
 
   it.each([
-    ["a server error", new Response("boom", { status: 500 }), T.write.failed],
-    ["too many tries", Response.json({}, { status: 429 }), T.write.tooMany],
+    ["a server error", new Response("boom", { status: 500 }), es.letterNotice.failed],
+    ["too many tries", Response.json({}, { status: 429 }), es.letterNotice.tooMany],
   ])("after “not your turn”, %s gives the paper back with what happened, the draft kept, never old contents as new", async (_label, refresh, expected) => {
     const fetchMock = answerWith(Response.json({ type: "not_allowed", reason: "not_your_turn" }, { status: 409 }), refresh);
     renderMailbox(<MailboxScreen />, writing());
@@ -579,7 +579,7 @@ describe("WriteLetterStep, asking for the mailbox again fails (#252 review)", ()
     await waitFor(() => expect(notice()).toBe(es.common.errors.couldntConnect));
     fireEvent.click(sendButton());
 
-    await screen.findByText(T.send.headline);
+    await screen.findByText(es.letterSend.headline);
   });
 
   it("after a letter is on its way, a seal the server no longer recognizes closes the mailbox too", async () => {
@@ -598,7 +598,7 @@ describe("WriteLetterStep, the way out of a letter that left", () => {
     answerWith(Response.json({ type: "held" }, { status: 201 }));
     renderMailbox(<MailboxScreen />, writing());
     writeAndSend("Gracias.");
-    await screen.findByText(T.send.headline);
+    await screen.findByText(es.letterSend.headline);
 
     const wayOut = document.querySelector("[data-way-out]")!;
     const back = within(wayOut as HTMLElement).getByText(T.letter.back);

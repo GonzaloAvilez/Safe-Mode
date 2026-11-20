@@ -107,7 +107,26 @@
     "resonateButton": "This resonated with me",
     "subcopyMatched": "Their words were already here, waiting.",
     "subcopyNoMatch": "Nothing echoed back this time. Not every feeling finds its match here — that's the corpus's limit, not yours.",
-    "connectButton": "I would love to connect"
+    "connectButton": "I would love to connect",
+    "letter": {
+      "writeButton": "Write them a letter",
+      "writeHint": "Without your name. A person reads it before delivering it.",
+      "onItsWay": "Your letter is on its way",
+      "requesting": "Preparing your seal…",
+      "requestFailed": "We couldn't prepare your seal. Please try again.",
+      "unavailable": "This phrase can't receive letters anymore.",
+      "lettersClosed": "Letters are paused for now.",
+      "keepTagline": "This is only for you.",
+      "keepHeadline": "So they can answer you,\nyour seal comes first.",
+      "keepBody": "Your letter and their reply will live in a mailbox that only opens with this. No one else has it, not even us.",
+      "backToPhrase": "Back to their phrase",
+      "confirmTagline": "A gesture before writing.",
+      "confirmHint": "With the three lights on, you write your letter.",
+      "confirmFailed": "We couldn't confirm your seal. Please try again.",
+      "writingTagline": "This is only for you.",
+      "forPhrase": "For whoever left: “{phrase}”",
+      "comeBack": "Their reply will wait for you in the envelope on the home screen.\nIt opens with your seal."
+    }
   },
   "gratitude": {
     "tagline": "Something is different now.",
@@ -177,13 +196,41 @@
     "label": "Letter {number} · Yours",
     "fieldLabel": "Your letter",
     "placeholder": "Write what you'd like to tell them...",
-    "noContact": "No names, phone numbers or social media."
+    "noContact": "No names, phone numbers or social media.",
+    "headline": "Your letter",
+    "review": "A person reads every letter before delivering it. It can take up to 48 hours.",
+    "send": "Seal the envelope",
+    "notNow": "Not now"
   },
   "returnKeyCard": {
     "brand": "REFUGIO",
     "stamp": "REFUGIO POST",
     "footer": "This seal opens your letters.",
     "qrLabel": "QR code of your seal"
+  },
+  "letterSend": {
+    "sealing": "Sealing the envelope…",
+    "headline": "The envelope is on its way.",
+    "review": "A person reads it before delivering it. It can take up to 48 hours."
+  },
+  "letterCrisis": {
+    "headline": "Before your letter,\nyou matter.",
+    "intro": "You're not alone. If you feel like you need to talk to someone right now, here's help:",
+    "notSent": "This letter won't be sent. It isn't a punishment: when you feel calmer, you can write again."
+  },
+  "letterNotice": {
+    "moderation": "This letter can't go out like this. You can rewrite it, calmly.",
+    "contactFound": "Your letter has {things}.",
+    "contactRemove": "Remove {count, plural, one {it} other {them}} and the letter can go out. Nobody here shares how to reach them: that's how both of you stay safe.",
+    "contactKind": {
+      "phone": "a phone number",
+      "email": "an email address",
+      "url": "a link",
+      "handle": "a social media handle"
+    },
+    "lettersClosed": "Letters are paused for now. Your letter is still here.",
+    "tooMany": "Too many tries. Wait a moment and try again.",
+    "failed": "We couldn't send your letter. Try again."
   },
   "mailbox": {
     "tagline": "Your mailbox.",
@@ -246,34 +293,8 @@
       "reply": "Reply",
       "writeAnother": "Write another letter"
     },
-    "write": {
-      "headline": "Your letter",
-      "review": "A person reads every letter before delivering it. It can take up to 48 hours.",
-      "send": "Seal the envelope",
-      "notNow": "Not now",
-      "moderation": "This letter can't go out like this. You can rewrite it, calmly.",
-      "contactFound": "Your letter has {things}.",
-      "contactRemove": "Remove {count, plural, one {it} other {them}} and the letter can go out. Nobody here shares how to reach them: that's how both of you stay safe.",
-      "contactKind": {
-        "phone": "a phone number",
-        "email": "an email address",
-        "url": "a link",
-        "handle": "a social media handle"
-      },
-      "lettersClosed": "Letters are paused for now. Your letter is still here.",
-      "tooMany": "Too many tries. Wait a moment and try again.",
-      "failed": "We couldn't send your letter. Try again."
-    },
     "send": {
-      "sealing": "Sealing the envelope…",
-      "headline": "The envelope is on its way.",
-      "review": "A person reads it before delivering it. It can take up to 48 hours.",
       "comeBack": "Come back with your seal whenever you want to see if they wrote back."
-    },
-    "crisis": {
-      "headline": "Before your letter,\nyou matter.",
-      "intro": "You're not alone. If you feel like you need to talk to someone right now, here's help:",
-      "notSent": "This letter won't be sent. It isn't a punishment: when you feel calmer, you can write again."
     },
     "close": "Close my mailbox",
     "backToStart": "Back to start"

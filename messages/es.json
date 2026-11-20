@@ -107,7 +107,26 @@
     "resonateButton": "Esto resonó conmigo",
     "subcopyMatched": "Sus palabras ya estaban aquí, esperando.",
     "subcopyNoMatch": "Nada hizo eco esta vez. No todos los sentimientos encuentran su par aquí — ese es el límite del corpus, no el tuyo.",
-    "connectButton": "Me encantaría conectar"
+    "connectButton": "Me encantaría conectar",
+    "letter": {
+      "writeButton": "Escribirle una carta",
+      "writeHint": "Sin tu nombre. Una persona la lee antes de entregarla.",
+      "onItsWay": "Tu carta va en camino",
+      "requesting": "Preparando tu sello…",
+      "requestFailed": "No pudimos preparar tu sello. Vuelve a intentarlo.",
+      "unavailable": "Esta frase ya no puede recibir cartas.",
+      "lettersClosed": "Las cartas están en pausa por ahora.",
+      "keepTagline": "Esto es solo para ti.",
+      "keepHeadline": "Para que pueda responderte,\nprimero tu sello.",
+      "keepBody": "Tu carta y su respuesta vivirán en un buzón que solo se abre con esto. Nadie más lo tiene, ni nosotros.",
+      "backToPhrase": "Volver a su frase",
+      "confirmTagline": "Un gesto antes de escribir.",
+      "confirmHint": "Con las tres luces encendidas, escribes tu carta.",
+      "confirmFailed": "No pudimos confirmar tu sello. Vuelve a intentarlo.",
+      "writingTagline": "Esto es solo para ti.",
+      "forPhrase": "Para quien dejó: “{phrase}”",
+      "comeBack": "Su respuesta te esperará en el sobre del inicio.\nSe abre con tu sello."
+    }
   },
   "gratitude": {
     "tagline": "Algo es diferente ahora.",
@@ -177,13 +196,41 @@
     "label": "Carta {number} · La tuya",
     "fieldLabel": "Tu carta",
     "placeholder": "Escribe lo que quieras decirle...",
-    "noContact": "Sin nombres, teléfonos ni redes."
+    "noContact": "Sin nombres, teléfonos ni redes.",
+    "headline": "Tu carta",
+    "review": "Una persona lee cada carta antes de entregarla. Puede tardar hasta 48 horas.",
+    "send": "Cerrar el sobre",
+    "notNow": "Ahora no"
   },
   "returnKeyCard": {
     "brand": "REFUGIO",
     "stamp": "CORREO DE REFUGIO",
     "footer": "Este sello abre tus cartas.",
     "qrLabel": "Código QR de tu sello"
+  },
+  "letterSend": {
+    "sealing": "Cerrando el sobre…",
+    "headline": "El sobre salió.",
+    "review": "Una persona lo lee antes de entregarlo. Puede tardar hasta 48 horas."
+  },
+  "letterCrisis": {
+    "headline": "Antes que tu carta,\nimportas tú.",
+    "intro": "No estás solo. Si sientes que necesitas hablar con alguien ahora, aquí hay ayuda:",
+    "notSent": "Esta carta no se enviará. No es un castigo: cuando estés con más calma, puedes volver a escribir."
+  },
+  "letterNotice": {
+    "moderation": "Esta carta no puede salir así. Puedes reescribirla con calma.",
+    "contactFound": "Tu carta tiene {things}.",
+    "contactRemove": "{count, plural, one {Quítalo} other {Quítalos}} y la carta podrá salir. Aquí nadie comparte cómo contactarse: así las dos personas siguen a salvo.",
+    "contactKind": {
+      "phone": "un número de teléfono",
+      "email": "un correo",
+      "url": "un enlace",
+      "handle": "un usuario de redes"
+    },
+    "lettersClosed": "Las cartas están en pausa por ahora. Tu carta sigue aquí.",
+    "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
+    "failed": "No pudimos enviar tu carta. Vuelve a intentarlo."
   },
   "mailbox": {
     "tagline": "Tu buzón.",
@@ -246,34 +293,8 @@
       "reply": "Responder",
       "writeAnother": "Escribir otra carta"
     },
-    "write": {
-      "headline": "Tu carta",
-      "review": "Una persona lee cada carta antes de entregarla. Puede tardar hasta 48 horas.",
-      "send": "Cerrar el sobre",
-      "notNow": "Ahora no",
-      "moderation": "Esta carta no puede salir así. Puedes reescribirla con calma.",
-      "contactFound": "Tu carta tiene {things}.",
-      "contactRemove": "{count, plural, one {Quítalo} other {Quítalos}} y la carta podrá salir. Aquí nadie comparte cómo contactarse: así las dos personas siguen a salvo.",
-      "contactKind": {
-        "phone": "un número de teléfono",
-        "email": "un correo",
-        "url": "un enlace",
-        "handle": "un usuario de redes"
-      },
-      "lettersClosed": "Las cartas están en pausa por ahora. Tu carta sigue aquí.",
-      "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
-      "failed": "No pudimos enviar tu carta. Vuelve a intentarlo."
-    },
     "send": {
-      "sealing": "Cerrando el sobre…",
-      "headline": "El sobre salió.",
-      "review": "Una persona lo lee antes de entregarlo. Puede tardar hasta 48 horas.",
       "comeBack": "Vuelve con tu sello cuando quieras ver si te respondieron."
-    },
-    "crisis": {
-      "headline": "Antes que tu carta,\nimportas tú.",
-      "intro": "No estás solo. Si sientes que necesitas hablar con alguien ahora, aquí hay ayuda:",
-      "notSent": "Esta carta no se enviará. No es un castigo: cuando estés con más calma, puedes volver a escribir."
     },
     "close": "Cerrar mi buzón",
     "backToStart": "Volver al inicio"

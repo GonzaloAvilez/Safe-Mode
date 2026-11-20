@@ -8,6 +8,7 @@ import { ScreenHeader } from "../../_shared/screen-header";
 import { readMirrorHandoff } from "../../_shared/mirror-handoff";
 import { playRandomNote } from "../../_shared/handpan-audio";
 import { MirrorCanvas } from "../mirror-canvas";
+import { FirstLetterDoor, FirstLetterFlow, useMirrorLetterFor } from "./first-letter-flow";
 import { QuoteReveal } from "./quote-reveal";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useRitualState } from "@/app/_components/experience-state/ritual";
@@ -46,6 +47,8 @@ export function MirrorScreen() {
   const handoff = useSyncExternalStore(subscribeToHandoff, readMirrorHandoff, getServerHandoffSnapshot);
   const { mirrorInteraction, setMirrorInteraction } = useRitualState();
   const { unlock: unlockLocaleSwitch } = useLocaleTransition();
+  // Called before the early return below, with whatever entry there is, so the hooks keep their order.
+  const letter = useMirrorLetterFor(handoff?.entryId ?? "");
 
   // Deliberately not keyed on `handoff` — the hydration resync above commits in two
   // steps (server-matching null, then the real client value), and this effect would
@@ -66,6 +69,12 @@ export function MirrorScreen() {
   }
 
   const matched = handoff.outcome === "matched";
+
+  // ADR-004 #212: writing a letter to whoever left this phrase takes the whole screen, until the
+  // visitor goes back to the phrase.
+  if (handoff.outcome === "matched" && letter && !letter.backOnPhrase) {
+    return <FirstLetterFlow entryId={handoff.entryId} phraseText={handoff.text} />;
+  }
   const interaction =
     mirrorInteraction.entryId === handoff.entryId
       ? mirrorInteraction
@@ -111,7 +120,9 @@ export function MirrorScreen() {
 
       <ScreenHeader tagline={matched ? t("taglineMatched") : t("taglineNoMatch")} />
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center">
+      {/* On short screens (700px tall or less) the content starts right under the fixed header and
+          leaves room at the bottom, so its buttons never sit under the fixed "Continuar". */}
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center [@media(max-height:700px)]:pt-32 [@media(max-height:700px)]:pb-32">
         <div
           className="w-full max-w-[360px] rounded-2xl border px-6 py-6 backdrop-blur-sm"
           style={
@@ -166,7 +177,10 @@ export function MirrorScreen() {
           {matched ? t("subcopyMatched") : t("subcopyNoMatch")}
         </div>
 
-        {matched && (
+        {/* When letters can reach its author, the letter takes the place of "Me encantaría conectar". */}
+        {handoff.outcome === "matched" && handoff.connectable && <FirstLetterDoor entryId={handoff.entryId} />}
+
+        {handoff.outcome === "matched" && !handoff.connectable && (
           <button
             type="button"
             onClick={handleConnect}

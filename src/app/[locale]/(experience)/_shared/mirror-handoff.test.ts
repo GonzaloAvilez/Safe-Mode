@@ -57,12 +57,13 @@ describe("readMirrorHandoff / writeMirrorHandoff", () => {
     writeMirrorHandoff({ outcome: "no_match", entryId: "entry-1" });
     expect(readMirrorHandoff()).toEqual({ outcome: "no_match", entryId: "entry-1" });
 
-    writeMirrorHandoff({ outcome: "matched", text: "a real match", entryId: "entry-2", phraseId: "phrase-1" });
+    writeMirrorHandoff({ outcome: "matched", text: "a real match", entryId: "entry-2", phraseId: "phrase-1", connectable: true });
     expect(readMirrorHandoff()).toEqual({
       outcome: "matched",
       text: "a real match",
       entryId: "entry-2",
       phraseId: "phrase-1",
+      connectable: true,
     });
   });
 
@@ -75,7 +76,7 @@ describe("readMirrorHandoff / writeMirrorHandoff", () => {
     (window.sessionStorage as { setItem: unknown }).setItem = () => {
       throw new Error("quota exceeded");
     };
-    writeMirrorHandoff({ outcome: "matched", text: "ignored", entryId: "entry-2", phraseId: "phrase-1" });
+    writeMirrorHandoff({ outcome: "matched", text: "ignored", entryId: "entry-2", phraseId: "phrase-1", connectable: false });
 
     // The failed write never landed in sessionStorage, so a fresh read correctly
     // still sees the last real value that made it there — entry-1's no_match — not
@@ -102,5 +103,23 @@ describe("readMirrorHandoff / writeMirrorHandoff", () => {
     vi.resetModules();
     const { readMirrorHandoff } = await import("./mirror-handoff");
     expect(readMirrorHandoff()).toBeNull();
+  });
+
+  // ADR-004 #212: Mirror offers a letter only when the server said the phrase can receive one.
+  it.each([
+    ["true", true, true],
+    ["false", false, false],
+    ["missing (stored before letters existed)", undefined, false],
+    ["anything but a boolean", "yes", false],
+  ])("reads connectable %s as %s", async (_label, connectable, expected) => {
+    (globalThis as { window?: unknown }).window = {
+      sessionStorage: {
+        getItem: () => JSON.stringify({ outcome: "matched", text: "a phrase", entryId: "entry-1", phraseId: "phrase-1", connectable }),
+        setItem: () => {},
+      },
+    };
+    vi.resetModules();
+    const { readMirrorHandoff } = await import("./mirror-handoff");
+    expect(readMirrorHandoff()).toEqual({ outcome: "matched", text: "a phrase", entryId: "entry-1", phraseId: "phrase-1", connectable: expected });
   });
 });
