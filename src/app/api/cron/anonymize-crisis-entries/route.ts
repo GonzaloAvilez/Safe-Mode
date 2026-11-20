@@ -1,9 +1,8 @@
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 import { anonymizeExpiredCrisisEntries } from "@/lib/crisis-entries";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCronRequest(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

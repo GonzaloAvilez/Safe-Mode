@@ -1,10 +1,9 @@
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 import { anonymizeExpiredLetters, closeInactiveCorrespondences } from "@/lib/letter-retention";
 
 // Daily (vercel.json). Responds with counts only, never letter content (ADR-004 layer 8).
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCronRequest(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
