@@ -7,7 +7,6 @@ import { createStrictContext } from "./create-strict-context";
 
 export type WriteOutcome =
   | { type: "crisis" }
-  | { type: "general_flagged" }
   | { type: "cap_reached" }
   | { type: "error"; message: string };
 

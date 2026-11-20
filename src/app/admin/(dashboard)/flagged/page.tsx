@@ -124,6 +124,7 @@ export default async function AdminFlaggedPage() {
           <h1 className="text-lg font-medium">Entries flaggeadas (moderación general)</h1>
           <p className="mt-1 text-sm text-white/40">
             Flaggeadas por la Moderation API fuera de las categorías de self-harm (esas van arriba, en Crisis).
+            Desde #261 siguen a Mirror como cualquier entry: la marca es solo para que estés al tanto.
           </p>
         </div>
         {flagged.length === 0 ? (

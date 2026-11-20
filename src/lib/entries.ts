@@ -61,7 +61,6 @@ export async function updateEntryOutcome(
 
 export type EntryOutcome =
   | { type: "crisis"; entryId: string }
-  | { type: "general_flagged"; entryId: string }
   | { type: "cap_reached"; entryId: string }
   | { type: "no_match"; entryId: string }
   | { type: "matched"; entryId: string; phrase: PhraseMatch };
@@ -75,11 +74,11 @@ export async function submitEntry(
   const moderation = await moderateText(text);
   const flags = resolveModerationFlags(moderation);
 
-  // Skip the spend-cap read entirely when already flagged — it can never change the outcome.
-  const isModerationClean = !flags.flaggedCrisis && !flags.flaggedGeneral;
-  const withinDailyCap = isModerationClean
-    ? await canSpendToday(estimateEmbeddingCostUsd(text.length))
-    : true;
+  // Skip the spend-cap read entirely for crisis — it can never change the outcome. A general
+  // flag doesn't skip it: that entry goes on to an embedding like any other (#261).
+  const withinDailyCap = flags.flaggedCrisis
+    ? true
+    : await canSpendToday(estimateEmbeddingCostUsd(text.length));
 
   const route = resolveEntryRoute(flags, withinDailyCap);
 
@@ -101,7 +100,7 @@ export async function submitEntry(
   const entry = await insertEntry({
     text,
     flaggedCrisis: false,
-    flaggedGeneral: false,
+    flaggedGeneral: flags.flaggedGeneral,
     outcome: null,
     embedding,
     matchedPhraseId: null,

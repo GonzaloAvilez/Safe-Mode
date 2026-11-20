@@ -70,6 +70,13 @@ Public route names below (for example `/mirror`) are shorthand for `/{locale}/mi
 - [x] **Crisis screen with findahelpline.com working** — implemented.
 - [x] **Moderation API on conservative threshold** — implemented (D4).
 - [x] **Manually tested with real risk cases** — resolved 2026-07-14. Walked all three moderation paths through the real `/write` UI (not curl): a self-harm-ideation phrase correctly triggered the crisis flow (findahelpline.com shown, `entries.text` stayed `null`, real text isolated in `crisis_entries` only); a violent-but-non-self-harm phrase correctly triggered the distinct general-flagged message, not crisis; a clean phrase proceeded normally to a Mirror match. Verified at both the UI and database level. Test rows deleted from the shared Supabase project after verification.
+  **General-flag path reversed 2026-11-20 (#261):** a general moderation flag no longer stops a Write entry. It's still recorded in `flagged_general` and shown in `/admin/flagged`, but the entry goes on to Mirror like any other. Evidence:
+  - The only real `general_flagged` entry in production (1 of 129) was grief over a pet's death, flagged `violence` at 0.20.
+  - A probe of 22 synthetic texts blocked 16 of 21 emotional ones: grief, child abuse, rape, domestic violence and witnessed violence. OpenAI's categories can't tell telling what happened to you apart from hurting someone, and a threshold doesn't help (scores 0.51 to 0.94).
+  - Entries are never shown to anyone, so the block protected nobody.
+  - No rejection copy could work: any of them asks the visitor to rephrase their pain to pass a filter, against Write's own promise.
+
+  Crisis is unchanged. Letters and phrases keep their own moderation.
 
 ## English and Spanish — delivered
 

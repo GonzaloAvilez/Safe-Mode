@@ -114,22 +114,45 @@ describe("submitEntry — crisis route", () => {
   });
 });
 
-describe("submitEntry — general_flagged route", () => {
-  it("saves the entry as flagged_general with no embedding, and skips the spend cap check", async () => {
+// #261: entries are never shown to anyone, so a general moderation flag (grief, abuse,
+// violence someone lived through) is recorded but never stops the entry.
+describe("submitEntry — general moderation flag", () => {
+  it("goes on to the embedding and Mirror like any entry, keeping flagged_general for /admin/flagged", async () => {
     setUpInsertChain();
     moderateTextMock.mockResolvedValueOnce(generalFlaggedModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(true);
+    getEmbeddingMock.mockResolvedValueOnce(embeddingResultFixture);
+    findClosestPhraseMock.mockResolvedValueOnce(phraseMatchFixture);
+    createResponseMock.mockResolvedValueOnce({ id: "response-1" });
 
-    const result = await submitEntry("texto violento", TEST_SESSION_ID);
+    const result = await submitEntry("se murió mi gata", TEST_SESSION_ID, undefined, "es");
 
-    expect(result).toEqual({ type: "general_flagged", entryId: insertEntrySuccessFixture.data.id });
+    expect(result).toEqual({ type: "matched", entryId: insertEntrySuccessFixture.data.id, phrase: phraseMatchFixture });
     expect(insertMock).toHaveBeenCalledWith({
-      text: "texto violento",
+      text: "se murió mi gata",
       flagged_crisis: false,
       flagged_general: true,
-      embedding: null,
-      outcome: "general_flagged",
+      embedding: embeddingResultFixture.embedding,
+      outcome: null,
       matched_phrase_id: null,
     });
+    expect(recordEmbeddingSpendMock).toHaveBeenCalledWith(embeddingResultFixture.totalTokens);
+    expect(createResponseMock).toHaveBeenCalledWith(insertEntrySuccessFixture.data.id, TEST_SESSION_ID, undefined);
+    expect(findClosestPhraseMock).toHaveBeenCalledWith(embeddingResultFixture.embedding, "es");
+  });
+
+  it("still answers to the spend cap, since it now spends on an embedding", async () => {
+    setUpInsertChain();
+    moderateTextMock.mockResolvedValueOnce(generalFlaggedModerationCheckFixture);
+    canSpendTodayMock.mockResolvedValueOnce(false);
+
+    const result = await submitEntry("se murió mi gata", TEST_SESSION_ID);
+
+    expect(result).toEqual({ type: "cap_reached", entryId: insertEntrySuccessFixture.data.id });
+    expect(canSpendTodayMock).toHaveBeenCalled();
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ flagged_general: true, embedding: null, outcome: "cap_reached" })
+    );
     expect(getEmbeddingMock).not.toHaveBeenCalled();
   });
 });

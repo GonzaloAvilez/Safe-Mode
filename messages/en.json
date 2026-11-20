@@ -72,7 +72,6 @@
     "searching": "your essence is traveling",
     "outcome": {
       "crisisIntro": "You're not alone. If you feel like you need to talk to someone right now, here's help:",
-      "generalFlagged": "Your text couldn't be published this time.",
       "capReached": "We've used up today's space, come back tomorrow."
     }
   },
