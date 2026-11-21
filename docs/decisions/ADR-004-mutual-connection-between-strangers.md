@@ -115,7 +115,7 @@ Letter (stored: letters.status)
 
   draft → moderating ─┬→ held ─┬→ delivered
                       │        └→ rejected     (founder review)
-                      └→ rejected              (crisis, moderation, contact info)
+                      └→ rejected              (crisis, directed aggression, contact info)
 
 Correspondence (derived from its letters, never stored, except closed)
 
@@ -140,14 +140,26 @@ once retention has erased their text. Storing the rest would duplicate the truth
 **Safety pipeline, in order**
 
 1. **Moderation** (`moderateText`). Crisis always wins, even if the letter also has contact info,
-   because the sender needs help resources first. Then general moderation.
+   because the sender needs help resources first. Then **directed aggression**.
 2. **Contact info** (`detectContactInfo`, #225).
 3. **Human review.** Everything that passes waits as `held` in the `/admin` queue.
+
+**Amended 2026-11-20 (#265):** step 1 used to reject on any general moderation flag. It now rejects
+only on the categories that mean aggression aimed at a person — `harassment/threatening`,
+`hate/threatening`, `illicit/violent`, `sexual/minors` (`directed-aggression.ts`). `violence` and
+`violence/graphic` on their own go to human review like any other letter. Measured over 34
+letter-length texts about loss in ES and EN: `violence` fires on narrating how a body was hurt,
+regardless of who hurt whom, so the same letter passed or failed on whether it said how someone
+died — and the rejection asked the sender to take that out. Every false positive carried `violence`
+alone; the one genuine threat also carried `harassment/threatening`. Because step 3 already puts a
+human in front of every letter, the automatic gate only has to catch what a person shouldn't have
+to read to recognise. Crisis and contact info are unchanged, and the stored
+`letters.rejection_reason` is still `"moderation"` — no schema change.
 
 | Outcome | Delivered? | Sender sees | Text kept |
 |---|---|---|---|
 | Crisis | No | The existing crisis resource (same flow as entries) | 30 days, then anonymized (same as `crisis_entries`) |
-| General moderation | No | Rejection message | 60 days |
+| Directed aggression | No | Rejection message | 60 days |
 | Contact info | No | What to remove, so they can rewrite | **Never stored**. Only the rejection and its reason |
 | Moderation call fails | No, nothing is stored | "Try again" | Nothing (fail-closed) |
 | Founder rejects | No | Rejection message | 60 days |

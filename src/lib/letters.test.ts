@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   benignModerationCheckFixture,
   concerningModerationCheckFixture,
+  directedAggressionModerationCheckFixture,
   generalFlaggedModerationCheckFixture,
 } from "@/test/fixtures/moderation-check";
 import type { Letter } from "@/lib/letter-lifecycle";
@@ -23,6 +24,7 @@ afterEach(() => {
 const CLEAN = benignModerationCheckFixture;
 const CRISIS = concerningModerationCheckFixture;
 const GENERAL = generalFlaggedModerationCheckFixture;
+const AGGRESSION = directedAggressionModerationCheckFixture;
 
 const CORRESPONDENCE_ID = "correspondence-1";
 
@@ -98,9 +100,21 @@ describe("submitLetter", () => {
       );
     });
 
-    it("stores a general-moderation rejection with its text", async () => {
+    // #265: a letter flagged only in general (grief describing how someone died) is held
+    // for the founder like any other, instead of being refused before anyone reads it.
+    it("holds a letter flagged only in general, like any other", async () => {
       const { insert } = mockDatabase({ stored: open() });
       moderateTextMock.mockResolvedValue(GENERAL);
+
+      const result = await submitLetter({ correspondenceId: CORRESPONDENCE_ID, sender: "visitor", body: honest });
+
+      expect(result).toEqual({ type: "held" });
+      expect(insert).toHaveBeenCalledWith(expect.objectContaining({ status: "held", body: honest }));
+    });
+
+    it("stores a directed-aggression rejection with its text", async () => {
+      const { insert } = mockDatabase({ stored: open() });
+      moderateTextMock.mockResolvedValue(AGGRESSION);
 
       const result = await submitLetter({ correspondenceId: CORRESPONDENCE_ID, sender: "visitor", body: honest });
 
