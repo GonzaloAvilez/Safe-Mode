@@ -33,10 +33,10 @@ export const generalFlaggedModerationCheckFixture: ModerationCheck = {
   },
 };
 
-// Aggression aimed at a person, not a description of one: the shape of the real threat in
-// the #265 probe, which carried `harassment/threatening` on top of `violence`. Letters
-// reject this without a human having to read it.
-export const directedAggressionModerationCheckFixture: ModerationCheck = {
+// Falls in an auto-reject category: the shape of the real threat in the #265 probe, which
+// carried `harassment/threatening` on top of `violence`. Letters refuse this without a
+// human having to read it.
+export const letterAutoRejectModerationCheckFixture: ModerationCheck = {
   flagged: true,
   flaggedCategories: ["harassment", "harassment/threatening", "violence"],
   selfHarmScores: {

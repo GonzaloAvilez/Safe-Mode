@@ -79,7 +79,7 @@ Public route names below (for example `/mirror`) are shorthand for `/{locale}/mi
   Crisis is unchanged. Letters and phrases keep their own moderation.
 
   **Letters narrowed 2026-11-20 (#265), the day after:** a letter is no longer refused for a general
-  moderation flag either — only for **directed aggression** (`harassment/threatening`,
+  moderation flag either — only for a fixed **auto-reject category list** (`harassment/threatening`,
   `hate/threatening`, `illicit/violent`, `sexual/minors`). The trigger was a real mailbox letter about
   a pet that died under the writer's own car, refused at `violence` 0.355 before any human read it.
   Evidence (34 letter-length texts about loss, ES and EN):

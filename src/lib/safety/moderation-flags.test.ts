@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveModerationFlags } from "@/lib/safety/moderation-flags";
-import type { ModerationCategory } from "@/lib/safety/directed-aggression";
+import type { ModerationCategory } from "@/lib/safety/letter-auto-reject";
 
 const CALM = { "self-harm": 0.001, "self-harm/intent": 0.001, "self-harm/instructions": 0.001 };
 
@@ -8,13 +8,13 @@ describe("resolveModerationFlags", () => {
   it("returns every flag false when moderation does not flag the content", () => {
     const result = resolveModerationFlags({ flagged: false, flaggedCategories: [], selfHarmScores: CALM });
 
-    expect(result).toEqual({ flaggedCrisis: false, flaggedGeneral: false, flaggedDirectedAggression: false });
+    expect(result).toEqual({ flaggedCrisis: false, flaggedGeneral: false, flaggedLetterAutoReject: false });
   });
 
   it("sets flaggedGeneral (not flaggedCrisis) when a non-self-harm category is flagged", () => {
     const result = resolveModerationFlags({ flagged: true, flaggedCategories: ["violence"], selfHarmScores: CALM });
 
-    expect(result).toEqual({ flaggedCrisis: false, flaggedGeneral: true, flaggedDirectedAggression: false });
+    expect(result).toEqual({ flaggedCrisis: false, flaggedGeneral: true, flaggedLetterAutoReject: false });
   });
 
   it("sets flaggedCrisis (not flaggedGeneral) when a self-harm score crosses the conservative threshold", () => {
@@ -24,7 +24,7 @@ describe("resolveModerationFlags", () => {
       selfHarmScores: { ...CALM, "self-harm": 0.9 },
     });
 
-    expect(result).toEqual({ flaggedCrisis: true, flaggedGeneral: false, flaggedDirectedAggression: false });
+    expect(result).toEqual({ flaggedCrisis: true, flaggedGeneral: false, flaggedLetterAutoReject: false });
   });
 
   it("treats crisis and general as mutually exclusive even when OpenAI flags multiple categories at once", () => {
@@ -48,18 +48,18 @@ describe("resolveModerationFlags", () => {
       selfHarmScores: { ...CALM, "self-harm": 0.9 },
     });
 
-    expect(result).toEqual({ flaggedCrisis: true, flaggedGeneral: false, flaggedDirectedAggression: false });
+    expect(result).toEqual({ flaggedCrisis: true, flaggedGeneral: false, flaggedLetterAutoReject: false });
   });
 
-  describe("flaggedDirectedAggression", () => {
-    it("is set when a directed-aggression category fires, alongside flaggedGeneral", () => {
+  describe("flaggedLetterAutoReject", () => {
+    it("is set when an auto-reject category fires, alongside flaggedGeneral", () => {
       const result = resolveModerationFlags({
         flagged: true,
         flaggedCategories: ["harassment", "harassment/threatening", "violence"],
         selfHarmScores: CALM,
       });
 
-      expect(result).toEqual({ flaggedCrisis: false, flaggedGeneral: true, flaggedDirectedAggression: true });
+      expect(result).toEqual({ flaggedCrisis: false, flaggedGeneral: true, flaggedLetterAutoReject: true });
     });
 
     // The #265 false positives: describing how someone died, with nothing aimed at anyone.
@@ -69,7 +69,7 @@ describe("resolveModerationFlags", () => {
         const result = resolveModerationFlags({ flagged: true, flaggedCategories: [category], selfHarmScores: CALM });
 
         expect(result.flaggedGeneral).toBe(true);
-        expect(result.flaggedDirectedAggression).toBe(false);
+        expect(result.flaggedLetterAutoReject).toBe(false);
       }
     );
 
@@ -80,7 +80,7 @@ describe("resolveModerationFlags", () => {
         selfHarmScores: { ...CALM, "self-harm": 0.9 },
       });
 
-      expect(result).toEqual({ flaggedCrisis: true, flaggedGeneral: false, flaggedDirectedAggression: false });
+      expect(result).toEqual({ flaggedCrisis: true, flaggedGeneral: false, flaggedLetterAutoReject: false });
     });
   });
 });

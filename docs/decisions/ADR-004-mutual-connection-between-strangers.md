@@ -115,7 +115,7 @@ Letter (stored: letters.status)
 
   draft → moderating ─┬→ held ─┬→ delivered
                       │        └→ rejected     (founder review)
-                      └→ rejected              (crisis, directed aggression, contact info)
+                      └→ rejected              (crisis, auto-reject category, contact info)
 
 Correspondence (derived from its letters, never stored, except closed)
 
@@ -140,13 +140,14 @@ once retention has erased their text. Storing the rest would duplicate the truth
 **Safety pipeline, in order**
 
 1. **Moderation** (`moderateText`). Crisis always wins, even if the letter also has contact info,
-   because the sender needs help resources first. Then **directed aggression**.
+   because the sender needs help resources first. Then the **auto-reject categories**.
 2. **Contact info** (`detectContactInfo`, #225).
 3. **Human review.** Everything that passes waits as `held` in the `/admin` queue.
 
 **Amended 2026-11-20 (#265):** step 1 used to reject on any general moderation flag. It now rejects
-only on the categories that mean aggression aimed at a person — `harassment/threatening`,
-`hate/threatening`, `illicit/violent`, `sexual/minors` (`directed-aggression.ts`). `violence` and
+only on a fixed list of categories a letter may be refused for without human review —
+`harassment/threatening`, `hate/threatening`, `illicit/violent`, `sexual/minors`
+(`letter-auto-reject.ts`). `violence` and
 `violence/graphic` on their own go to human review like any other letter. Measured over 34
 letter-length texts about loss in ES and EN: `violence` fires on narrating how a body was hurt,
 regardless of who hurt whom, so the same letter passed or failed on whether it said how someone
@@ -159,7 +160,7 @@ to read to recognise. Crisis and contact info are unchanged, and the stored
 | Outcome | Delivered? | Sender sees | Text kept |
 |---|---|---|---|
 | Crisis | No | The existing crisis resource (same flow as entries) | 30 days, then anonymized (same as `crisis_entries`) |
-| Directed aggression | No | Rejection message | 60 days |
+| Auto-reject category | No | Rejection message | 60 days |
 | Contact info | No | What to remove, so they can rewrite | **Never stored**. Only the rejection and its reason |
 | Moderation call fails | No, nothing is stored | "Try again" | Nothing (fail-closed) |
 | Founder rejects | No | Rejection message | 60 days |

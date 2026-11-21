@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   benignModerationCheckFixture,
   concerningModerationCheckFixture,
-  directedAggressionModerationCheckFixture,
+  letterAutoRejectModerationCheckFixture,
   generalFlaggedModerationCheckFixture,
   selfHarmOnlyModerationCheckFixture,
 } from "@/test/fixtures/moderation-check";
@@ -21,10 +21,10 @@ afterEach(() => {
 const CLEAN = benignModerationCheckFixture;
 const CRISIS = concerningModerationCheckFixture;
 const GENERAL = generalFlaggedModerationCheckFixture;
-const AGGRESSION = directedAggressionModerationCheckFixture;
+const AUTO_REJECT = letterAutoRejectModerationCheckFixture;
 
 describe("resolveLetterSafetyOutcome: priority order", () => {
-  // Every combination of the three signals: crisis > directed aggression > contact info.
+  // Every combination of the three signals: crisis > auto-reject category > contact info.
   const NO_CONTACT = { found: false, kinds: [] };
   const CONTACT = { found: true, kinds: ["phone" as const] };
 
@@ -37,9 +37,9 @@ describe("resolveLetterSafetyOutcome: priority order", () => {
     [false, true, false, { outcome: "rejected", reason: "moderation" }],
     [false, false, true, { outcome: "rejected", reason: "contact_info", contactKinds: ["phone"] }],
     [false, false, false, { outcome: "held" }],
-  ])("crisis=%s aggression=%s contact=%s → %j", (flaggedCrisis, flaggedDirectedAggression, hasContact, expected) => {
+  ])("crisis=%s autoReject=%s contact=%s → %j", (flaggedCrisis, flaggedLetterAutoReject, hasContact, expected) => {
     const result = resolveLetterSafetyOutcome(
-      { flaggedCrisis, flaggedDirectedAggression },
+      { flaggedCrisis, flaggedLetterAutoReject },
       hasContact ? CONTACT : NO_CONTACT
     );
 
@@ -48,7 +48,7 @@ describe("resolveLetterSafetyOutcome: priority order", () => {
 
   // flaggedGeneral is recorded, but it is no longer a verdict for letters (#265).
   it("ignores flaggedGeneral: a letter flagged only in general waits for the human queue", () => {
-    const flags: ModerationFlags = { flaggedCrisis: false, flaggedGeneral: true, flaggedDirectedAggression: false };
+    const flags: ModerationFlags = { flaggedCrisis: false, flaggedGeneral: true, flaggedLetterAutoReject: false };
 
     expect(resolveLetterSafetyOutcome(flags, NO_CONTACT)).toEqual({ outcome: "held" });
   });
@@ -107,8 +107,8 @@ describe("checkLetterSafety", () => {
       expect(await checkLetterSafety(honest)).toEqual({ outcome: "held" });
     });
 
-    it("rejects a letter carrying aggression aimed at a person", async () => {
-      moderateTextMock.mockResolvedValue(AGGRESSION);
+    it("rejects a letter in an auto-reject category", async () => {
+      moderateTextMock.mockResolvedValue(AUTO_REJECT);
 
       expect(await checkLetterSafety(honest)).toEqual({ outcome: "rejected", reason: "moderation" });
     });

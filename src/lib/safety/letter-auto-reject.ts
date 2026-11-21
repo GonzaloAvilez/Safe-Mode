@@ -1,8 +1,10 @@
-// Which of OpenAI's moderation categories should stop a letter on their own (#265).
+// Which of OpenAI's moderation categories refuse a letter on their own, before any human
+// reads it (#265). This is a policy list, not a judgement about the text: it says what the
+// machine is allowed to refuse by itself, nothing more.
 //
 // Letters go to a human before they reach anyone (ADR-004 layer 6), so the automatic gate
-// doesn't have to decide "is this publishable" — only "is this so clearly aggression that
-// a person shouldn't have to read it to find out". Those are different questions, and
+// doesn't have to decide "is this publishable" — only "is this so clearly beyond the line
+// that a person shouldn't have to read it to find out". Those are different questions, and
 // `flagged` alone answers the wrong one.
 //
 // Measured 2026-11-20 over 34 letter-length texts about loss, ES and EN. `violence` fires
@@ -20,10 +22,9 @@
 //
 // What does separate them is the category. In that run every false positive carried
 // `violence` and nothing else, while the one real threat ("sé dónde vive y voy a ir a su
-// casa el viernes") also carried `harassment/threatening`. Aggression aimed at someone
-// announces itself in a category that grief never reaches.
+// casa el viernes") also carried `harassment/threatening` — a category grief never reaches.
 //
-// So: these categories reject. `violence` and `violence/graphic` on their own go to the
+// So: the categories below reject. `violence` and `violence/graphic` on their own go to the
 // human queue like any other letter. Crisis (self-harm) and contact info are untouched and
 // still decided first — see letter-safety.ts.
 //
@@ -47,15 +48,15 @@ export type ModerationCategory =
   | "violence"
   | "violence/graphic";
 
-export const DIRECTED_AGGRESSION_CATEGORIES = [
+export const LETTER_AUTO_REJECT_CATEGORIES = [
   "harassment/threatening",
   "hate/threatening",
   "illicit/violent",
   "sexual/minors",
 ] as const satisfies readonly ModerationCategory[];
 
-export function hasDirectedAggression(flaggedCategories: readonly ModerationCategory[]): boolean {
+export function hasAutoRejectLetterCategory(flaggedCategories: readonly ModerationCategory[]): boolean {
   return flaggedCategories.some((category) =>
-    (DIRECTED_AGGRESSION_CATEGORIES as readonly string[]).includes(category)
+    (LETTER_AUTO_REJECT_CATEGORIES as readonly string[]).includes(category)
   );
 }

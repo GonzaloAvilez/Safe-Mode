@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   benignModerationCheckFixture,
   concerningModerationCheckFixture,
-  directedAggressionModerationCheckFixture,
+  letterAutoRejectModerationCheckFixture,
   generalFlaggedModerationCheckFixture,
 } from "@/test/fixtures/moderation-check";
 import type { Letter } from "@/lib/letter-lifecycle";
@@ -24,7 +24,7 @@ afterEach(() => {
 const CLEAN = benignModerationCheckFixture;
 const CRISIS = concerningModerationCheckFixture;
 const GENERAL = generalFlaggedModerationCheckFixture;
-const AGGRESSION = directedAggressionModerationCheckFixture;
+const AUTO_REJECT = letterAutoRejectModerationCheckFixture;
 
 const CORRESPONDENCE_ID = "correspondence-1";
 
@@ -112,9 +112,9 @@ describe("submitLetter", () => {
       expect(insert).toHaveBeenCalledWith(expect.objectContaining({ status: "held", body: honest }));
     });
 
-    it("stores a directed-aggression rejection with its text", async () => {
+    it("stores an auto-rejected letter with its text", async () => {
       const { insert } = mockDatabase({ stored: open() });
-      moderateTextMock.mockResolvedValue(AGGRESSION);
+      moderateTextMock.mockResolvedValue(AUTO_REJECT);
 
       const result = await submitLetter({ correspondenceId: CORRESPONDENCE_ID, sender: "visitor", body: honest });
 
