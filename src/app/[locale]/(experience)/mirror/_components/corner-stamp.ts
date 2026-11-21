@@ -11,9 +11,9 @@ export const CORNER_STAMP_CLASSES =
   "lg:bg-[rgba(22,18,10,0.94)] lg:shadow-[0_6px_18px_-6px_rgba(0,0,0,0.7)] " +
   "lg:outline lg:outline-1 lg:outline-dashed lg:outline-offset-[3px] lg:outline-[rgba(210,158,32,0.35)]";
 
-// Only for a stamp that can be pressed: it straightens a little under the pointer. A stamp that
-// only says something (a letter on its way, letters paused) stays still.
-export const PRESSABLE_STAMP_CLASSES = "lg:hover:-rotate-[2deg]";
+// Only for a stamp that can be pressed: it straightens a little and warms under the pointer, staying
+// opaque over the card. A stamp that only says something (a letter on its way, letters paused) stays still.
+export const PRESSABLE_STAMP_CLASSES = "lg:hover:-rotate-[2deg] lg:hover:bg-[rgba(38,30,12,0.97)]";
 
 // Where a stamp sits: hanging off the card's bottom-right corner. Below lg it's just the next
 // thing under the phrase.
