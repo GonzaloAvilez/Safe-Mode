@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useRitualState, type MirrorLetter } from "@/app/_components/experience-state/ritual";
@@ -14,6 +14,7 @@ import { ConfirmReturnKeyStep } from "../../_shared/return-key/confirm-return-ke
 import { KeepReturnKeyStep } from "../../_shared/return-key/keep-return-key-step";
 import { playTransition } from "../../_shared/handpan-audio";
 import { ScreenHeader } from "../../_shared/screen-header";
+import { CORNER_STAMP_CAPTION_CLASSES, CORNER_STAMP_CLASSES, PRESSABLE_STAMP_CLASSES } from "./corner-stamp";
 import { requestVisitorReturnKey } from "./request-visitor-return-key";
 
 // ADR-004 #212, design B ("Cartas desde Mirror"), with design A's desktop: writing a letter to
@@ -62,6 +63,7 @@ export function FirstLetterDoor({ entryId }: { entryId: string }) {
   const letter = useMirrorLetterFor(entryId);
   const [requesting, setRequesting] = useState(false);
   const [message, setMessage] = useState<DoorMessage | null>(null);
+  const hintId = useId();
   const mounted = useRef(false);
 
   useEffect(() => {
@@ -75,10 +77,15 @@ export function FirstLetterDoor({ entryId }: { entryId: string }) {
     return (
       <p
         role="status"
-        className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-[rgba(210,158,32,0.3)] px-5 text-[13px] tracking-[.5px] text-[rgba(242,192,99,0.85)]"
+        className={`relative mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-[rgba(210,158,32,0.3)] px-5 text-[13px] tracking-[.5px] text-[rgba(242,192,99,0.85)] ${CORNER_STAMP_CLASSES}`}
       >
         <EnvelopeIcon />
         {t("onItsWay")}
+        {/* On the desktop stamp, a postmark: this letter has left. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-4 -right-4 hidden h-12 w-12 rounded-full border border-dashed border-[rgba(242,192,99,0.45)] lg:block"
+        />
       </p>
     );
   }
@@ -142,22 +149,41 @@ export function FirstLetterDoor({ entryId }: { entryId: string }) {
           : t(message);
 
   return (
-    <div className="mt-4 flex flex-col items-center">
+    <div className="group mt-4 flex flex-col items-center lg:relative lg:mt-0">
       {!closed && (
         <button
           type="button"
           onClick={openDoor}
           disabled={requesting}
-          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[rgba(210,158,32,0.55)] bg-[rgba(200,160,30,0.08)] px-[22px] text-[13px] tracking-[.5px] text-[rgba(248,225,150,0.92)] transition-all duration-300 hover:scale-105 hover:bg-[rgba(200,160,30,0.14)] active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          aria-describedby={hintId}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-full border border-[rgba(210,158,32,0.55)] bg-[rgba(200,160,30,0.08)] px-[22px] text-[13px] tracking-[.5px] text-[rgba(248,225,150,0.92)] transition-all duration-300 hover:scale-105 hover:bg-[rgba(200,160,30,0.14)] active:scale-95 disabled:pointer-events-none disabled:opacity-50 ${CORNER_STAMP_CLASSES} ${PRESSABLE_STAMP_CLASSES}`}
         >
           <EnvelopeIcon />
           {requesting ? t("requesting") : t("writeButton")}
         </button>
       )}
-      {!closed && <p className="mt-2.5 max-w-[280px] text-[12px] leading-[1.6] text-white/50">{t("writeHint")}</p>}
-      <p role="status" className="mt-2 max-w-[280px] text-[13px] leading-[1.6] text-white/65 empty:hidden">
-        {messageText}
-      </p>
+      {/* Beside the stamp on desktop. A door that can't open anymore leaves no stamp to sit beside:
+          its message takes the stamp's place, on a stamp of its own that can't be pressed. */}
+      <div className={`flex flex-col items-center ${closed ? "" : `${CORNER_STAMP_CAPTION_CLASSES} lg:items-start`}`}>
+        {/* On the desktop stamp the hint shows on hover or focus, unless a message is showing; it
+            always describes the button. */}
+        {!closed && (
+          <p
+            id={hintId}
+            className={`mt-2.5 max-w-[280px] text-[12px] leading-[1.6] text-white/50 lg:mt-0 lg:opacity-0 lg:transition-opacity lg:duration-300 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100 ${messageText ? "lg:hidden" : ""}`}
+          >
+            {t("writeHint")}
+          </p>
+        )}
+        <p
+          role="status"
+          className={`mt-2 max-w-[280px] text-[13px] leading-[1.6] text-white/65 empty:hidden ${
+            closed ? `lg:flex lg:border lg:border-white/15 lg:text-white/55 ${CORNER_STAMP_CLASSES}` : ""
+          }`}
+        >
+          {messageText}
+        </p>
+      </div>
     </div>
   );
 }
