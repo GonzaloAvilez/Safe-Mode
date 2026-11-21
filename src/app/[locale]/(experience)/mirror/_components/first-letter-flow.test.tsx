@@ -16,9 +16,40 @@ const { handoffMock, pickMock, router } = vi.hoisted(() => ({ handoffMock: vi.fn
 vi.mock("../../_shared/mirror-handoff", () => ({ readMirrorHandoff: handoffMock }));
 vi.mock("../mirror-canvas", () => ({ MirrorCanvas: () => <div data-testid="mirror-canvas" /> }));
 vi.mock("../../_shared/screen-header", () => ({ ScreenHeader: ({ tagline }: { tagline: string }) => <header>{tagline}</header> }));
-vi.mock("../../_shared/screen-cta", () => ({ ScreenCta: ({ label }: { label: string }) => <a href="#next">{label}</a> }));
+vi.mock("../../_shared/screen-cta", () => ({
+  ScreenCta: ({ label, placement = "fixed" }: { label: string; placement?: string }) => (
+    <a href="#next" data-placement={placement}>
+      {label}
+    </a>
+  ),
+}));
 vi.mock("../../_shared/handpan-audio", () => ({ playRandomNote: vi.fn(), playTransition: vi.fn() }));
-vi.mock("./quote-reveal", () => ({ QuoteReveal: ({ text }: { text: string }) => <>{text}</> }));
+// The phrase shows at once and says it's done, as the real one does once the last letter appears.
+// With `phraseReveal.hold`, it stays mid-way until the test calls `phraseReveal.finish()`; a phrase
+// shown `instant` never waits, as with the real one.
+const phraseReveal = vi.hoisted(() => ({ hold: false, finish: () => {} }));
+vi.mock("./quote-reveal", async () => {
+  const { useEffect, useState } = await import("react");
+  return {
+    QuoteReveal: ({ text, instant, onRevealed }: { text: string; instant?: boolean; onRevealed?: () => void }) => {
+      // Read once, like the real one: only when the phrase first shows.
+      const [waits] = useState(() => phraseReveal.hold && !instant);
+      const [shown, setShown] = useState(!waits);
+      useEffect(() => {
+        if (!waits) {
+          onRevealed?.();
+          return;
+        }
+        phraseReveal.finish = () => {
+          setShown(true);
+          onRevealed?.();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return <>{shown ? text : ""}</>;
+    },
+  };
+});
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/lib/return-key-groups", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/return-key-groups")>()),
@@ -184,6 +215,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  phraseReveal.hold = false;
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -329,6 +361,90 @@ describe("Mirror's door to a letter", () => {
     expect(screen.getByText(message)).toBeTruthy();
     expect(state("phase")).toBe("");
     expect(Boolean(door())).toBe(doorStays);
+  });
+});
+
+// #263: everything under the phrase waits for it to finish appearing, so nothing visible is pushed
+// while the card grows; it keeps its place meanwhile, hidden and out of reach.
+describe("What follows the phrase", () => {
+  const subcopy = () => screen.getByText(es.mirror.subcopyMatched);
+  const connect = () => screen.queryByRole("button", { name: new RegExp(es.mirror.connectButton) });
+
+  it("waits, hidden and out of reach, until the phrase has finished, then shows the letter door", async () => {
+    phraseReveal.hold = true;
+    renderMirror();
+    await settle();
+
+    expect(door()).toBeNull();
+    expect(subcopy().closest("[aria-hidden='true']")).not.toBeNull();
+    expect(subcopy().closest("[inert]")).not.toBeNull();
+
+    expect(screen.queryByText(PHRASE)).toBeNull();
+    act(() => phraseReveal.finish());
+
+    expect(screen.getByText(PHRASE)).toBeTruthy();
+    expect(door()).toBeTruthy();
+    expect(subcopy().closest("[aria-hidden='true']")).toBeNull();
+    expect(subcopy().closest("[inert]")).toBeNull();
+  });
+
+  it("waits the same way with “Me encantaría conectar”", async () => {
+    phraseReveal.hold = true;
+    handoffMock.mockReturnValue(handoff({ connectable: false }));
+    renderMirror();
+    await settle();
+
+    expect(connect()).toBeNull();
+    act(() => phraseReveal.finish());
+    expect(connect()).toBeTruthy();
+  });
+
+  it("waits the same way when nothing matched", async () => {
+    phraseReveal.hold = true;
+    handoffMock.mockReturnValue({ outcome: "no_match", entryId: "entry-1" });
+    renderMirror();
+    await settle();
+
+    const noMatchSubcopy = screen.getByText(es.mirror.subcopyNoMatch);
+    expect(noMatchSubcopy.closest("[aria-hidden='true']")).not.toBeNull();
+    act(() => phraseReveal.finish());
+    expect(noMatchSubcopy.closest("[aria-hidden='true']")).toBeNull();
+  });
+
+  it("“Seguir” comes after all of it, so a long phrase can't end up under it", async () => {
+    renderMirror();
+    await settle();
+
+    expect(screen.getByRole("link", { name: es.common.continue }).getAttribute("data-placement")).toBe("flow");
+  });
+
+  it("the door's hint is always what describes it, also where it only shows on hover", async () => {
+    renderMirror();
+    await settle();
+
+    const hint = screen.getByText(L.writeHint);
+    expect(door()!.getAttribute("aria-describedby")).toBe(hint.id);
+  });
+
+  it("coming back to the phrase from the letter doesn't wait for it again", async () => {
+    renderMirror(WRITING);
+    await settle();
+    await writeAndSend("Gracias.");
+    phraseReveal.hold = true;
+
+    fireEvent.click(button(L.backToPhrase)!);
+
+    expect(screen.getByText(PHRASE)).toBeTruthy();
+    expect(screen.getByText(L.onItsWay).closest("[aria-hidden='true']")).toBeNull();
+  });
+
+  it("a phrase already left behind for a letter shows at once when Mirror opens again", async () => {
+    phraseReveal.hold = true;
+    renderMirror({ ...WRITING, phase: "sent", backOnPhrase: true });
+    await settle();
+
+    expect(screen.getByText(PHRASE)).toBeTruthy();
+    expect(screen.getByText(L.onItsWay).closest("[aria-hidden='true']")).toBeNull();
   });
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { ScreenCta } from "../../_shared/screen-cta";
@@ -8,6 +8,7 @@ import { ScreenHeader } from "../../_shared/screen-header";
 import { readMirrorHandoff } from "../../_shared/mirror-handoff";
 import { playRandomNote } from "../../_shared/handpan-audio";
 import { MirrorCanvas } from "../mirror-canvas";
+import { CORNER_STAMP_CLASSES, CORNER_STAMP_SLOT_CLASSES, PRESSABLE_STAMP_CLASSES } from "./corner-stamp";
 import { FirstLetterDoor, FirstLetterFlow, useMirrorLetterFor } from "./first-letter-flow";
 import { QuoteReveal } from "./quote-reveal";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
@@ -49,6 +50,10 @@ export function MirrorScreen() {
   const { unlock: unlockLocaleSwitch } = useLocaleTransition();
   // Called before the early return below, with whatever entry there is, so the hooks keep their order.
   const letter = useMirrorLetterFor(handoff?.entryId ?? "");
+  // Whether the phrase has finished appearing. Someone coming back to it (from their letter) has
+  // already watched it appear, so it shows at once, with what follows it.
+  const [quoteRevealed, setQuoteRevealed] = useState(() => letter !== null);
+  const showWhatFollowsThePhrase = useCallback(() => setQuoteRevealed(true), []);
 
   // Deliberately not keyed on `handoff` — the hydration resync above commits in two
   // steps (server-matching null, then the real client value), and this effect would
@@ -114,89 +119,114 @@ export function MirrorScreen() {
     }
   }
 
+  // Everything under the phrase waits for it to finish, then fades in: the card grows downward
+  // as the phrase appears, and nothing visible is pushed while it does (#263). It keeps its place
+  // meanwhile, hidden and out of reach.
+  const afterThePhrase = {
+    className: `transition-opacity duration-700 ${quoteRevealed ? "opacity-100" : "opacity-0"}`,
+    "aria-hidden": !quoteRevealed,
+    inert: !quoteRevealed,
+  };
+
   return (
     <>
       <MirrorCanvas otherIntensity={matched ? 1 : NO_MATCH_OTHER_INTENSITY} />
 
       <ScreenHeader tagline={matched ? t("taglineMatched") : t("taglineNoMatch")} />
 
-      {/* On short screens (700px tall or less) the content starts right under the fixed header and
-          leaves room at the bottom, so its buttons never sit under the fixed "Continuar". */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-8 pt-[26vh] text-center [@media(max-height:700px)]:pt-32 [@media(max-height:700px)]:pb-32">
-        <div
-          className="w-full max-w-[360px] rounded-2xl border px-6 py-6 backdrop-blur-sm"
-          style={
-            matched
-              ? {
-                  backgroundColor: "rgba(18,15,11,0.72)",
-                  borderColor: "rgba(165,125,220,0.28)",
-                  boxShadow: "0 0 44px -10px rgba(165,125,220,0.35)",
-                }
-              : {
-                  backgroundColor: "#00000085",
-                  borderColor: "rgba(165,125,220,0.14)",
-                  boxShadow: "0 0 32px -14px rgba(165,125,220,0.18)",
-                }
-          }
-        >
-          {matched ? (
-            <>
-              <div className="font-serif text-[26px] leading-none text-[rgba(200,160,200,0.45)]">&ldquo;</div>
-              <p className="mt-1 text-[length:var(--text-quote-primary)] leading-[1.7] tracking-[.2px] text-white/72 italic">
-                <QuoteReveal text={handoff.text} />
-              </p>
-              <div className="mt-3 text-[length:var(--text-quote-secondary)] tracking-[.5px] text-white/25">
-                {t("attribution")}
-              </div>
+      {/* The card starts just under the other's light (the canvas draws it at 30% of the height) and
+          grows downward. On short screens (700px tall or less) it starts right under the fixed header. */}
+      <div className="relative z-10 flex flex-1 flex-col items-center gap-2 px-8 pt-[calc(30vh+64px)] text-center [@media(max-height:700px)]:pt-32">
+        {/* Below lg this wrapper steps aside (display: contents), so the card, the subcopy and the
+            way to reach the author stack in the column; `order` puts the subcopy before it. From lg
+            it holds the card, so the stamp can hang off the card's corner. */}
+        <div className="contents lg:relative lg:block lg:w-full lg:max-w-[360px]">
+          <div
+            className="w-full max-w-[360px] rounded-2xl border px-6 py-6 backdrop-blur-sm"
+            style={
+              matched
+                ? {
+                    backgroundColor: "rgba(18,15,11,0.72)",
+                    borderColor: "rgba(165,125,220,0.28)",
+                    boxShadow: "0 0 44px -10px rgba(165,125,220,0.35)",
+                  }
+                : {
+                    backgroundColor: "#00000085",
+                    borderColor: "rgba(165,125,220,0.14)",
+                    boxShadow: "0 0 32px -14px rgba(165,125,220,0.18)",
+                  }
+            }
+          >
+            {matched ? (
+              <>
+                <div className="font-serif text-[26px] leading-none text-[rgba(200,160,200,0.45)]">&ldquo;</div>
+                <p className="mt-1 text-[length:var(--text-quote-primary)] leading-[1.7] tracking-[.2px] text-white/72 italic">
+                  <QuoteReveal text={handoff.text} instant={quoteRevealed} onRevealed={showWhatFollowsThePhrase} />
+                </p>
+                <div className="mt-3 text-[length:var(--text-quote-secondary)] tracking-[.5px] text-white/25">
+                  {t("attribution")}
+                </div>
 
-              <button
-                type="button"
-                onClick={handleResonate}
-                disabled={resonated}
-                aria-pressed={resonated}
-                className={`mt-4 rounded-full border px-5 py-1.5 text-[13px] tracking-[.5px] transition-colors duration-500 ${
-                  resonated
-                    ? "border-[rgba(165,125,220,0.55)] text-[rgba(200,175,255,0.85)]"
-                    : "border-[rgba(165,125,220,0.3)] text-[rgba(165,125,220,0.6)] hover:border-[rgba(165,125,220,0.5)]"
-                }`}
-              >
-                {resonated ? "💛" : "✨"} {t("resonateButton")}
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="font-serif text-[26px] leading-none text-[rgba(165,125,220,0.25)]">·</div>
-              <p className="mt-1 text-[length:var(--text-quote-primary)] leading-[1.8] tracking-[.3px] text-white/45">
-                <QuoteReveal text={t("noMatchQuote")} />
-              </p>
-            </>
+                <button
+                  type="button"
+                  onClick={handleResonate}
+                  disabled={resonated}
+                  aria-pressed={resonated}
+                  className={`mt-4 rounded-full border px-5 py-1.5 text-[13px] tracking-[.5px] transition-colors duration-500 ${
+                    resonated
+                      ? "border-[rgba(165,125,220,0.55)] text-[rgba(200,175,255,0.85)]"
+                      : "border-[rgba(165,125,220,0.3)] text-[rgba(165,125,220,0.6)] hover:border-[rgba(165,125,220,0.5)]"
+                  }`}
+                >
+                  {resonated ? "💛" : "✨"} {t("resonateButton")}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="font-serif text-[26px] leading-none text-[rgba(165,125,220,0.25)]">·</div>
+                <p className="mt-1 text-[length:var(--text-quote-primary)] leading-[1.8] tracking-[.3px] text-white/45">
+                  <QuoteReveal text={t("noMatchQuote")} instant={quoteRevealed} onRevealed={showWhatFollowsThePhrase} />
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* The way to reach whoever left the phrase: a stamp on the card's corner on desktop, the
+              last thing under the phrase otherwise. When letters can reach its author, the letter
+              takes the place of "Me encantaría conectar". */}
+          {handoff.outcome === "matched" && (
+            <div {...afterThePhrase} className={`order-2 ${CORNER_STAMP_SLOT_CLASSES} ${afterThePhrase.className}`}>
+              {handoff.connectable ? (
+                <FirstLetterDoor entryId={handoff.entryId} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleConnect}
+                  aria-pressed={wantsToConnect}
+                  className={`mt-4 inline-flex items-center gap-1.5 rounded-full border px-5 py-1.5 text-[13px] tracking-[.5px] transition-all duration-300 hover:scale-105 active:scale-95 ${CORNER_STAMP_CLASSES} ${PRESSABLE_STAMP_CLASSES} ${
+                    wantsToConnect
+                      ? "border-[rgba(200,160,30,0.55)] bg-[rgba(200,160,30,0.12)] text-[rgba(248,225,150,0.9)]"
+                      : "border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] text-[rgba(200,160,30,0.75)] hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)]"
+                  }`}
+                >
+                  <span aria-hidden="true">{wantsToConnect ? "💛" : "🤍"}</span>
+                  <span>{t("connectButton")}</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="mt-6 max-w-[280px] text-[14px] leading-[1.7] tracking-[.3px] text-white/45">
+        <div
+          {...afterThePhrase}
+          className={`order-1 mt-6 max-w-[280px] text-[14px] leading-[1.7] tracking-[.3px] text-white/45 ${afterThePhrase.className}`}
+        >
           {matched ? t("subcopyMatched") : t("subcopyNoMatch")}
         </div>
-
-        {/* When letters can reach its author, the letter takes the place of "Me encantaría conectar". */}
-        {handoff.outcome === "matched" && handoff.connectable && <FirstLetterDoor entryId={handoff.entryId} />}
-
-        {handoff.outcome === "matched" && !handoff.connectable && (
-          <button
-            type="button"
-            onClick={handleConnect}
-            aria-pressed={wantsToConnect}
-            className={`mt-4 rounded-full border px-5 py-1.5 text-[13px] tracking-[.5px] transition-all duration-300 hover:scale-105 active:scale-95 ${
-              wantsToConnect
-                ? "border-[rgba(200,160,30,0.55)] bg-[rgba(200,160,30,0.12)] text-[rgba(248,225,150,0.9)]"
-                : "border-[rgba(200,160,30,0.3)] bg-[rgba(200,160,30,0.06)] text-[rgba(200,160,30,0.75)] hover:border-[rgba(200,160,30,0.55)] hover:bg-[rgba(200,160,30,0.12)]"
-            }`}
-          >
-            {wantsToConnect ? "💛" : "🤍"} {t("connectButton")}
-          </button>
-        )}
       </div>
 
-      <ScreenCta href="/gratitude" label={tc("continue")} accentRgb="170,130,230" />
+      {/* After the content rather than floating over it, so a long phrase can't end up under it (#263). */}
+      <ScreenCta href="/gratitude" label={tc("continue")} accentRgb="170,130,230" placement="flow" />
     </>
   );
 }

@@ -17,12 +17,20 @@ type ScreenCtaProps = {
   // rules modal is acknowledged; every other screen leaves this unset.
   disabled?: boolean;
   onClick?: () => void;
+  // "fixed" (default) floats over the bottom of the screen. "flow" sits after the screen's
+  // content instead, so content taller than the screen can never end up under it (Mirror, #263).
+  placement?: "fixed" | "flow";
 };
+
+const PLACEMENT_CLASSES = {
+  fixed: "fixed bottom-8 left-1/2 -translate-x-1/2",
+  flow: "relative mt-10 mb-8 self-center",
+} as const;
 
 // Forwards its ref to the underlying <a> so Observe's canvas can still measure this
 // button's bounding box for the particle field's UI-exclusion zone.
 export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function ScreenCta(
-  { href, label, accentRgb, disabled = false, onClick },
+  { href, label, accentRgb, disabled = false, onClick, placement = "fixed" },
   ref
 ) {
   const { locale } = useParams<{ locale: Locale }>();
@@ -42,7 +50,7 @@ export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function 
       <span
         aria-disabled="true"
         style={cssVars}
-        className="group/enter pointer-events-none fixed bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5 opacity-30"
+        className={`group/enter pointer-events-none ${PLACEMENT_CLASSES[placement]} z-10 flex flex-col items-center gap-2.5 opacity-30`}
       >
         {inner}
       </span>
@@ -58,7 +66,7 @@ export const ScreenCta = forwardRef<HTMLAnchorElement, ScreenCtaProps>(function 
         onClick?.();
       }}
       style={cssVars}
-      className="group/enter fixed bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2.5"
+      className={`group/enter ${PLACEMENT_CLASSES[placement]} z-10 flex flex-col items-center gap-2.5`}
     >
       {inner}
     </Link>
