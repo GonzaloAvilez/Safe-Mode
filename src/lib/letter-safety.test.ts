@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   benignModerationCheckFixture,
   concerningModerationCheckFixture,
+  letterAutoRejectModerationCheckFixture,
   generalFlaggedModerationCheckFixture,
   selfHarmOnlyModerationCheckFixture,
 } from "@/test/fixtures/moderation-check";
+import type { ModerationFlags } from "@/lib/safety/moderation-flags";
 
 const { moderateTextMock } = vi.hoisted(() => ({ moderateTextMock: vi.fn() }));
 
@@ -19,9 +21,10 @@ afterEach(() => {
 const CLEAN = benignModerationCheckFixture;
 const CRISIS = concerningModerationCheckFixture;
 const GENERAL = generalFlaggedModerationCheckFixture;
+const AUTO_REJECT = letterAutoRejectModerationCheckFixture;
 
 describe("resolveLetterSafetyOutcome: priority order", () => {
-  // Every combination of the three signals: crisis > general moderation > contact info.
+  // Every combination of the three signals: crisis > auto-reject category > contact info.
   const NO_CONTACT = { found: false, kinds: [] };
   const CONTACT = { found: true, kinds: ["phone" as const] };
 
@@ -34,10 +37,20 @@ describe("resolveLetterSafetyOutcome: priority order", () => {
     [false, true, false, { outcome: "rejected", reason: "moderation" }],
     [false, false, true, { outcome: "rejected", reason: "contact_info", contactKinds: ["phone"] }],
     [false, false, false, { outcome: "held" }],
-  ])("crisis=%s general=%s contact=%s → %j", (flaggedCrisis, flaggedGeneral, hasContact, expected) => {
-    const result = resolveLetterSafetyOutcome({ flaggedCrisis, flaggedGeneral }, hasContact ? CONTACT : NO_CONTACT);
+  ])("crisis=%s autoReject=%s contact=%s → %j", (flaggedCrisis, flaggedLetterAutoReject, hasContact, expected) => {
+    const result = resolveLetterSafetyOutcome(
+      { flaggedCrisis, flaggedLetterAutoReject },
+      hasContact ? CONTACT : NO_CONTACT
+    );
 
     expect(result).toEqual(expected);
+  });
+
+  // flaggedGeneral is recorded, but it is no longer a verdict for letters (#265).
+  it("ignores flaggedGeneral: a letter flagged only in general waits for the human queue", () => {
+    const flags: ModerationFlags = { flaggedCrisis: false, flaggedGeneral: true, flaggedLetterAutoReject: false };
+
+    expect(resolveLetterSafetyOutcome(flags, NO_CONTACT)).toEqual({ outcome: "held" });
   });
 });
 
@@ -86,10 +99,30 @@ describe("checkLetterSafety", () => {
       expect(await checkLetterSafety(honest)).toEqual({ outcome: "rejected", reason: "crisis" });
     });
 
-    it("rejects a letter flagged by general moderation", async () => {
+    // #265: `violence` alone is what grief about how someone died looks like to OpenAI.
+    // The human queue decides it, not the API.
+    it("lets a letter flagged only in general wait for review", async () => {
       moderateTextMock.mockResolvedValue(GENERAL);
 
+      expect(await checkLetterSafety(honest)).toEqual({ outcome: "held" });
+    });
+
+    it("rejects a letter in an auto-reject category", async () => {
+      moderateTextMock.mockResolvedValue(AUTO_REJECT);
+
       expect(await checkLetterSafety(honest)).toEqual({ outcome: "rejected", reason: "moderation" });
+    });
+
+    // Contact info is the lower-priority signal, so a general flag must not mask it now
+    // that it no longer rejects on its own.
+    it("still rejects contact info in a letter that is also flagged in general", async () => {
+      moderateTextMock.mockResolvedValue(GENERAL);
+
+      expect(await checkLetterSafety(withPhone)).toEqual({
+        outcome: "rejected",
+        reason: "contact_info",
+        contactKinds: ["phone"],
+      });
     });
   });
 

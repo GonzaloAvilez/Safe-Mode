@@ -78,6 +78,27 @@ Public route names below (for example `/mirror`) are shorthand for `/{locale}/mi
 
   Crisis is unchanged. Letters and phrases keep their own moderation.
 
+  **Letters narrowed 2026-11-20 (#265), the day after:** a letter is no longer refused for a general
+  moderation flag either — only for a fixed **auto-reject category list** (`harassment/threatening`,
+  `hate/threatening`, `illicit/violent`, `sexual/minors`). The trigger was a real mailbox letter about
+  a pet that died under the writer's own car, refused at `violence` 0.355 before any human read it.
+  Evidence (34 letter-length texts about loss, ES and EN):
+  - #261's result does **not** reproduce for loss: **21 of 24 grief letters already reached human
+    review.** Euthanasia, miscarriage, stillbirth, overdose, dementia, terminal diagnosis — all pass.
+    The false positive in letters is narrow, not broad.
+  - What trips it is narrating how a body was hurt, not grief. The same letter scored 0.355 with the
+    clause and 0.032 without it; a father's fall scored 0.685 told plainly and 0.124 told as "tuvo un
+    accidente en casa". Bilingual, so not a Spanish artifact. The only passing rewrite is the one that
+    removes how they died.
+  - Not a threshold: `flaggedGeneral` uses OpenAI's boolean, and there is no number of ours to tune.
+  - The clean line is the category, not the score. Every false positive carried `violence` alone; the
+    one genuine threat also carried `harassment/threatening`, so it stays refused.
+  - Unlike entries, letters already have **mandatory human review**, so the question was never
+    block-vs-deliver but auto-refuse-vs-let-a-person-decide.
+
+  Open: plain `harassment`/`hate`/`sexual`/`illicit` deliberately left out of the reject list.
+  Bereavement by suicide still routes to crisis and so can never write a letter — tracked in #266.
+
 ## English and Spanish — delivered
 
 English became the workshop UI language on 2026-07-15. That English-only phase was superseded by the bilingual rollout completed in September: [ADR-003](./docs/decisions/ADR-003-bilingual-routing-and-matching.md), [issue #178 (closed)](https://github.com/GonzaloAvilez/Safe-Mode/issues/178).

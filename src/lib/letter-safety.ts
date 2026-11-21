@@ -6,9 +6,13 @@ import { detectContactInfo, type ContactInfoKind, type ContactInfoResult } from 
 // ADR-004 #210, part C: the safety pipeline every letter goes through before it can wait
 // for human review (ADR-004 "Letter rules"). Order matters:
 //   1. moderation: crisis first, because the sender needs help resources even if the letter
-//      also carries contact info; then general moderation
+//      also carries contact info; then the auto-reject categories
 //   2. contact info (detectContactInfo)
 //   3. anything that passes waits as "held" for the founder
+//
+// Step 1 used to reject on any general moderation flag. It doesn't anymore (#265): that
+// refused grief for describing how someone died, before the human review this pipeline
+// exists to feed. Only the auto-reject categories refuse a letter now — see letter-auto-reject.ts.
 //
 // Fail-closed: if the moderation call throws, the error propagates and nothing is stored.
 
@@ -19,9 +23,13 @@ export type LetterSafetyOutcome =
   | { outcome: "rejected"; reason: "contact_info"; contactKinds: ContactInfoKind[] };
 
 // The decision alone, without the API call, so the order can be tested exhaustively.
-export function resolveLetterSafetyOutcome(flags: ModerationFlags, contact: ContactInfoResult): LetterSafetyOutcome {
+// Takes only the two flags it reads: `flaggedGeneral` is deliberately not one of them (#265).
+export function resolveLetterSafetyOutcome(
+  flags: Pick<ModerationFlags, "flaggedCrisis" | "flaggedLetterAutoReject">,
+  contact: ContactInfoResult
+): LetterSafetyOutcome {
   if (flags.flaggedCrisis) return { outcome: "rejected", reason: "crisis" };
-  if (flags.flaggedGeneral) return { outcome: "rejected", reason: "moderation" };
+  if (flags.flaggedLetterAutoReject) return { outcome: "rejected", reason: "moderation" };
   if (contact.found) return { outcome: "rejected", reason: "contact_info", contactKinds: contact.kinds };
   return { outcome: "held" };
 }

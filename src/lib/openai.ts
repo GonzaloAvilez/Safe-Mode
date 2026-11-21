@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { isLocale, type Locale } from "@/lib/locale";
+import type { ModerationCategory } from "@/lib/safety/letter-auto-reject";
 import type { SelfHarmScores } from "@/lib/safety/moderation-gate";
 
 // Server-only client. Never import this from a client component.
@@ -44,6 +45,9 @@ export async function getEmbedding(text: string): Promise<EmbeddingResult> {
 
 export type ModerationCheck = {
   flagged: boolean;
+  // The categories OpenAI set to true, not just that something was set. Letters decide on
+  // which ones fired, not on the boolean (see letter-auto-reject.ts).
+  flaggedCategories: ModerationCategory[];
   selfHarmScores: SelfHarmScores;
 };
 
@@ -57,6 +61,9 @@ export async function moderateText(text: string): Promise<ModerationCheck> {
 
   return {
     flagged: result.flagged,
+    flaggedCategories: Object.entries(result.categories)
+      .filter(([, isFlagged]) => isFlagged)
+      .map(([category]) => category as ModerationCategory),
     selfHarmScores: {
       "self-harm": result.category_scores["self-harm"],
       "self-harm/intent": result.category_scores["self-harm/intent"],
