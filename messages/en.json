@@ -109,7 +109,7 @@
     "connectButton": "I would love to connect",
     "letter": {
       "writeButton": "Write them a letter",
-      "writeHint": "Without your name. A person reads it before delivering it.",
+      "writeHint": "Without your name. Before it arrives it goes through moderation: someone reads it without knowing who you are.",
       "onItsWay": "Your letter is on its way",
       "requesting": "Preparing your seal…",
       "requestFailed": "We couldn't prepare your seal. Please try again.",
@@ -143,7 +143,7 @@
     "choice": {
       "label": "YOUR TRACE",
       "headline": "Before you let it go: would you like someone to be able to write you a letter?",
-      "body": "If someone finds it and recognizes themselves in it, they'll be able to write to you. A person reads every letter before it's delivered, and letters are kept for 60 days. Maybe no one will write, and that's okay too.",
+      "body": "If someone finds it and recognizes themselves in it, they'll be able to write to you. Every letter goes through moderation to look after both people, without knowing who wrote it, and is kept for 60 days. Maybe no one will write, and that's okay too.",
       "yes": "Yes, I'd like a seal",
       "no": "That's fine as it is"
     },
@@ -177,7 +177,7 @@
     "placeholder": "Write what you'd like to tell them...",
     "noContact": "No names, phone numbers or social media.",
     "headline": "Your letter",
-    "review": "A person reads every letter before delivering it. It can take up to 48 hours.",
+    "review": "Your letter goes through moderation to look after both people. It can take up to 48 hours.",
     "send": "Seal the envelope",
     "notNow": "Not now"
   },
@@ -190,7 +190,7 @@
   "letterSend": {
     "sealing": "Sealing the envelope…",
     "headline": "The envelope is on its way.",
-    "review": "A person reads it before delivering it. It can take up to 48 hours."
+    "review": "It goes through moderation before it arrives. It can take up to 48 hours."
   },
   "letterCrisis": {
     "headline": "Before your letter,\nyou matter.",
@@ -243,7 +243,7 @@
         "awaiting_review": "On its way",
         "closed": "Ended"
       },
-      "onItsWay": "“On its way”: a person is reading your letter before delivering it, up to 48 hours.",
+      "onItsWay": "“On its way”: your letter is in moderation, up to 48 hours.",
       "kept": "Letters are kept for 60 days."
     },
     "empty": {
@@ -257,10 +257,10 @@
       "fromVisitor": "— someone who saw themselves in your phrase",
       "fromAuthor": "— whoever left the phrase",
       "held": "On its way",
-      "heldNote": "A person reads it before delivering it. It can take up to 48 hours.",
+      "heldNote": "In moderation. It can take up to 48 hours.",
       "rejected": "Not delivered",
       "rejectedHeadline": "This letter didn't reach them.",
-      "rejectedBody": "The person who reads letters before delivering them decided not to send it. It doesn't use up your turn: you can write another.",
+      "rejectedBody": "It's not a judgment of what you feel: sometimes a letter needs other words to get there. It doesn't use up your turn, you can write another.",
       "erasedHeadline": "This letter no longer keeps its text.",
       "erasedTheirs": "Letters are kept for 60 days. What remains is that someone wrote to you.",
       "erasedYours": "Letters are kept for 60 days. What remains is that you wrote to them.",

@@ -37,9 +37,10 @@ describe("LettersChoiceStep", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("tells the person that nobody may write, that a person reads each letter and that they're kept 60 days", () => {
+  it("tells the person that nobody may write, that each letter is moderated without knowing who wrote it, and that they're kept 60 days", () => {
     expect(CHOICE.body).toContain("Puede que nadie escriba");
-    expect(CHOICE.body).toContain("Una persona lee cada carta antes de entregarla");
+    expect(CHOICE.body).toContain("pasa por moderación");
+    expect(CHOICE.body).toContain("sin saber quién la escribe");
     expect(CHOICE.body).toContain("60 días");
   });
 
