@@ -109,7 +109,7 @@
     "connectButton": "Me encantaría conectar",
     "letter": {
       "writeButton": "Escribirle una carta",
-      "writeHint": "Sin tu nombre. Una persona la lee antes de entregarla.",
+      "writeHint": "Sin tu nombre. Antes de llegar pasa por moderación: alguien la lee sin saber quién eres.",
       "onItsWay": "Tu carta va en camino",
       "requesting": "Preparando tu sello…",
       "requestFailed": "No pudimos preparar tu sello. Vuelve a intentarlo.",
@@ -145,7 +145,7 @@
     "choice": {
       "label": "TU HUELLA",
       "headline": "Antes de soltarla: ¿quieres que alguien pueda escribirte una carta?",
-      "body": "Si alguien la encuentra y se reconoce en ella, podrá escribirte. Una persona lee cada carta antes de entregarla, y se guardan 60 días. Puede que nadie escriba, y también está bien.",
+      "body": "Si alguien la encuentra y se reconoce en ella, podrá escribirte. Cada carta pasa por moderación para cuidar a las dos personas, sin saber quién la escribe, y se guarda 60 días. Puede que nadie escriba, y también está bien.",
       "yes": "Sí, quiero un sello",
       "no": "Así está bien"
     },
@@ -197,7 +197,7 @@
     "placeholder": "Escribe lo que quieras decirle...",
     "noContact": "Sin nombres, teléfonos ni redes.",
     "headline": "Tu carta",
-    "review": "Una persona lee cada carta antes de entregarla. Puede tardar hasta 48 horas.",
+    "review": "Tu carta pasa por moderación para cuidar a las dos personas. Puede tardar hasta 48 horas.",
     "send": "Cerrar el sobre",
     "notNow": "Ahora no"
   },
@@ -210,7 +210,7 @@
   "letterSend": {
     "sealing": "Cerrando el sobre…",
     "headline": "El sobre salió.",
-    "review": "Una persona lo lee antes de entregarlo. Puede tardar hasta 48 horas."
+    "review": "Pasa por moderación antes de llegar. Puede tardar hasta 48 horas."
   },
   "letterCrisis": {
     "headline": "Antes que tu carta,\nimportas tú.",
@@ -263,7 +263,7 @@
         "awaiting_review": "En camino",
         "closed": "Terminada"
       },
-      "onItsWay": "“En camino”: una persona está leyendo tu carta antes de entregarla, hasta 48 horas.",
+      "onItsWay": "“En camino”: tu carta está en moderación, hasta 48 horas.",
       "kept": "Las cartas se guardan 60 días."
     },
     "empty": {
@@ -277,10 +277,10 @@
       "fromVisitor": "— alguien que se reconoció en tu frase",
       "fromAuthor": "— quien dejó la frase",
       "held": "En camino",
-      "heldNote": "Una persona la lee antes de entregarla. Puede tardar hasta 48 horas.",
+      "heldNote": "En moderación. Puede tardar hasta 48 horas.",
       "rejected": "No se entregó",
       "rejectedHeadline": "Esta carta no llegó a su destino.",
-      "rejectedBody": "La persona que lee las cartas antes de entregarlas decidió no enviarla. No cuenta como tu turno: puedes escribir otra.",
+      "rejectedBody": "No es un juicio sobre lo que sientes: a veces una carta necesita otras palabras para llegar. No cuenta como tu turno, puedes escribir otra.",
       "erasedHeadline": "Esta carta ya no guarda su texto.",
       "erasedTheirs": "Las cartas se guardan 60 días. Lo que queda es que alguien te escribió.",
       "erasedYours": "Las cartas se guardan 60 días. Lo que queda es que le escribiste.",
