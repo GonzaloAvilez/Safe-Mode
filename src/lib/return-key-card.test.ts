@@ -16,7 +16,7 @@ const SPEC: ReturnKeyCardSpec = {
   returnKey: SEAL,
   sentence: SENTENCE,
   labels: { brand: "REFUGIO", stamp: "CORREO DE REFUGIO", footer: "Este sello abre tus cartas." },
-  fonts: { sans: "Geist, sans-serif", mono: "Geist Mono, monospace" },
+  fonts: { sans: "Geist, sans-serif" },
 };
 
 type Call = { method: string; args: unknown[]; letterSpacing: string };
@@ -72,18 +72,19 @@ describe("drawReturnKeyCard", () => {
     expect(calls.find((c) => c.method === "scale")?.args).toEqual([2.7, 2.7]);
   });
 
-  it("writes the gift sentence, the seal and the labels, and nothing else (no date, no link)", () => {
+  it("writes the gift sentence and the labels, and nothing else (no digits of the seal, no date, no link)", () => {
     const { ctx, calls } = fakeContext();
 
     drawReturnKeyCard(ctx, SPEC);
 
     const written = texts(calls);
     expect(written).toContain("REFUGIO");
-    expect(written).toContain("48213 · 39017 · 56229");
     expect(written).toContain("CORREO DE REFUGIO");
     expect(written).toContain("Este sello abre tus cartas.");
     expect(written.join(" ").replace(/\s+/g, " ")).toContain(`“${SENTENCE}”`);
     expect(written.join(" ")).not.toMatch(/https?:|www\.|\d{1,2}\/\d{1,2}\/|\d{4}-\d{2}-\d{2}/);
+    // The seal is only in the QR: not a single group of its digits is written out.
+    expect(written.join(" ")).not.toMatch(/\d{5}/);
   });
 
   it("draws a QR that a reader decodes to exactly the 15 digits", () => {
@@ -157,14 +158,13 @@ describe("drawReturnKeyCard", () => {
     expect(textY("Este sello abre tus cartas.")).toBeCloseTo(card.y + card.height - card.paddingBottom - footerHeight / 2, 5);
   });
 
-  it("spaces only the letters that are meant to be spaced: the title, the seal, the stamp and the footer", () => {
+  it("spaces only the letters that are meant to be spaced: the title, the stamp and the footer", () => {
     const { ctx, calls } = fakeContext();
 
     drawReturnKeyCard(ctx, SPEC);
 
     const spacingOf = (text: string) => calls.find((c) => c.method === "fillText" && c.args[0] === text)!.letterSpacing;
     expect(spacingOf("REFUGIO")).toBe("4px");
-    expect(spacingOf("48213 · 39017 · 56229")).toBe("1px");
     expect(spacingOf("CORREO DE REFUGIO")).toBe("2.5px");
     expect(spacingOf("Este sello abre tus cartas.")).toBe("0.4px");
     // The sentence comes right after the title: it must not inherit the title's spacing.
@@ -173,7 +173,7 @@ describe("drawReturnKeyCard", () => {
     expect(sentenceLines.every((c) => c.letterSpacing === "0px")).toBe(true);
   });
 
-  it("uses the fonts it was given", () => {
+  it("uses the font it was given", () => {
     const { ctx } = fakeContext();
     const fonts: string[] = [];
     Object.defineProperty(ctx, "font", { set: (value: string) => fonts.push(value), get: () => "" });
@@ -181,7 +181,6 @@ describe("drawReturnKeyCard", () => {
     drawReturnKeyCard(ctx, SPEC);
 
     expect(fonts.some((font) => font.includes("Geist, sans-serif"))).toBe(true);
-    expect(fonts.some((font) => font.includes("Geist Mono, monospace"))).toBe(true);
   });
 
   it("refuses a seal that isn't 15 digits: no card for something that isn't a key", () => {

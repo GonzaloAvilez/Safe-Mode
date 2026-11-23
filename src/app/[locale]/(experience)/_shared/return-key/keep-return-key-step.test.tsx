@@ -97,24 +97,24 @@ describe("KeepReturnKeyStep", () => {
   it("shows the seal and sentence it was given, with the screen's own words and way out", () => {
     renderKeep();
 
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
     expect(screen.getByText(`“${SENTENCE}”`)).toBeTruthy();
+    expect(screen.getByRole("img", { name: es.returnKeyCard.qrLabel })).toBeTruthy();
     expect(screen.getByText(PROPS.body)).toBeTruthy();
     expect(button(PROPS.leaveLabel)).toBeTruthy();
   });
 
-  it("asks no one to type their seal: there's no field for digits", () => {
-    renderKeep();
+  it("never shows the seal's digits, and asks no one to type or write them down", () => {
+    const { container } = renderKeep();
 
+    expect(container.textContent).not.toMatch(/\d{5}/);
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(screen.queryByPlaceholderText("00000")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
   it("speaks English with an English visitor", async () => {
     renderKeep("en");
 
     expect(button(en.returnKey.keep.save)).toBeTruthy();
-    expect(button(en.returnKey.keep.wroteByHand)).toBeTruthy();
     await act(async () => fireEvent.click(button(en.returnKey.keep.save)!));
     expect(pictureInput(en.returnKey.keep.chooseImage)).toBeTruthy();
   });
@@ -134,7 +134,6 @@ describe("KeepReturnKeyStep", () => {
       // Saving again stays possible, as a quieter way.
       expect(button(K.saveAgain)).toBeTruthy();
       expect(button(K.save)).toBeNull();
-      expect(button(K.continue)).toBeNull();
     });
 
     it("choosing the picture of this seal confirms it, says so, and moves on after a moment", async () => {
@@ -165,7 +164,6 @@ describe("KeepReturnKeyStep", () => {
       expect(status()).toBe(K.checking);
       expect(pictureInput().disabled).toBe(true);
       expect((button(K.saveAgain) as HTMLButtonElement).disabled).toBe(true);
-      expect((button(K.wroteByHand) as HTMLButtonElement).disabled).toBe(true);
       expect((button(PROPS.leaveLabel) as HTMLButtonElement).disabled).toBe(true);
 
       await act(async () => answer({ type: "confirmed" }));
@@ -250,66 +248,17 @@ describe("KeepReturnKeyStep", () => {
     });
   });
 
-  describe("by hand", () => {
-    it("asks the person to say they wrote it all down, and only then offers to go on", () => {
-      renderKeep();
+  it("if the picture can't be made, it says so and saving can be tried again", async () => {
+    drawImageMock.mockRejectedValueOnce(new Error("canvas is not available"));
+    renderKeep();
 
-      fireEvent.click(button(K.wroteByHand)!);
-      expect(button(K.continue)).toBeNull();
+    await saveImage();
+    expect(status()).toBe(K.imageError);
+    expect(screen.queryByLabelText(K.chooseImage)).toBeNull();
 
-      const wroteItAll = screen.getByRole("checkbox", { name: K.wroteConfirm });
-      fireEvent.click(wroteItAll);
-      expect(button(K.continue)).toBeTruthy();
-
-      fireEvent.click(wroteItAll);
-      expect(button(K.continue)).toBeNull();
-    });
-
-    it("going on confirms the seal on their word, says so, and moves on after a moment", async () => {
-      renderKeep();
-      fireEvent.click(button(K.wroteByHand)!);
-      fireEvent.click(screen.getByRole("checkbox", { name: K.wroteConfirm }));
-
-      await act(async () => fireEvent.click(button(K.continue)!));
-
-      expect(confirmMock).toHaveBeenCalledWith(SEAL);
-      expect(readSealMock).not.toHaveBeenCalled();
-      expect(status()).toBe(K.confirmed);
-      await holdElapses();
-      expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
-    });
-
-    it("a failed confirmation says why and lets them go on again", async () => {
-      confirmMock.mockResolvedValueOnce({ type: "error", reason: "failed" });
-      renderKeep();
-      fireEvent.click(button(K.wroteByHand)!);
-      fireEvent.click(screen.getByRole("checkbox", { name: K.wroteConfirm }));
-
-      await act(async () => fireEvent.click(button(K.continue)!));
-      expect(status()).toBe(PROPS.failedMessage);
-
-      await act(async () => fireEvent.click(button(K.continue)!));
-      await holdElapses();
-      expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
-    });
-
-    it("before any picture is saved, it leaves saving it there and offers no picture to choose", () => {
-      renderKeep();
-
-      fireEvent.click(button(K.wroteByHand)!);
-
-      expect(button(K.save)).toBeTruthy();
-      expect(screen.queryByLabelText(K.chooseImage)).toBeNull();
-    });
-
-    it("is still there after saving the picture, for whoever can't find it", async () => {
-      renderKeep();
-      await saveImage();
-
-      fireEvent.click(button(K.wroteByHand)!);
-
-      expect(screen.getByRole("checkbox", { name: K.wroteConfirm })).toBeTruthy();
-    });
+    await saveImage();
+    expect(screen.getByLabelText(K.chooseImage)).toBeTruthy();
+    expect(status()).toBe("");
   });
 
   it("calls onLeave from the way out, and never confirms", () => {

@@ -15,14 +15,13 @@ import { ReturnKeyCard, readCardFonts } from "./return-key-card";
 // so a lost seal can't be recovered by anyone, the founder included.
 //
 // Keeping the seal also confirms it (#245: only a confirmed seal receives or sends letters), in one
-// gesture on this same screen:
-//   - the picture: save it, then choose it. Its QR is read here, on the phone, and it must be this
-//     seal. That proves the picture landed somewhere the person can find it again, which is
-//     exactly what opening the mailbox will ask of them.
-//   - by hand: they say they wrote it all down. Nothing can check a piece of paper, so this is
-//     their word.
-// Neither asks anyone to read digits off a picture and type them: that was the old "missing
-// light" step, and it was tiring for exactly the people Refugio is for.
+// gesture on this same screen: save the picture, then choose it. Its QR is read here, on the
+// phone, and it must be this seal. That proves the picture landed somewhere the person can find
+// it again, which is exactly what opening the mailbox will ask of them.
+//
+// The seal's digits are never shown (decided 2026-11-23), so nobody is asked to read, copy or
+// type them: the old "missing light" step did, and it was tiring for exactly the people Refugio
+// is for. The picture is the seal.
 //
 // A way out is always there; what it says and where it goes belongs to the screen showing the step.
 
@@ -54,8 +53,7 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
   const tcommon = useTranslations("common");
   const { lock: lockLocaleSwitch, unlock: unlockLocaleSwitch } = useLocaleTransition();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [kept, setKept] = useState<"none" | "image" | "hand">("none");
-  const [wroteItAll, setWroteItAll] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState<"checking" | "confirmed" | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
@@ -82,7 +80,7 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
         fonts: readCardFonts(cardRef.current),
       });
       downloadBlob(picture, t("keep.fileName"));
-      setKept("image");
+      setSaved(true);
       setImageUnread(false);
       setIosHint(isIosDevice());
     } catch {
@@ -146,11 +144,6 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
     });
   }
 
-  async function confirmWrittenDown() {
-    if (busy) return;
-    await whileChecking(confirm);
-  }
-
   const working = busy !== null;
   const status = busy === "checking" ? t("keep.checking") : busy === "confirmed" ? t("keep.confirmed") : message?.text;
 
@@ -165,7 +158,7 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
       <p className="max-w-[316px] text-center text-[13px] leading-[1.7] text-white/60">{body}</p>
 
       <div className="flex flex-col items-center gap-3">
-        {kept === "image" ? (
+        {saved ? (
           <>
             <div className="flex max-w-[316px] flex-col items-center gap-1 text-center text-[12px] leading-[1.6] text-white/55">
               <span>{t("keep.saved")}</span>
@@ -198,43 +191,6 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
             className="rounded-full border border-[rgba(210,158,32,0.6)] px-8 py-2.5 text-[13px] tracking-[1px] text-white/85 transition-colors duration-300 hover:text-white disabled:pointer-events-none disabled:opacity-30"
           >
             {t("keep.save")}
-          </button>
-        )}
-
-        {kept === "hand" ? (
-          <>
-            <label className="flex cursor-pointer items-center gap-2.5 text-[13px] text-white/70">
-              <input
-                type="checkbox"
-                checked={wroteItAll}
-                onChange={(event) => setWroteItAll(event.target.checked)}
-                disabled={working}
-                className="size-4 accent-[#d29e20]"
-              />
-              {t("keep.wroteConfirm")}
-            </label>
-            {wroteItAll && (
-              <button
-                type="button"
-                onClick={confirmWrittenDown}
-                disabled={working}
-                className="mt-2 rounded-full border border-white/25 px-8 py-2.5 text-[13px] tracking-[1px] text-white/80 transition-colors duration-300 hover:border-[rgba(210,158,32,0.6)] hover:text-white disabled:pointer-events-none disabled:opacity-30"
-              >
-                {t("keep.continue")}
-              </button>
-            )}
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setKept("hand");
-              setMessage(null);
-            }}
-            disabled={working}
-            className="text-[13px] tracking-[.5px] text-white/55 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/80 disabled:pointer-events-none disabled:opacity-30"
-          >
-            {t("keep.wroteByHand")}
           </button>
         )}
 

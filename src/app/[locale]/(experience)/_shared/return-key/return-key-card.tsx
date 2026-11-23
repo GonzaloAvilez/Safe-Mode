@@ -3,12 +3,12 @@
 import { useMemo, type Ref } from "react";
 import { useTranslations } from "next-intl";
 import { CARD_COLORS } from "@/lib/return-key-card";
-import { formatReturnKey } from "@/lib/return-key-groups";
 import { returnKeyQrPath } from "@/lib/return-key-qr";
 
-// ADR-004 #212: the private card with the seal. A gift sentence, the seal in three groups,
-// and its QR inside a postage stamp ("sello" is both the seal and the stamp that sends a
-// letter). It's the same card "Guardar imagen" saves (lib/return-key-card.ts draws it on a
+// ADR-004 #212: the private card with the seal. A gift sentence and the seal's QR inside a
+// postage stamp ("sello" is both the seal and the stamp that sends a letter). The seal's
+// digits are never written out: the QR holds them, and it's what opens the mailbox (decided
+// 2026-11-23). It's the same card "Guardar imagen" saves (lib/return-key-card.ts draws it on a
 // canvas from the same layout), and it is private: nothing on it can be shared or says
 // whose it is.
 //
@@ -39,13 +39,6 @@ export function ReturnKeyCard({ returnKey, sentence, ref }: ReturnKeyCardProps) 
       >
         “{sentence}”
       </p>
-
-      <span
-        data-card-seal=""
-        className="font-mono text-[18px] leading-[23px] tracking-[1px] whitespace-nowrap text-[#e4b34c]"
-      >
-        {formatReturnKey(returnKey)}
-      </span>
 
       <svg viewBox="0 0 260 210" width="260" height="210" role="img" aria-label={t("qrLabel")}>
         <rect x="55" y="12" width="150" height="186" fill={CARD_COLORS.stampPaper} />
@@ -98,12 +91,9 @@ export function ReturnKeyCard({ returnKey, sentence, ref }: ReturnKeyCardProps) 
   );
 }
 
-// The font families the card is really using, for the picture to draw with the same ones.
-export function readCardFonts(card: HTMLElement): { sans: string; mono: string } {
-  const family = (selector: string) => {
-    const element = card.querySelector(selector);
-    if (!element) throw new Error(`the card has no ${selector}`);
-    return getComputedStyle(element).fontFamily;
-  };
-  return { sans: family("[data-card-sentence]"), mono: family("[data-card-seal]") };
+// The font family the card is really using, for the picture to draw with the same one.
+export function readCardFonts(card: HTMLElement): { sans: string } {
+  const sentence = card.querySelector("[data-card-sentence]");
+  if (!sentence) throw new Error("the card has no [data-card-sentence]");
+  return { sans: getComputedStyle(sentence).fontFamily };
 }

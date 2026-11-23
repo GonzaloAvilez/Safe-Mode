@@ -28,7 +28,6 @@ const KEEP = { ...es.leaveATrace.keep, ...es.returnKey.keep };
 const PICTURE = new Blob(["png"], { type: "image/png" });
 const KEPT = { phase: "keeping" as const, key: { returnKey: SEAL, sentence: SENTENCE } };
 const phase = () => screen.getByTestId("phase").textContent;
-const button = (name: string) => screen.queryByRole("button", { name });
 
 async function holdElapses() {
   await act(async () => {
@@ -53,21 +52,21 @@ afterEach(() => {
 });
 
 describe("KeepTraceSealStep", () => {
-  it("shows the seal on the private card, and what it's for", () => {
+  it("shows the seal's QR on the private card, never its digits, and what it's for", () => {
     renderStep(<KeepTraceSealStep />, KEPT);
 
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
+    // The whole step (the harness also prints the ritual's state, seal included, out of sight).
+    expect(screen.getByText(KEEP.body).parentElement!.textContent).not.toMatch(/\d{5}/);
     expect(screen.getByText(`“${SENTENCE}”`)).toBeTruthy();
     expect(screen.getByRole("img", { name: es.returnKeyCard.qrLabel })).toBeTruthy();
     expect(screen.getByText(KEEP.body)).toBeTruthy();
   });
 
-  it("offers no way to go on until the person has saved the image or said they wrote the seal down", () => {
+  it("offers no way to go on until the person has saved the image: saving it is the only way", () => {
     renderStep(<KeepTraceSealStep />, KEPT);
 
-    expect(button(KEEP.continue)).toBeNull();
-    expect(button(KEEP.save)).toBeTruthy();
-    expect(button(KEEP.wroteByHand)).toBeTruthy();
+    expect(screen.queryByLabelText(KEEP.chooseImage)).toBeNull();
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([KEEP.save, KEEP.withoutLetters]);
   });
 
   it("saves the picture of the card, tells the person it's ready, and only then offers to choose it", async () => {
@@ -93,7 +92,7 @@ describe("KeepTraceSealStep", () => {
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
 
     await waitFor(() => expect(drawImageMock).toHaveBeenCalled());
-    expect(drawImageMock.mock.calls[0][0].fonts).toEqual({ sans: expect.any(String), mono: expect.any(String) });
+    expect(drawImageMock.mock.calls[0][0].fonts).toEqual({ sans: expect.any(String) });
   });
 
   it("on iPhone, tells the person how to save the picture if it opens instead of downloading", async () => {
@@ -114,21 +113,7 @@ describe("KeepTraceSealStep", () => {
     expect(screen.queryByText(KEEP.iosHint)).toBeNull();
   });
 
-  it("“Lo anoté a mano” asks the person to confirm they wrote it all down, and only then can they go on", () => {
-    renderStep(<KeepTraceSealStep />, KEPT);
-
-    fireEvent.click(screen.getByRole("button", { name: KEEP.wroteByHand }));
-    expect(button(KEEP.continue)).toBeNull();
-
-    const confirm = screen.getByRole("checkbox", { name: KEEP.wroteConfirm });
-    fireEvent.click(confirm);
-    expect(button(KEEP.continue)).toBeTruthy();
-
-    fireEvent.click(confirm);
-    expect(button(KEEP.continue)).toBeNull();
-  });
-
-  it("lets the person write the seal down if the picture can't be made, and says so", async () => {
+  it("says so if the picture can't be made, and saving can be tried again", async () => {
     drawImageMock.mockRejectedValue(new Error("canvas is not available"));
     renderStep(<KeepTraceSealStep />, KEPT);
 
@@ -136,8 +121,7 @@ describe("KeepTraceSealStep", () => {
 
     await screen.findByText(KEEP.imageError);
     expect(downloadMock).not.toHaveBeenCalled();
-    expect(button(KEEP.continue)).toBeNull();
-    expect(button(KEEP.wroteByHand)).toBeTruthy();
+    expect(screen.queryByLabelText(KEEP.chooseImage)).toBeNull();
     expect((screen.getByRole("button", { name: KEEP.save }) as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -155,26 +139,13 @@ describe("KeepTraceSealStep", () => {
     expect(screen.getByTestId("key").textContent).toBe("");
   });
 
-  it("someone who wrote it down seals the trace on their word", async () => {
-    renderStep(<KeepTraceSealStep />, KEPT);
-    fireEvent.click(screen.getByRole("button", { name: KEEP.wroteByHand }));
-    fireEvent.click(screen.getByRole("checkbox", { name: KEEP.wroteConfirm }));
-
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: KEEP.continue })));
-    await holdElapses();
-
-    expect(confirmMock).toHaveBeenCalledWith(SEAL);
-    expect(phase()).toBe("sealed");
-    expect(screen.getByTestId("key").textContent).toBe("");
-  });
-
   it("if the trace can't be sealed, it says so in Leave a Trace's words and keeps the seal", async () => {
     confirmMock.mockResolvedValue({ type: "error", reason: "failed" });
     renderStep(<KeepTraceSealStep />, KEPT);
-    fireEvent.click(screen.getByRole("button", { name: KEEP.wroteByHand }));
-    fireEvent.click(screen.getByRole("checkbox", { name: KEEP.wroteConfirm }));
+    fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
+    const choose = (await screen.findByLabelText(KEEP.chooseImage)) as HTMLInputElement;
 
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: KEEP.continue })));
+    await act(async () => fireEvent.change(choose, { target: { files: [new File(["png"], "sello.png", { type: "image/png" })] } }));
 
     expect(screen.getByText(KEEP.failed)).toBeTruthy();
     expect(phase()).toBe("keeping");

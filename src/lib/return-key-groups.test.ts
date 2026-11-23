@@ -1,38 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatReturnKey,
-  parseSeal,
-  splitReturnKeyGroups,
-} from "@/lib/return-key-groups";
+import { parseSeal } from "@/lib/return-key-groups";
 
 const SEAL = "482133901756229";
-
-describe("splitReturnKeyGroups", () => {
-  it("splits the seal into its three groups of five digits", () => {
-    expect(splitReturnKeyGroups(SEAL)).toEqual(["48213", "39017", "56229"]);
-  });
-
-  it("keeps leading zeros", () => {
-    expect(splitReturnKeyGroups("000120000300004")).toEqual(["00012", "00003", "00004"]);
-  });
-
-  it.each(["", "48213", "48213390175622", "4821339017562290", "48213 39017 56229", "48213390175622a"])(
-    "throws for %j, which is not a 15-digit seal",
-    (input) => {
-      expect(() => splitReturnKeyGroups(input)).toThrow("not a 15-digit seal");
-    }
-  );
-});
-
-describe("formatReturnKey", () => {
-  it("prints the groups with the middle dots the card shows", () => {
-    expect(formatReturnKey(SEAL)).toBe("48213 · 39017 · 56229");
-  });
-
-  it("accepts another separator", () => {
-    expect(formatReturnKey(SEAL, "-")).toBe("48213-39017-56229");
-  });
-});
 
 describe("parseSeal", () => {
   it.each([

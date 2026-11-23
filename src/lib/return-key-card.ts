@@ -1,10 +1,11 @@
-import { formatReturnKey } from "@/lib/return-key-groups";
 import { returnKeyQrModules } from "@/lib/return-key-qr";
 
 // ADR-004 #212: the private keepsake card, as the picture "Guardar imagen" saves. The picture
 // is drawn on a canvas in the visitor's own browser, so the seal never travels anywhere.
-// What goes on it: the gift sentence, the seal and its QR inside a postage stamp, and nothing
-// that identifies anyone (no date, no link). It is not meant to be shared.
+// What goes on it: the gift sentence and the seal's QR inside a postage stamp, and nothing
+// that identifies anyone (no date, no link). It is not meant to be shared. The seal's digits
+// are never written out: the QR holds them, and the QR is what opens the mailbox (decided
+// 2026-11-23: visible digits only invited reading and typing them).
 //
 // The screen shows the same card as markup (return-key-card.tsx). Both follow the layout in
 // CARD_LAYOUT, in design units: a 400 × 500 ground with the 320 × 450 card centered on it,
@@ -19,7 +20,6 @@ export const CARD_LAYOUT = {
   brandHeight: 12,
   sentenceMinHeight: 72,
   sentenceLineHeight: 25.6,
-  sealHeight: 23,
   stamp: { width: 260, height: 210 },
   footerHeight: 13,
 } as const;
@@ -31,7 +31,6 @@ export const CARD_COLORS = {
   cardBorder: "rgba(210,158,32,0.3)",
   brand: "rgba(255,255,255,0.52)",
   sentence: "rgba(255,255,255,0.88)",
-  seal: "#e4b34c",
   footer: "rgba(255,255,255,0.55)",
   stampPaper: "#f3eee3",
   stampInk: "#131315",
@@ -44,8 +43,8 @@ export type ReturnKeyCardSpec = {
   returnKey: string;
   sentence: string;
   labels: { brand: string; stamp: string; footer: string };
-  // CSS font-family values, read from the card on screen so the picture uses the same fonts.
-  fonts: { sans: string; mono: string };
+  // CSS font-family value, read from the card on screen so the picture uses the same font.
+  fonts: { sans: string };
 };
 
 // A pixel size per QR module that is a whole number, so no seams show between modules.
@@ -177,14 +176,14 @@ export function drawReturnKeyCard(ctx: CanvasRenderingContext2D, spec: ReturnKey
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // Same rhythm as the card on screen: five rows between the paddings, with the leftover
+  // Same rhythm as the card on screen: four rows between the paddings, with the leftover
   // height shared evenly between them (justify-between).
   const innerWidth = card.width - card.paddingX * 2;
   ctx.font = `300 16px ${spec.fonts.sans}`;
   const lines = wrapLines(ctx, `“${spec.sentence}”`, innerWidth);
   const sentenceHeight = Math.max(CARD_LAYOUT.sentenceMinHeight, lines.length * CARD_LAYOUT.sentenceLineHeight);
-  const rows = CARD_LAYOUT.brandHeight + sentenceHeight + CARD_LAYOUT.sealHeight + stamp.height + CARD_LAYOUT.footerHeight;
-  const gap = (card.height - card.paddingTop - card.paddingBottom - rows) / 4;
+  const rows = CARD_LAYOUT.brandHeight + sentenceHeight + stamp.height + CARD_LAYOUT.footerHeight;
+  const gap = (card.height - card.paddingTop - card.paddingBottom - rows) / 3;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -200,11 +199,6 @@ export function drawReturnKeyCard(ctx: CanvasRenderingContext2D, spec: ReturnKey
   const textTop = y + (sentenceHeight - lines.length * CARD_LAYOUT.sentenceLineHeight) / 2;
   lines.forEach((line, index) => ctx.fillText(line, centerX, textTop + (index + 0.5) * CARD_LAYOUT.sentenceLineHeight));
   y += sentenceHeight + gap;
-
-  ctx.fillStyle = CARD_COLORS.seal;
-  ctx.font = `400 18px ${spec.fonts.mono}`;
-  withLetterSpacing(ctx, "1px", () => ctx.fillText(formatReturnKey(spec.returnKey), centerX, y + CARD_LAYOUT.sealHeight / 2));
-  y += CARD_LAYOUT.sealHeight + gap;
 
   const stampX = centerX - stamp.width / 2;
   ctx.fillStyle = CARD_COLORS.stampPaper;

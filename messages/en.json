@@ -149,7 +149,7 @@
     },
     "keep": {
       "tagline": "This is only for you.",
-      "body": "This is how you'll get back to your letters: with this image or with these numbers. Only you have them: if you lose them, not even Refugio can recover them. Keep them safe.",
+      "body": "This is how you'll get back to your letters: with this image. Only you have it: if you lose it, not even Refugio can recover it. Keep it safe.",
       "withoutLetters": "Better without letters",
       "failed": "We couldn't seal your trace. Please try again."
     },
@@ -160,10 +160,7 @@
       "save": "Save image",
       "saved": "Your image is ready. Choose it to check it was saved.",
       "iosHint": "On iPhone, if the image opens, press and hold it and choose “Save to Photos”.",
-      "wroteByHand": "I wrote it down",
-      "wroteConfirm": "I've written it all down",
-      "continue": "Continue",
-      "imageError": "We couldn't prepare the image. You can write your seal down by hand.",
+      "imageError": "We couldn't prepare the image. Please try again.",
       "fileName": "refugio-seal.png",
       "chooseImage": "Choose the picture you saved",
       "chooseAnother": "Choose another picture",

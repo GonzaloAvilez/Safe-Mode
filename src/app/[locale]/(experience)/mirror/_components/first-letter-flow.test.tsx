@@ -51,6 +51,13 @@ vi.mock("./quote-reveal", async () => {
   };
 });
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => router }));
+// jsdom draws no canvas and decodes no picture: the card's picture and its QR reading are stood in for.
+vi.mock("@/lib/return-key-card", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/return-key-card")>()),
+  drawReturnKeyCardImage: () => Promise.resolve(new Blob(["png"], { type: "image/png" })),
+}));
+vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: () => {}, isIosDevice: () => false }));
+vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: () => Promise.resolve("482133901756229") }));
 
 import { MirrorScreen } from "./mirror-screen";
 import { KEPT_MESSAGE_HOLD_MS } from "../../_shared/return-key/keep-return-key-step";
@@ -169,10 +176,13 @@ async function openDoor() {
   await settle();
 }
 
-async function keepByHandAndConfirm() {
-  fireEvent.click(button(es.returnKey.keep.wroteByHand)!);
-  fireEvent.click(screen.getByRole("checkbox", { name: es.returnKey.keep.wroteConfirm }));
-  fireEvent.click(button(es.returnKey.keep.continue)!);
+// Saves the card's picture and chooses it back, as the visitor would.
+async function keepThePicture() {
+  fireEvent.click(button(es.returnKey.keep.save)!);
+  await settle();
+  fireEvent.change(screen.getByLabelText(es.returnKey.keep.chooseImage), {
+    target: { files: [new File(["png"], "refugio-sello.png", { type: "image/png" })] },
+  });
   await settle(KEPT_MESSAGE_HOLD_MS);
 }
 
@@ -249,7 +259,7 @@ describe("Mirror's door to a letter", () => {
     await openDoor();
 
     expect(JSON.parse(sentTo("/api/return-key").body)).toEqual({ entryId: "entry-1", locale: "es" });
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
+    expect(screen.getByRole("img", { name: es.returnKeyCard.qrLabel })).toBeTruthy();
     expect(screen.getByText(`“${SENTENCE}”`)).toBeTruthy();
     expect(screen.getByText(L.keepBody)).toBeTruthy();
     expect(state("phase")).toBe("keeping");
@@ -445,7 +455,7 @@ describe("Keeping and confirming the seal", () => {
     await settle();
     await openDoor();
 
-    await keepByHandAndConfirm();
+    await keepThePicture();
 
     const init = sentTo("/api/return-key/confirm");
     expect(init.headers.Authorization).toBe(`Bearer ${SEAL}`);
@@ -460,7 +470,7 @@ describe("Keeping and confirming the seal", () => {
     await settle();
     await openDoor();
 
-    await keepByHandAndConfirm();
+    await keepThePicture();
 
     expect(screen.getByText(L.confirmFailed)).toBeTruthy();
     expect(state("phase")).toBe("keeping");
@@ -478,7 +488,7 @@ describe("Keeping and confirming the seal", () => {
 
     await openDoor();
     expect(state("phase")).toBe("keeping");
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
+    expect(screen.getByRole("img", { name: es.returnKeyCard.qrLabel })).toBeTruthy();
     expect(calls("/api/return-key")).toHaveLength(1);
   });
 });

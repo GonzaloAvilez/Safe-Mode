@@ -149,7 +149,7 @@
     },
     "keep": {
       "tagline": "Esto es solo para ti.",
-      "body": "Así vas a volver a tus cartas: con esta imagen o con estos números. Solo tú los tienes: si los pierdes, ni Refugio puede recuperarlos. Guárdalos muy bien.",
+      "body": "Así vas a volver a tus cartas: con esta imagen. Solo tú la tienes: si la pierdes, ni Refugio puede recuperarla. Guárdala muy bien.",
       "withoutLetters": "Mejor sin cartas",
       "failed": "No pudimos sellar tu huella. Vuelve a intentarlo."
     },
@@ -160,10 +160,7 @@
       "save": "Guardar imagen",
       "saved": "Tu imagen está lista. Elígela para comprobar que se guardó.",
       "iosHint": "En iPhone, si se abre la imagen, mantenla presionada y elige «Guardar en Fotos».",
-      "wroteByHand": "Lo anoté a mano",
-      "wroteConfirm": "Ya lo anoté completo",
-      "continue": "Continuar",
-      "imageError": "No pudimos preparar la imagen. Puedes anotar tu sello a mano.",
+      "imageError": "No pudimos preparar la imagen. Vuelve a intentarlo.",
       "fileName": "refugio-sello.png",
       "chooseImage": "Elegir la imagen que guardaste",
       "chooseAnother": "Elegir otra imagen",
