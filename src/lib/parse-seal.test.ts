@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSeal } from "@/lib/return-key-groups";
+import { parseSeal } from "@/lib/parse-seal";
 
 const SEAL = "482133901756229";
 

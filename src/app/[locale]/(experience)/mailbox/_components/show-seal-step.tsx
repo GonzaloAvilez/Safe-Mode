@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type SubmitEvent } from 
 import { useTranslations } from "next-intl";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useMailboxState } from "@/app/_components/experience-state/mailbox";
-import { parseSeal } from "@/lib/return-key-groups";
+import { parseSeal } from "@/lib/parse-seal";
 import { ScreenPrompt } from "../../_shared/screen-prompt";
 import { fetchMailboxWithReturnKey } from "./fetch-mailbox-with-return-key";
 import { readSealFromImage } from "../../_shared/return-key/read-seal-from-image";

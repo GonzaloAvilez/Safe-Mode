@@ -1,4 +1,4 @@
-import { parseSeal } from "@/lib/return-key-groups";
+import { parseSeal } from "@/lib/parse-seal";
 
 // ADR-004 #212/#213: reading the saved picture of the seal, both to confirm it was kept
 // (KeepReturnKeyStep) and to open the mailbox. The QR on the card holds the 15 digits and nothing

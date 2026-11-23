@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, createHmac, randomInt } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase";
 import { unwrap } from "@/lib/supabase-result";
-import { parseSeal } from "@/lib/return-key-groups";
+import { parseSeal } from "@/lib/parse-seal";
 
 // ADR-004 layer 3 (#209): anonymous identities and their return keys. Used by both sides
 // of a letter: the phrase author and the visitor who writes to them.
