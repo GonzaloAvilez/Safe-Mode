@@ -15,7 +15,6 @@ import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 const T = {
   ...es.leaveATrace,
   keep: { ...es.leaveATrace.keep, ...es.returnKey.keep },
-  seal: { ...es.leaveATrace.seal, ...es.returnKey.confirm },
 };
 
 afterEach(() => {
@@ -54,11 +53,11 @@ describe("LeaveATraceScreen", () => {
     expect(screen.queryByText(T.choice.headline)).toBeNull();
   });
 
-  it("shows the missing light after the card, with its own tagline", () => {
-    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "sealing", key: { returnKey: SEAL, sentence: SENTENCE } });
+  it("shows the card with the seal, with its own tagline", () => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "keeping", key: { returnKey: SEAL, sentence: SENTENCE } });
 
-    expect(screen.getByText(T.seal.headline)).toBeTruthy();
-    expect(screen.getByText(T.seal.tagline)).toBeTruthy();
+    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
+    expect(screen.getByText(T.keep.tagline)).toBeTruthy();
   });
 
   // The sealed closing has two sentences, one per line: what the seal does, where the mailbox is.
@@ -86,7 +85,7 @@ describe("LeaveATraceScreen", () => {
     expect(screen.queryByText(T.skippedSubcopy)).toBeNull();
   });
 
-  it("with letters open, the whole way: writing, the choice, the card, the missing light, a sealed closing", async () => {
+  it("with letters open, the whole way: writing, the choice, the card, a sealed closing", async () => {
     const fetchMock = vi.fn((url: string) =>
       Promise.resolve(
         url === "/api/return-key/confirm"
@@ -103,12 +102,6 @@ describe("LeaveATraceScreen", () => {
     fireEvent.click(await screen.findByRole("button", { name: T.keep.wroteByHand }));
     fireEvent.click(screen.getByRole("checkbox", { name: T.keep.wroteConfirm }));
     fireEvent.click(screen.getByRole("button", { name: T.keep.continue }));
-    await screen.findByText(T.seal.headline);
-
-    // Answer whichever group is asked, as someone holding the seal would.
-    const asked = (["first", "middle", "last"] as const).findIndex((group) => screen.queryByText(T.seal.field[group]));
-    fireEvent.change(screen.getByPlaceholderText("00000"), { target: { value: ["48213", "39017", "56229"][asked] } });
-    fireEvent.click(screen.getByRole("button", { name: T.seal.submit }));
 
     await screen.findByText(sealedMailbox, {}, { timeout: 4000 });
     expect(screen.getByTestId("closing-scene")).toBeTruthy();

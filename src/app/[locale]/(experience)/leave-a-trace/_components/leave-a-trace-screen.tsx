@@ -10,7 +10,6 @@ import { ScreenPrompt } from "../../_shared/screen-prompt";
 import { GratitudeCanvas } from "../../gratitude/gratitude-canvas";
 import { KeepTraceSealStep } from "./keep-trace-seal-step";
 import { LettersChoiceStep } from "./letters-choice-step";
-import { SealTraceStep } from "./seal-trace-step";
 import { TraceForm } from "./trace-form";
 
 // The quiet scene every step before the closing shares: a soft glow, the tagline, content in the middle.
@@ -43,9 +42,9 @@ function TraceStepShell({
 // Screen 08/8, the last stop. Draft and resolved phase stay in ephemeral memory so
 // changing locale cannot erase the visitor's choice or vulnerable text.
 //
-// With letters open (ADR-004 #212) the way to the closing has three steps more for whoever wants
-// them: writing → choosing (letters or not) → keeping (the seal) → sealing (the missing light)
-// → the closing, with one more line for whoever sealed it. `lettersOpen` is read
+// With letters open (ADR-004 #212) the way to the closing has two steps more for whoever wants
+// them: writing → choosing (letters or not) → keeping (the seal, which also confirms it) → the
+// closing, with one more line for whoever sealed it. `lettersOpen` is read
 // by the page on every visit, and the server decides again when the phrase arrives, so a switch
 // that closes meanwhile never leaves someone with a seal that opens nothing.
 export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
@@ -65,14 +64,6 @@ export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
     return (
       <TraceStepShell tagline={t("keep.tagline")} spacing="pt-40 pb-16">
         <KeepTraceSealStep />
-      </TraceStepShell>
-    );
-  }
-
-  if (phase === "sealing") {
-    return (
-      <TraceStepShell tagline={t("seal.tagline")}>
-        <SealTraceStep />
       </TraceStepShell>
     );
   }

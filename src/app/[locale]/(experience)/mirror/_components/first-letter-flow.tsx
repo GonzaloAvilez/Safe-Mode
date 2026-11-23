@@ -10,7 +10,6 @@ import { LetterCrisisHelp } from "../../_shared/letters/letter-crisis-help";
 import { LETTER_FADE_MS, LETTER_TRACE_MS, LetterSendScene, type LetterSendStage } from "../../_shared/letters/letter-send-scene";
 import { sendFirstLetter } from "../../_shared/letters/send-letter";
 import { isLetterNoticeOutcome, useLetterNotice } from "../../_shared/letters/use-letter-notice";
-import { ConfirmReturnKeyStep } from "../../_shared/return-key/confirm-return-key-step";
 import { KeepReturnKeyStep } from "../../_shared/return-key/keep-return-key-step";
 import { playTransition } from "../../_shared/handpan-audio";
 import { ScreenHeader } from "../../_shared/screen-header";
@@ -21,8 +20,8 @@ import { requestVisitorReturnKey } from "./request-visitor-return-key";
 // whoever left the phrase Mirror showed. Seal first, then the paper:
 //
 //   the door     "Escribirle una carta", on the phrase, only when letters can reach its author
-//   keeping      the card with their new seal (B1)
-//   confirming   the missing light (B2): only a confirmed seal can send a letter
+//   keeping      the card with their new seal (B1); keeping it confirms it, and only a confirmed
+//                seal can send a letter
 //   writing      the paper (B3); on desktop, next to their phrase (A)
 //   sending      the envelope closes while the letter is sent (B6)
 //   sent         the envelope has left (B4), and the way back to their phrase
@@ -119,7 +118,6 @@ export function FirstLetterDoor({ entryId }: { entryId: string }) {
         phase: "keeping",
         backOnPhrase: false,
         key: { returnKey: result.returnKey, sentence: result.sentence },
-        lastAsked: null,
         draft: "",
         outcome: null,
       });
@@ -211,14 +209,6 @@ function FirstLetterShell({ tagline, spacing = "py-24", children }: { tagline: s
   );
 }
 
-const LIT_LIGHTS = (
-  <div aria-hidden="true" className="flex gap-3.5">
-    {[0, 1, 2].map((index) => (
-      <span key={index} className="size-[7px] rounded-full bg-[#f0c060] shadow-[0_0_10px_3px_rgba(240,192,96,0.4)]" />
-    ))}
-  </div>
-);
-
 // The steps after the door, for as long as the visitor isn't back on the phrase.
 export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phraseText: string }) {
   const t = useTranslations("mirror.letter");
@@ -294,27 +284,10 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
         <KeepReturnKeyStep
           returnKey={key.returnKey}
           sentence={key.sentence}
-          alreadyKept={letter.lastAsked !== null}
           body={t("keepBody")}
-          leaveLabel={t("backToPhrase")}
-          onKept={() => updateMirrorLetter({ phase: "confirming" })}
-          onLeave={backToPhrase}
-        />
-      </FirstLetterShell>
-    );
-  }
-
-  if (letter.phase === "confirming" && key) {
-    return (
-      <FirstLetterShell tagline={t("confirmTagline")}>
-        <ConfirmReturnKeyStep
-          returnKey={key.returnKey}
-          previouslyAsked={letter.lastAsked}
-          hint={t("confirmHint")}
           failedMessage={t("confirmFailed")}
           leaveLabel={t("backToPhrase")}
           onConfirmed={() => updateMirrorLetter({ phase: "writing" })}
-          onSeeSealAgain={(asked) => updateMirrorLetter({ phase: "keeping", lastAsked: asked })}
           onLeave={backToPhrase}
         />
       </FirstLetterShell>
@@ -379,8 +352,7 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
         <div aria-hidden="true" className="hidden h-px w-[88px] bg-[linear-gradient(90deg,rgba(165,125,220,0.45),rgba(210,158,32,0.45))] lg:block" />
 
         <form onSubmit={send} className="flex w-full max-w-sm flex-col items-center gap-5 lg:w-[460px] lg:max-w-none">
-          {LIT_LIGHTS}
-          <h1 className="-mt-2 text-[22px] font-light tracking-[5px] text-white/82">{tp("headline")}</h1>
+          <h1 className="text-[22px] font-light tracking-[5px] text-white/82">{tp("headline")}</h1>
           <p className="-mt-2 text-center text-[13px] leading-[1.55] text-[rgba(200,175,255,0.7)] italic lg:hidden">
             {t("forPhrase", { phrase: phraseText })}
           </p>

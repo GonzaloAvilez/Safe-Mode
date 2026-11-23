@@ -7,7 +7,7 @@ import { useMailboxState } from "@/app/_components/experience-state/mailbox";
 import { parseSeal } from "@/lib/return-key-groups";
 import { ScreenPrompt } from "../../_shared/screen-prompt";
 import { fetchMailboxWithReturnKey } from "./fetch-mailbox-with-return-key";
-import { readSealFromImage } from "./read-seal-from-image";
+import { readSealFromImage } from "../../_shared/return-key/read-seal-from-image";
 
 // ADR-004 #213, design B2: the mailbox opens with the seal. First the picture of it, the one
 // "Guardar imagen" saved (its QR is read here, on the phone, and the picture goes nowhere), and

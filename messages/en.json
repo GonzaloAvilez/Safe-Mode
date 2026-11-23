@@ -119,8 +119,6 @@
       "keepHeadline": "So they can answer you,\nyour seal comes first.",
       "keepBody": "Your letter and their reply will live for 60 days in a mailbox that only opens with this seal. Only you have it: if you lose it, not even Refugio can recover it. Keep it safe.",
       "backToPhrase": "Back to their phrase",
-      "confirmTagline": "A gesture before writing.",
-      "confirmHint": "With the three lights on, you write your letter.",
       "confirmFailed": "We couldn't confirm your seal. Please try again.",
       "writingTagline": "This is only for you.",
       "forPhrase": "For whoever left: “{phrase}”",
@@ -152,11 +150,7 @@
     "keep": {
       "tagline": "This is only for you.",
       "body": "This is how you'll get back to your letters: with this image or with these numbers. Only you have them: if you lose them, not even Refugio can recover them. Keep them safe.",
-      "withoutLetters": "Better without letters"
-    },
-    "seal": {
-      "tagline": "One last gesture.",
-      "hint": "The three lights together open your letters.",
+      "withoutLetters": "Better without letters",
       "failed": "We couldn't seal your trace. Please try again."
     },
     "sealedSubcopy": "If someone writes to you, your seal will open their letter.\nYour mailbox is in the envelope on the home screen."
@@ -164,30 +158,19 @@
   "returnKey": {
     "keep": {
       "save": "Save image",
-      "saved": "Your image is ready.",
+      "saved": "Your image is ready. Choose it to check it was saved.",
       "iosHint": "On iPhone, if the image opens, press and hold it and choose “Save to Photos”.",
       "wroteByHand": "I wrote it down",
       "wroteConfirm": "I've written it all down",
       "continue": "Continue",
       "imageError": "We couldn't prepare the image. You can write your seal down by hand.",
-      "fileName": "refugio-seal.png"
-    },
-    "confirm": {
-      "headline": "Light the missing light.",
-      "ask": {
-        "first": "Type the first group of your seal.",
-        "middle": "Type the middle group of your seal.",
-        "last": "Type the last group of your seal."
-      },
-      "field": {
-        "first": "First group",
-        "middle": "Middle group",
-        "last": "Last group"
-      },
-      "submit": "Light it",
-      "back": "See my seal again",
-      "wrong": "That's not the group. You can see your seal again.",
-      "lit": "The three lights are on.",
+      "fileName": "refugio-seal.png",
+      "chooseImage": "Choose the picture you saved",
+      "chooseAnother": "Choose another picture",
+      "saveAgain": "Save it again",
+      "otherSeal": "That picture is of another seal. Choose the one you just saved.",
+      "checking": "Checking your seal…",
+      "confirmed": "Your seal is kept.",
       "tooMany": "Too many tries. Wait a moment and try again."
     }
   },

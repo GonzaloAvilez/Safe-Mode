@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { SendFirstLetterResult } from "@/app/[locale]/(experience)/_shared/letters/send-letter";
-import type { SealGroupIndex } from "@/lib/return-key-groups";
 import { createStrictContext } from "./create-strict-context";
 
 export type WriteOutcome =
@@ -12,9 +11,9 @@ export type WriteOutcome =
 
 // ADR-004 #212: when letters are open, "choosing" comes between writing and sending (the phrase
 // leaves only once the person has answered whether they want letters), "keeping" is where
-// someone who said yes keeps their seal, and "sealing" is where they light the missing light.
-// "sealed" is the closing for whoever sealed it: the same closing, with one line more.
-export type LeaveATracePhase = "writing" | "choosing" | "keeping" | "sealing" | "sealed" | "submitted" | "skipped";
+// someone who said yes keeps their seal (which also confirms it). "sealed" is the closing for
+// whoever kept it: the same closing, with one line more.
+export type LeaveATracePhase = "writing" | "choosing" | "keeping" | "sealed" | "submitted" | "skipped";
 
 // A seal and the gift sentence of its card, shown once (ADR-004 #212).
 export type ReturnKeyWithSentence = { returnKey: string; sentence: string };
@@ -22,12 +21,11 @@ export type ReturnKeyWithSentence = { returnKey: string; sentence: string };
 export type LeaveATraceKey = ReturnKeyWithSentence;
 
 // ADR-004 #212, design B: a visitor writing to whoever left the phrase Mirror showed them.
-//   keeping     the card with their seal
-//   confirming  the missing light
+//   keeping     the card with their seal; keeping it confirms it
 //   writing     the paper
 //   sending     the envelope closing while the letter is sent
 //   sent        the letter is on its way
-export type MirrorLetterPhase = "keeping" | "confirming" | "writing" | "sending" | "sent";
+export type MirrorLetterPhase = "keeping" | "writing" | "sending" | "sent";
 
 export type MirrorLetter = {
   // The entry whose phrase the letter is for: another entry starts over.
@@ -39,8 +37,6 @@ export type MirrorLetter = {
   // Memory only, like every seal: never in the URL or browser storage, gone on reload. Let go of
   // once the letter leaves.
   key: ReturnKeyWithSentence | null;
-  // The group the missing light asked for last, so the next question is a different one.
-  lastAsked: SealGroupIndex | null;
   draft: string;
   // Why the paper came back (rejected, paused...), shown under it; null while writing.
   outcome: SendFirstLetterResult | null;
@@ -66,10 +62,6 @@ type RitualState = {
   // resets. Only its hash is stored on the server, so a lost seal can't be recovered.
   leaveATraceKey: LeaveATraceKey | null;
   setLeaveATraceKey: Dispatch<SetStateAction<LeaveATraceKey | null>>;
-  // The group sealing asked for last time, so that after looking at the seal again the next
-  // question is a different group.
-  leaveATraceLastAsked: SealGroupIndex | null;
-  setLeaveATraceLastAsked: Dispatch<SetStateAction<SealGroupIndex | null>>;
   mirrorInteraction: MirrorInteraction;
   setMirrorInteraction: Dispatch<SetStateAction<MirrorInteraction>>;
   mirrorLetter: MirrorLetter | null;
@@ -96,7 +88,6 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
   const [leaveATraceDraft, setLeaveATraceDraft] = useState("");
   const [leaveATracePhase, setLeaveATracePhase] = useState<LeaveATracePhase>("writing");
   const [leaveATraceKey, setLeaveATraceKey] = useState<LeaveATraceKey | null>(null);
-  const [leaveATraceLastAsked, setLeaveATraceLastAsked] = useState<SealGroupIndex | null>(null);
   const [mirrorInteraction, setMirrorInteraction] = useState<MirrorInteraction>(EMPTY_MIRROR_INTERACTION);
   const [mirrorLetter, setMirrorLetter] = useState<MirrorLetter | null>(null);
 
@@ -117,7 +108,6 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
     setLeaveATraceDraft("");
     setLeaveATracePhase("writing");
     setLeaveATraceKey(null);
-    setLeaveATraceLastAsked(null);
     setMirrorInteraction(EMPTY_MIRROR_INTERACTION);
     setMirrorLetter(null);
   }, []);
@@ -135,8 +125,6 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
         setLeaveATracePhase,
         leaveATraceKey,
         setLeaveATraceKey,
-        leaveATraceLastAsked,
-        setLeaveATraceLastAsked,
         mirrorInteraction,
         setMirrorInteraction,
         mirrorLetter,
