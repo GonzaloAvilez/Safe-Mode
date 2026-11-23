@@ -69,11 +69,19 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
 - Phrases created before this exists stay ownerless forever (`identity_id` null). That's the
   anonymity promise working, not a defect (see open decision 5).
 - **Return key format (decided 2026-11-16, #212):** a random 15-digit number, shown as a seal
-  ("48213 39017 56229"). The card (#212) pairs it with a sentence from a bank the founder
-  approves, plus a QR code of the seal. The sentence is a gift, not part of the key, so it can
-  mean something without making the key guessable. Random words and sentences assembled from
-  random pieces were tried first and rejected: they made no sense and broke the emotional tone
-  of the moment.
+  ("48213 39017 56229", printed on the card until 2026-11-23, see below). The card (#212) pairs
+  it with a sentence from a bank the founder approves, plus a QR code of the seal. The sentence
+  is a gift, not part of the key, so it can mean something without making the key guessable.
+  Random words and sentences assembled from random pieces were tried first and rejected: they
+  made no sense and broke the emotional tone of the moment.
+- **The seal is the picture, not its digits (decided 2026-11-23).** The card no longer prints
+  the 15 digits, only their QR, which holds exactly those digits and nothing else. Keeping the
+  seal confirms it in one gesture: save the picture, then choose it back. The QR is read on the
+  phone and must be this seal. That replaced "enciende la luz que falta" (type a random group of
+  five), which the founder found confusing and tiring. The digits were visible only so they
+  could be typed or written down, and that's the load being removed. Trade-off accepted: a
+  lost picture is a lost seal, and writing it down by hand is no longer offered. The mailbox
+  still accepts typed digits, for seals kept before this change.
 - About 50 bits is too few for a plain hash, so a seal is stored as HMAC-SHA256 with a server
   secret (`RETURN_KEY_HASH_SECRET`, a "pepper") that lives only in Vercel. A stolen database
   alone can't be used to guess keys. Guessing through the API is rate-limited. The secret can

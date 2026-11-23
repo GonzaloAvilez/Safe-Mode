@@ -7,6 +7,13 @@ import es from "../../../../../../messages/es.json";
 vi.mock("../../gratitude/gratitude-canvas", () => ({ GratitudeCanvas: () => <div data-testid="closing-scene" /> }));
 vi.mock("../../_shared/screen-header", () => ({ ScreenHeader: ({ tagline }: { tagline: string }) => <header>{tagline}</header> }));
 vi.mock("../../_shared/screen-cta", () => ({ ScreenCta: ({ label }: { label: string }) => <span>{label}</span> }));
+// jsdom draws no canvas and decodes no picture: the card's picture and its QR reading are stood in for.
+vi.mock("@/lib/return-key-card", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/return-key-card")>()),
+  drawReturnKeyCardImage: () => Promise.resolve(new Blob(["png"], { type: "image/png" })),
+}));
+vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: () => {}, isIosDevice: () => false }));
+vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: () => Promise.resolve("482133901756229") }));
 
 import { LeaveATraceScreen } from "./leave-a-trace-screen";
 import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
@@ -15,7 +22,6 @@ import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 const T = {
   ...es.leaveATrace,
   keep: { ...es.leaveATrace.keep, ...es.returnKey.keep },
-  seal: { ...es.leaveATrace.seal, ...es.returnKey.confirm },
 };
 
 afterEach(() => {
@@ -42,7 +48,7 @@ describe("LeaveATraceScreen", () => {
   it("shows the card after a yes, with its own tagline", () => {
     renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "keeping", key: { returnKey: SEAL, sentence: SENTENCE } });
 
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
+    expect(screen.getByRole("img", { name: es.returnKeyCard.qrLabel })).toBeTruthy();
     expect(screen.getByText(T.keep.tagline)).toBeTruthy();
   });
 
@@ -52,13 +58,6 @@ describe("LeaveATraceScreen", () => {
     expect(screen.getByTestId("closing-scene")).toBeTruthy();
     expect(screen.getByText(T.backToStart)).toBeTruthy();
     expect(screen.queryByText(T.choice.headline)).toBeNull();
-  });
-
-  it("shows the missing light after the card, with its own tagline", () => {
-    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "sealing", key: { returnKey: SEAL, sentence: SENTENCE } });
-
-    expect(screen.getByText(T.seal.headline)).toBeTruthy();
-    expect(screen.getByText(T.seal.tagline)).toBeTruthy();
   });
 
   // The sealed closing has two sentences, one per line: what the seal does, where the mailbox is.
@@ -86,7 +85,7 @@ describe("LeaveATraceScreen", () => {
     expect(screen.queryByText(T.skippedSubcopy)).toBeNull();
   });
 
-  it("with letters open, the whole way: writing, the choice, the card, the missing light, a sealed closing", async () => {
+  it("with letters open, the whole way: writing, the choice, the card, a sealed closing", async () => {
     const fetchMock = vi.fn((url: string) =>
       Promise.resolve(
         url === "/api/return-key/confirm"
@@ -100,15 +99,10 @@ describe("LeaveATraceScreen", () => {
     fireEvent.change(screen.getByPlaceholderText(T.placeholder), { target: { value: "Una frase." } });
     fireEvent.click(screen.getByRole("button", { name: T.submit }));
     fireEvent.click(await screen.findByRole("button", { name: T.choice.yes }));
-    fireEvent.click(await screen.findByRole("button", { name: T.keep.wroteByHand }));
-    fireEvent.click(screen.getByRole("checkbox", { name: T.keep.wroteConfirm }));
-    fireEvent.click(screen.getByRole("button", { name: T.keep.continue }));
-    await screen.findByText(T.seal.headline);
-
-    // Answer whichever group is asked, as someone holding the seal would.
-    const asked = (["first", "middle", "last"] as const).findIndex((group) => screen.queryByText(T.seal.field[group]));
-    fireEvent.change(screen.getByPlaceholderText("00000"), { target: { value: ["48213", "39017", "56229"][asked] } });
-    fireEvent.click(screen.getByRole("button", { name: T.seal.submit }));
+    fireEvent.click(await screen.findByRole("button", { name: T.keep.save }));
+    fireEvent.change(await screen.findByLabelText(T.keep.chooseImage), {
+      target: { files: [new File(["png"], "refugio-sello.png", { type: "image/png" })] },
+    });
 
     await screen.findByText(sealedMailbox, {}, { timeout: 4000 });
     expect(screen.getByTestId("closing-scene")).toBeTruthy();
@@ -193,7 +187,7 @@ describe("LeaveATraceScreen", () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: T.choice.yes }));
-    await screen.findByText("48213 · 39017 · 56229");
+    await screen.findByRole("img", { name: es.returnKeyCard.qrLabel });
     expect(fetchMock).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByRole("button", { name: T.keep.withoutLetters }));

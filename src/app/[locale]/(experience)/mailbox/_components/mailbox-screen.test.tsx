@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import es from "../../../../../../messages/es.json";
 
 const { readSealFromImageMock } = vi.hoisted(() => ({ readSealFromImageMock: vi.fn() }));
-vi.mock("./read-seal-from-image", () => ({ readSealFromImage: readSealFromImageMock }));
+vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: readSealFromImageMock }));
 
 vi.mock("../../_shared/screen-header", () => ({ ScreenHeader: ({ tagline }: { tagline: string }) => <header>{tagline}</header> }));
 vi.mock("../../_shared/screen-cta", () => ({

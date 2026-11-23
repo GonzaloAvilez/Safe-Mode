@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ExperienceProviders } from "@/app/_components/experience-state/providers";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useRitualState, type LeaveATraceKey, type LeaveATracePhase } from "@/app/_components/experience-state/ritual";
-import type { SealGroupIndex } from "@/lib/return-key-groups";
 import en from "../../../../../../messages/en.json";
 import es from "../../../../../../messages/es.json";
 
@@ -13,7 +12,7 @@ import es from "../../../../../../messages/es.json";
 export const SEAL = "482133901756229";
 export const SENTENCE = "Hay mañanas que empiezan por la tarde, y está bien.";
 
-type Seed = { draft?: string; phase?: LeaveATracePhase; key?: LeaveATraceKey | null; lastAsked?: SealGroupIndex | null };
+type Seed = { draft?: string; phase?: LeaveATracePhase; key?: LeaveATraceKey | null };
 
 function Seeded({ seed, children }: { seed: Seed; children: ReactNode }) {
   const ritual = useRitualState();
@@ -25,7 +24,6 @@ function Seeded({ seed, children }: { seed: Seed; children: ReactNode }) {
     ritual.setLeaveATraceDraft(seed.draft ?? "");
     ritual.setLeaveATracePhase(seed.phase ?? "writing");
     ritual.setLeaveATraceKey(seed.key ?? null);
-    ritual.setLeaveATraceLastAsked(seed.lastAsked ?? null);
     // Test-only: the ritual state has no initial value to pass in, so it is seeded here and the
     // step is shown on the next render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -44,7 +42,6 @@ function StateReadout() {
       <output data-testid="phase">{ritual.leaveATracePhase}</output>
       <output data-testid="draft">{ritual.leaveATraceDraft}</output>
       <output data-testid="key">{ritual.leaveATraceKey?.returnKey ?? ""}</output>
-      <output data-testid="lastAsked">{ritual.leaveATraceLastAsked ?? ""}</output>
       <output data-testid="locked">{String(locked)}</output>
     </div>
   );

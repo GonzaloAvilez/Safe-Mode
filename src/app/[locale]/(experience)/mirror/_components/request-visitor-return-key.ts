@@ -1,4 +1,4 @@
-import { parseSeal } from "@/lib/return-key-groups";
+import { parseSeal } from "@/lib/parse-seal";
 import type { ReturnKeyWithSentence } from "@/app/_components/experience-state/ritual";
 
 // ADR-004 #212, seal first (design B): asks the server for the visitor's seal before they write

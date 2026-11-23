@@ -119,8 +119,6 @@
       "keepHeadline": "Para que pueda responderte,\nprimero tu sello.",
       "keepBody": "Tu carta y su respuesta vivirán 60 días en un buzón que solo se abre con este sello. Solo tú lo tienes: si lo pierdes, ni Refugio puede recuperarlo. Guárdalo muy bien.",
       "backToPhrase": "Volver a su frase",
-      "confirmTagline": "Un gesto antes de escribir.",
-      "confirmHint": "Con las tres luces encendidas, escribes tu carta.",
       "confirmFailed": "No pudimos confirmar tu sello. Vuelve a intentarlo.",
       "writingTagline": "Esto es solo para ti.",
       "forPhrase": "Para quien dejó: “{phrase}”",
@@ -151,12 +149,8 @@
     },
     "keep": {
       "tagline": "Esto es solo para ti.",
-      "body": "Así vas a volver a tus cartas: con esta imagen o con estos números. Solo tú los tienes: si los pierdes, ni Refugio puede recuperarlos. Guárdalos muy bien.",
-      "withoutLetters": "Mejor sin cartas"
-    },
-    "seal": {
-      "tagline": "Un último gesto.",
-      "hint": "Las tres luces juntas abren tus cartas.",
+      "body": "Así vas a volver a tus cartas: con esta imagen. Solo tú la tienes: si la pierdes, ni Refugio puede recuperarla. Guárdala muy bien.",
+      "withoutLetters": "Mejor sin cartas",
       "failed": "No pudimos sellar tu huella. Vuelve a intentarlo."
     },
     "sealedSubcopy": "Si alguien te escribe, tu sello abrirá su carta.\nTu buzón está en el sobre del inicio."
@@ -164,30 +158,16 @@
   "returnKey": {
     "keep": {
       "save": "Guardar imagen",
-      "saved": "Tu imagen está lista.",
+      "saved": "Tu imagen está lista. Elígela para comprobar que se guardó.",
       "iosHint": "En iPhone, si se abre la imagen, mantenla presionada y elige «Guardar en Fotos».",
-      "wroteByHand": "Lo anoté a mano",
-      "wroteConfirm": "Ya lo anoté completo",
-      "continue": "Continuar",
-      "imageError": "No pudimos preparar la imagen. Puedes anotar tu sello a mano.",
-      "fileName": "refugio-sello.png"
-    },
-    "confirm": {
-      "headline": "Enciende la luz que falta.",
-      "ask": {
-        "first": "Escribe el grupo del principio de tu sello.",
-        "middle": "Escribe el grupo del centro de tu sello.",
-        "last": "Escribe el grupo del final de tu sello."
-      },
-      "field": {
-        "first": "Grupo del principio",
-        "middle": "Grupo del centro",
-        "last": "Grupo del final"
-      },
-      "submit": "Encender",
-      "back": "Volver a ver mi sello",
-      "wrong": "Ese no es el grupo. Puedes volver a ver tu sello.",
-      "lit": "Las tres luces están encendidas.",
+      "imageError": "No pudimos preparar la imagen. Vuelve a intentarlo.",
+      "fileName": "refugio-sello.png",
+      "chooseImage": "Elegir la imagen que guardaste",
+      "chooseAnother": "Elegir otra imagen",
+      "saveAgain": "Guardarla otra vez",
+      "otherSeal": "Esa imagen es de otro sello. Elige la que acabas de guardar.",
+      "checking": "Comprobando tu sello…",
+      "confirmed": "Tu sello está guardado.",
       "tooMany": "Demasiados intentos. Espera un momento y vuelve a intentarlo."
     }
   },

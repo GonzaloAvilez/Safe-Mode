@@ -43,11 +43,10 @@ afterEach(() => {
 });
 
 describe("ReturnKeyCard", () => {
-  it("shows the gift sentence, the seal in three groups and the labels, in Spanish", () => {
+  it("shows the gift sentence, the seal's QR and the labels, in Spanish", () => {
     renderCard();
 
     expect(screen.getByText(`“${SENTENCE}”`)).toBeTruthy();
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
     expect(screen.getByText("REFUGIO")).toBeTruthy();
     expect(screen.getByText("Este sello abre tus cartas.")).toBeTruthy();
     expect(screen.getByText("CORREO DE REFUGIO")).toBeTruthy();
@@ -60,6 +59,12 @@ describe("ReturnKeyCard", () => {
     expect(screen.getByText("This seal opens your letters.")).toBeTruthy();
     expect(screen.getByText("REFUGIO POST")).toBeTruthy();
     expect(screen.getByRole("img", { name: "QR code of your seal" })).toBeTruthy();
+  });
+
+  it("never writes the seal's digits out: only its QR holds them", () => {
+    const { container } = renderCard();
+
+    expect(container.textContent).not.toMatch(/\d{5}/);
   });
 
   it("draws a QR that decodes to exactly the 15 digits", () => {
@@ -87,13 +92,12 @@ describe("ReturnKeyCard", () => {
 });
 
 describe("readCardFonts", () => {
-  it("reads the families the card really uses, so the picture draws with the same ones", () => {
+  it("reads the family the card really uses, so the picture draws with the same one", () => {
     const { container } = renderCard();
     const card = container.firstElementChild as HTMLElement;
     (card.querySelector("[data-card-sentence]") as HTMLElement).style.fontFamily = "Geist, sans-serif";
-    (card.querySelector("[data-card-seal]") as HTMLElement).style.fontFamily = '"Geist Mono", monospace';
 
-    expect(readCardFonts(card)).toEqual({ sans: "Geist, sans-serif", mono: '"Geist Mono", monospace' });
+    expect(readCardFonts(card)).toEqual({ sans: "Geist, sans-serif" });
   });
 
   it("fails clearly when the card is missing a part", () => {

@@ -1,8 +1,9 @@
-import { parseSeal } from "@/lib/return-key-groups";
+import { parseSeal } from "@/lib/parse-seal";
 
-// ADR-004 #213: opening the mailbox with the saved picture of the seal. The QR on the card holds
-// the 15 digits and nothing else (return-key-qr.ts), so reading it gives the seal itself. The
-// picture is read here, in the browser: it's never uploaded, and nothing about it is kept.
+// ADR-004 #212/#213: reading the saved picture of the seal, both to confirm it was kept
+// (KeepReturnKeyStep) and to open the mailbox. The QR on the card holds the 15 digits and nothing
+// else (return-key-qr.ts), so reading it gives the seal itself. The picture is read here, in the
+// browser: it's never uploaded, and nothing about it is kept.
 
 // A photo can be several thousand pixels wide. The QR's modules stay many pixels wide well below
 // this, and jsQR is much faster on a smaller picture.

@@ -11,7 +11,7 @@ import en from "../../../../../../messages/en.json";
 import es from "../../../../../../messages/es.json";
 
 // The real router is the same object on every render; so is this one.
-const { handoffMock, pickMock, router } = vi.hoisted(() => ({ handoffMock: vi.fn(), pickMock: vi.fn(), router: { replace: () => {} } }));
+const { handoffMock, router } = vi.hoisted(() => ({ handoffMock: vi.fn(), router: { replace: () => {} } }));
 
 vi.mock("../../_shared/mirror-handoff", () => ({ readMirrorHandoff: handoffMock }));
 vi.mock("../mirror-canvas", () => ({ MirrorCanvas: () => <div data-testid="mirror-canvas" /> }));
@@ -51,20 +51,22 @@ vi.mock("./quote-reveal", async () => {
   };
 });
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => router }));
-vi.mock("@/lib/return-key-groups", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/return-key-groups")>()),
-  pickAskedGroup: pickMock,
+// jsdom draws no canvas and decodes no picture: the card's picture and its QR reading are stood in for.
+vi.mock("@/lib/return-key-card", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/return-key-card")>()),
+  drawReturnKeyCardImage: () => Promise.resolve(new Blob(["png"], { type: "image/png" })),
 }));
+vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: () => {}, isIosDevice: () => false }));
+vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: () => Promise.resolve("482133901756229") }));
 
 import { MirrorScreen } from "./mirror-screen";
-import { LIT_LIGHT_HOLD_MS } from "../../_shared/return-key/confirm-return-key-step";
+import { KEPT_MESSAGE_HOLD_MS } from "../../_shared/return-key/keep-return-key-step";
 import { LETTER_FADE_MS, LETTER_TRACE_MS } from "../../_shared/letters/letter-send-scene";
 
 // ADR-004 #212, design B: writing a letter from Mirror, through the real screen and the real
 // ritual state, with every request answered by the test.
 
 const SEAL = "482133901756229";
-const MIDDLE_GROUP = "39017";
 const SENTENCE = "Hay mañanas que empiezan por la tarde, y está bien.";
 const PHRASE = "Hay días en que sonrío para que nadie pregunte.";
 const L = es.mirror.letter;
@@ -174,13 +176,14 @@ async function openDoor() {
   await settle();
 }
 
-async function keepByHandAndConfirm() {
-  fireEvent.click(button(es.returnKey.keep.wroteByHand)!);
-  fireEvent.click(screen.getByRole("checkbox", { name: es.returnKey.keep.wroteConfirm }));
-  fireEvent.click(button(es.returnKey.keep.continue)!);
-  fireEvent.change(screen.getByPlaceholderText("00000"), { target: { value: MIDDLE_GROUP } });
-  fireEvent.click(button(es.returnKey.confirm.submit)!);
-  await settle(LIT_LIGHT_HOLD_MS);
+// Saves the card's picture and chooses it back, as the visitor would.
+async function keepThePicture() {
+  fireEvent.click(button(es.returnKey.keep.save)!);
+  await settle();
+  fireEvent.change(screen.getByLabelText(es.returnKey.keep.chooseImage), {
+    target: { files: [new File(["png"], "refugio-sello.png", { type: "image/png" })] },
+  });
+  await settle(KEPT_MESSAGE_HOLD_MS);
 }
 
 async function writeAndSend(text: string) {
@@ -195,7 +198,6 @@ const WRITING: MirrorLetter = {
   phase: "writing",
   backOnPhrase: false,
   key: { returnKey: SEAL, sentence: SENTENCE },
-  lastAsked: null,
   draft: "",
   outcome: null,
 };
@@ -206,7 +208,6 @@ beforeEach(() => {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query }));
   window.scrollTo = (() => {}) as typeof window.scrollTo;
   handoffMock.mockReturnValue(handoff());
-  pickMock.mockReturnValue(1);
   answers = {
     "/api/return-key": [created()],
     "/api/return-key/confirm": [new Response(null, { status: 204 })],
@@ -258,7 +259,7 @@ describe("Mirror's door to a letter", () => {
     await openDoor();
 
     expect(JSON.parse(sentTo("/api/return-key").body)).toEqual({ entryId: "entry-1", locale: "es" });
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
+    expect(screen.getByRole("img", { name: es.returnKeyCard.qrLabel })).toBeTruthy();
     expect(screen.getByText(`“${SENTENCE}”`)).toBeTruthy();
     expect(screen.getByText(L.keepBody)).toBeTruthy();
     expect(state("phase")).toBe("keeping");
@@ -449,12 +450,12 @@ describe("What follows the phrase", () => {
 });
 
 describe("Keeping and confirming the seal", () => {
-  it("goes from the card to the missing light to the paper, confirming the seal it was given", async () => {
+  it("goes from the card straight to the paper, confirming the seal it was given", async () => {
     renderMirror();
     await settle();
     await openDoor();
 
-    await keepByHandAndConfirm();
+    await keepThePicture();
 
     const init = sentTo("/api/return-key/confirm");
     expect(init.headers.Authorization).toBe(`Bearer ${SEAL}`);
@@ -463,16 +464,17 @@ describe("Keeping and confirming the seal", () => {
     expect(screen.getByText(`Para quien dejó: “${PHRASE}”`)).toBeTruthy();
   });
 
-  it("stays on the missing light, saying so, when the seal can't be confirmed", async () => {
+  it("stays on the card, saying so, when the seal can't be confirmed", async () => {
     answers["/api/return-key/confirm"] = [new Response("boom", { status: 500 })];
     renderMirror();
     await settle();
     await openDoor();
 
-    await keepByHandAndConfirm();
+    await keepThePicture();
 
     expect(screen.getByText(L.confirmFailed)).toBeTruthy();
-    expect(state("phase")).toBe("confirming");
+    expect(state("phase")).toBe("keeping");
+    expect(state("key")).toBe(SEAL);
   });
 
   it("“Volver a su frase” from the card keeps the seal, and the door picks up there without asking again", async () => {
@@ -486,24 +488,8 @@ describe("Keeping and confirming the seal", () => {
 
     await openDoor();
     expect(state("phase")).toBe("keeping");
-    expect(screen.getByText("48213 · 39017 · 56229")).toBeTruthy();
+    expect(screen.getByRole("img", { name: es.returnKeyCard.qrLabel })).toBeTruthy();
     expect(calls("/api/return-key")).toHaveLength(1);
-  });
-
-  it("going back to see the seal from the missing light asks a different group next time", async () => {
-    renderMirror();
-    await settle();
-    await openDoor();
-    fireEvent.click(button(es.returnKey.keep.wroteByHand)!);
-    fireEvent.click(screen.getByRole("checkbox", { name: es.returnKey.keep.wroteConfirm }));
-    fireEvent.click(button(es.returnKey.keep.continue)!);
-
-    fireEvent.click(button(es.returnKey.confirm.back)!);
-    expect(state("phase")).toBe("keeping");
-    // Already kept once: it can go on without saving it again.
-    fireEvent.click(button(es.returnKey.keep.continue)!);
-
-    expect(pickMock).toHaveBeenLastCalledWith(1);
   });
 });
 
