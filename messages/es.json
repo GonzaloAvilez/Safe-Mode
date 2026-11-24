@@ -289,5 +289,11 @@
     "saved": "Agregada. Deja otra cuando quieras.",
     "submit": "Agregar frase",
     "countLabel": "{count, plural, =1 {# frase} other {# frases}} agregadas hasta ahora — gracias."
+  },
+  "notifications": {
+    "letterDelivered": {
+      "title": "Refugio",
+      "body": "Alguien te escribió una carta."
+    }
   }
 }

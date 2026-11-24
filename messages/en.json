@@ -289,5 +289,11 @@
     "saved": "Added. Leave another whenever you're ready.",
     "submit": "Add phrase",
     "countLabel": "{count, plural, =1 {# phrase} other {# phrases}} added so far — thank you."
+  },
+  "notifications": {
+    "letterDelivered": {
+      "title": "Refugio",
+      "body": "Someone wrote you a letter."
+    }
   }
 }
