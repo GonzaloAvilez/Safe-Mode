@@ -1,6 +1,6 @@
 # ADR-005: Push notifications tied to an identity, no accounts
 
-**Status:** Proposed 2026-11-23. Direction chosen by the founder. Revised 2026-11-24 after review (where opt-in is offered, `after()`, per-identity opt-out, one notice per delivery, names). The notice's title is still open.
+**Status:** Proposed 2026-11-23. Direction chosen by the founder. Revised 2026-11-24 after review (where opt-in is offered, `after()`, per-identity opt-out, one notice per delivery, names). **Accepted for the server part 2026-11-24** (PR 2, #272), with the notice's text decided by the founder. The browser part (PR 3b, #273) is still to build.
 **Date:** 2026-11-23
 **Context owner:** product/eng
 **Related:** [ADR-004](./ADR-004-mutual-connection-between-strangers.md) (layer 7, identity model), [ADR-003](./ADR-003-bilingual-routing-and-matching.md)
@@ -103,6 +103,9 @@ event in `messages.ts` and one more `notify()` call.
 
 - **It never carries letter content, the phrase, or anything the person wrote.** It shows on a lock
   screen, so it can't say more than "something is waiting".
+- **The text** (decided 2026-11-24): title "Refugio"; body ES "Alguien te escribió una carta." /
+  EN "Someone wrote you a letter." It's one text for v1, the same for a first letter and a reply.
+  It lives in `messages/{es,en}.json` under `notifications`.
 - **Tapping it opens `/{locale}/mailbox`.** The person still chooses the picture of their seal to
   get in, because the seal is never stored on the device. The notice alone opens nothing.
 - **TTL is 7 days.** If the device is off or the browser is closed for longer, the notice is
@@ -198,9 +201,17 @@ Off by default. It's offered, never asked for on arrival.
 
 ## Open decisions (resolve in review, before code)
 
-1. **The notice's title:** "Refugio", or something neutral that doesn't name the app? Showing the
-   name of an emotional-support space on a lock screen says something about the person.
-   - Body proposed: ES "Tienes una carta esperándote." / EN "A letter is waiting for you."
+1. ~~The notice's title~~ **Resolved by the founder (2026-11-24):** the title is "Refugio" and the
+   body is the warm option, ES "Alguien te escribió una carta." / EN "Someone wrote you a letter."
+   - The question was whether to name the app on a lock screen, since showing the name of an
+     emotional-support space says something about the person. A neutral title wouldn't have hidden
+     it anyway: Chrome shows the site's domain, and on iPhone the notice appears under the
+     installed app's name.
+   - Not chosen: a direct body ("Tienes una carta esperándote."), the balance of warmth and
+     discretion, and a discreet one ("Hay algo nuevo en tu buzón."), the most private. The warm one
+     puts a person on the other side, which is what makes Refugio's letters what they are. It's
+     also the one that reveals most on a lock screen: "someone" hints at a connection. That's an
+     accepted trade-off.
 2. ~~Names~~ **Resolved in review (2026-11-24):**
    - table: `push_subscriptions`;
    - module: `src/lib/notifications/` (`notify`, `messages`, `channels/web-push`);
