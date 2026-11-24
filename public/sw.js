@@ -7,6 +7,9 @@
 
 const SUPPORTED_LOCALES = ["en", "es"];
 const DEFAULT_LOCALE = "en";
+// Sent to an open Refugio window instead of navigating it. The page acts on it; only the page
+// knows whether it's holding an unsent draft. Nothing listens yet — PR 3b adds that.
+const OPEN_MAILBOX = "refugio:open-mailbox";
 // Only reached if a push arrives without a readable payload. Every push must show something, or
 // the browser shows its own generic notice instead.
 const FALLBACK_TITLE = "Refugio";
@@ -50,12 +53,25 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL((event.notification.data && event.notification.data.url) || mailboxUrl(), self.location.origin).href;
 
-  // A window already on the mailbox is reused. Any other Refugio window is left alone: the ritual
-  // and its drafts live only in memory, so navigating it away would lose what someone is writing.
+  // The ritual and its drafts live only in memory, so no Refugio window may be navigated away
+  // from under someone. Three cases, in order:
+  //
+  //   1. A window already on the mailbox: focus it, nothing is lost.
+  //   2. Any other Refugio window: focus it and send OPEN_MAILBOX. It is NOT navigated, and
+  //      openWindow is NOT called — `clients.openWindow()` does not promise a *new* window. In an
+  //      installed app Chrome can reuse the standalone window that is already open (Android,
+  //      Windows), which would navigate away from a draft. Avoiding `client.navigate()` alone
+  //      isn't enough to keep that promise.
+  //   3. No Refugio window at all: there is nothing to lose, so open one.
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const onMailbox = windows.find((client) => client.url === url);
-      return onMailbox ? onMailbox.focus() : self.clients.openWindow(url);
+      if (onMailbox) return onMailbox.focus();
+
+      const open = windows.find((client) => client.focused) || windows[0];
+      if (!open) return self.clients.openWindow(url);
+
+      return Promise.resolve(open.focus()).then(() => open.postMessage({ type: OPEN_MAILBOX, url }));
     })
   );
 });

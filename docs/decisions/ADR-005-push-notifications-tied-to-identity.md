@@ -156,6 +156,14 @@ Off by default. It's offered, never asked for on arrival.
     because browsers show their own generic one otherwise.
   - **A tap opens the mailbox in a new window**, or focuses a window already on it. It never
     navigates another Refugio window, because the ritual and its drafts live only in memory.
+  - **With any other Refugio window open, the worker focuses it and posts
+    `{ type: "refugio:open-mailbox", url }` rather than opening anything** (corrected in review of
+    #276). Not navigating a client by hand is not enough to keep the promise above:
+    [`clients.openWindow()`](https://developer.mozilla.org/en-US/docs/Web/API/Clients/openWindow)
+    does not promise a *new* window, and in an installed app Chrome can reuse the standalone
+    window already open (Android, Windows) — navigating away from a draft. So `openWindow()` is
+    only ever called when no Refugio window exists, where there is nothing to lose. Only the page
+    knows whether it holds an unsent draft, so the page decides what the intent does.
   - The worker is served with `Cache-Control: no-cache`, so a fix to it reaches people on their
     next visit, and with its own CSP.
 - The proxy lets `/sw.js`, `/manifest.webmanifest`, `/icons/` and `/apple-icon.png` through
@@ -231,10 +239,16 @@ Off by default. It's offered, never asked for on arrival.
   - a failed notice leaves the letter delivered;
   - no notice ever carries letter text.
 - **PR 3a:** the worker shows a notice for every push (even an unreadable one), opens the mailbox
-  in the notice's locale, and never navigates another Refugio window.
+  in the notice's locale, and never navigates another Refugio window — including that
+  `openWindow()` is not called at all while any Refugio window is open.
 - **PR 3b:**
   - the seal is still available in both closings;
-  - leaving a closing, or returning home, clears it.
+  - leaving a closing, or returning home, clears it;
+  - **a page acts on `refugio:open-mailbox`**: with no unsent draft it goes to the mailbox; with
+    one, it keeps the draft. Opening the mailbox still asks for the seal picture first (#268) —
+    the intent is a request to navigate, never a way past that.
+  - On a real installed app, on Android or Windows: tapping a notice with an unsent draft keeps
+    the draft. This is the case unit tests can't reach, because they mock `openWindow()`.
 
 Verification follows the usual rules: `next build` + `next start`, a real end-to-end push in local
 Chrome against a local database, and desktop plus phone widths.

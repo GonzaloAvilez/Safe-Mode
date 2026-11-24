@@ -9,7 +9,16 @@ const SOURCE = readFileSync(path.resolve(__dirname, "../../public/sw.js"), "utf8
 const ORIGIN = "https://refugiospace.com";
 
 type Listener = (event: Record<string, unknown>) => void;
-type WindowClient = { url: string; focus: ReturnType<typeof vi.fn> };
+type WindowClient = {
+  url: string;
+  focused?: boolean;
+  focus: ReturnType<typeof vi.fn>;
+  postMessage: ReturnType<typeof vi.fn>;
+};
+
+function windowAt(url: string, focused = false): WindowClient {
+  return { url, focused, focus: vi.fn(async () => undefined), postMessage: vi.fn() };
+}
 
 function loadWorker(windows: WindowClient[] = []) {
   const listeners = new Map<string, Listener>();
@@ -102,7 +111,7 @@ describe("service worker: tapping the notice", () => {
     return { close, event: { notification: { close, data: url ? { url } : undefined } } };
   }
 
-  it("opens the mailbox in a new window", async () => {
+  it("opens a window when no Refugio window is open", async () => {
     const { self, dispatch } = loadWorker();
     const { close, event } = tap("/es/mailbox");
 
@@ -113,24 +122,74 @@ describe("service worker: tapping the notice", () => {
   });
 
   it("focuses a window already on the mailbox instead of opening another", async () => {
-    const mailbox = { url: `${ORIGIN}/es/mailbox`, focus: vi.fn(async () => undefined) };
+    const mailbox = windowAt(`${ORIGIN}/es/mailbox`);
     const { self, dispatch } = loadWorker([mailbox]);
 
     await dispatch("notificationclick", tap("/es/mailbox").event);
 
     expect(mailbox.focus).toHaveBeenCalledOnce();
+    expect(mailbox.postMessage).not.toHaveBeenCalled();
     expect(self.clients.openWindow).not.toHaveBeenCalled();
   });
 
-  // The ritual and its drafts live only in memory: navigating that window would lose them.
-  it("leaves a Refugio window on another screen alone", async () => {
-    const writing = { url: `${ORIGIN}/es/write`, focus: vi.fn() };
-    const { self, dispatch } = loadWorker([writing]);
+  // The heart of it: the ritual and its drafts live only in memory. `clients.openWindow()` does
+  // not promise a *new* window — an installed app can have its standalone window reused — so with
+  // any Refugio window open it is never called. The window is focused and told why instead.
+  describe("with a Refugio window open somewhere else", () => {
+    it("never calls openWindow, which could navigate that window away from a draft", async () => {
+      const writing = windowAt(`${ORIGIN}/es/write`);
+      const { self, dispatch } = loadWorker([writing]);
 
-    await dispatch("notificationclick", tap("/es/mailbox").event);
+      await dispatch("notificationclick", tap("/es/mailbox").event);
 
-    expect(writing.focus).not.toHaveBeenCalled();
-    expect(self.clients.openWindow).toHaveBeenCalledWith(`${ORIGIN}/es/mailbox`);
+      expect(self.clients.openWindow).not.toHaveBeenCalled();
+    });
+
+    it("focuses it and sends the mailbox intent, instead of navigating it", async () => {
+      const writing = windowAt(`${ORIGIN}/es/write`);
+      const { dispatch } = loadWorker([writing]);
+
+      await dispatch("notificationclick", tap("/es/mailbox").event);
+
+      expect(writing.focus).toHaveBeenCalledOnce();
+      expect(writing.postMessage).toHaveBeenCalledWith({
+        type: "refugio:open-mailbox",
+        url: `${ORIGIN}/es/mailbox`,
+      });
+    });
+
+    it("never navigates it, whatever the browser offers", async () => {
+      const writing = { ...windowAt(`${ORIGIN}/es/write`), navigate: vi.fn() };
+      const { dispatch } = loadWorker([writing]);
+
+      await dispatch("notificationclick", tap("/es/mailbox").event);
+
+      expect(writing.navigate).not.toHaveBeenCalled();
+    });
+
+    it("prefers the focused window when several are open", async () => {
+      const background = windowAt(`${ORIGIN}/es/write`);
+      const front = windowAt(`${ORIGIN}/es/observe`, true);
+      const { dispatch } = loadWorker([background, front]);
+
+      await dispatch("notificationclick", tap("/es/mailbox").event);
+
+      expect(front.postMessage).toHaveBeenCalledOnce();
+      expect(background.postMessage).not.toHaveBeenCalled();
+    });
+
+    // The mailbox itself still wins: it's already where the tap wanted to go.
+    it("still prefers a window already on the mailbox over a focused one", async () => {
+      const front = windowAt(`${ORIGIN}/es/write`, true);
+      const mailbox = windowAt(`${ORIGIN}/es/mailbox`);
+      const { self, dispatch } = loadWorker([front, mailbox]);
+
+      await dispatch("notificationclick", tap("/es/mailbox").event);
+
+      expect(mailbox.focus).toHaveBeenCalledOnce();
+      expect(front.focus).not.toHaveBeenCalled();
+      expect(self.clients.openWindow).not.toHaveBeenCalled();
+    });
   });
 
   it("opens the English mailbox when the notice carries no url", async () => {
