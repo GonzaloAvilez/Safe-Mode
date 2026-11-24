@@ -145,8 +145,32 @@ Off by default. It's offered, never asked for on arrival.
 ### Installable app (minimum PWA)
 
 - An `app/manifest.ts` and 192/512 icons, so the site can be installed.
+  - The icons, plus the 180px `apple-icon.png`, are the same door as `src/app/icon.png`, redrawn
+    as a vector in `docs/design/refugio-icon.svg`: the original is only 256px.
+  - On iPhone, the installed app uses an opaque black status bar. A translucent one would draw the
+    page under the clock, with the fixed language selector beneath it.
 - A minimal service worker at `public/sw.js` that only shows the notice and opens the mailbox on
   tap. It does no offline caching and touches no other request.
+  - **The notice's contract** is `{ title, body, locale }` from the server. The mailbox opens in
+    that locale, falling back to English. A payload that can't be read still shows a notice,
+    because browsers show their own generic one otherwise.
+  - **A tap opens the mailbox in a new window**, or focuses a window already on it. It never
+    navigates another Refugio window, because the ritual and its drafts live only in memory.
+  - **With any other Refugio window open, the worker focuses it and posts
+    `{ type: "refugio:open-mailbox", url }` rather than opening anything** (corrected in review of
+    #276). Not navigating a client by hand is not enough to keep the promise above:
+    [`clients.openWindow()`](https://developer.mozilla.org/en-US/docs/Web/API/Clients/openWindow)
+    does not promise a *new* window, and in an installed app Chrome can reuse the standalone
+    window already open (Android, Windows) — navigating away from a draft. So `openWindow()` is
+    only ever called when no Refugio window exists, where there is nothing to lose. Only the page
+    knows whether it holds an unsent draft, so the page decides what the intent does.
+  - The worker is served with `Cache-Control: no-cache`, so a fix to it reaches people on their
+    next visit, and with its own CSP.
+- The proxy lets `/sw.js`, `/manifest.webmanifest`, `/icons/` and `/apple-icon.png` through
+  untouched. Locale routing would otherwise send `/sw.js` to `/en/sw.js`, and a service worker
+  must be served from its own path.
+- Nothing registers the worker yet. `LetterNotificationsToggle` registers it the moment someone
+  opts in, so people who never opt in never get one.
 
 ### Keys
 
@@ -202,8 +226,9 @@ Off by default. It's offered, never asked for on arrival.
 2. **PR 1, migration:** `push_subscriptions`, alone.
 3. **PR 2, server:** `notifications/`, the routes, and the `approveLetter` hook. It stays dark
    without the keys.
-4. **PR 3, browser:** the manifest, icons, service worker and `LetterNotificationsToggle`, with
-   the seal kept until the closing is left.
+4. **PR 3a, installable app:** the manifest, icons and service worker. It doesn't depend on PRs 1
+   or 2, so it can merge at any time.
+5. **PR 3b, browser:** `LetterNotificationsToggle`, with the seal kept until the closing is left.
 
 **The implementation PRs must test:**
 - **PR 2:**
@@ -213,9 +238,17 @@ Off by default. It's offered, never asked for on arrival.
   - two concurrent approvals of one letter schedule exactly one notice;
   - a failed notice leaves the letter delivered;
   - no notice ever carries letter text.
-- **PR 3:**
+- **PR 3a:** the worker shows a notice for every push (even an unreadable one), opens the mailbox
+  in the notice's locale, and never navigates another Refugio window — including that
+  `openWindow()` is not called at all while any Refugio window is open.
+- **PR 3b:**
   - the seal is still available in both closings;
-  - leaving a closing, or returning home, clears it.
+  - leaving a closing, or returning home, clears it;
+  - **a page acts on `refugio:open-mailbox`**: with no unsent draft it goes to the mailbox; with
+    one, it keeps the draft. Opening the mailbox still asks for the seal picture first (#268) —
+    the intent is a request to navigate, never a way past that.
+  - On a real installed app, on Android or Windows: tapping a notice with an unsent draft keeps
+    the draft. This is the case unit tests can't reach, because they mock `openWindow()`.
 
 Verification follows the usual rules: `next build` + `next start`, a real end-to-end push in local
 Chrome against a local database, and desktop plus phone widths.
