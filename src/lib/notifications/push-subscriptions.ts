@@ -1,4 +1,5 @@
 import "server-only";
+import { ECDH } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase";
 import { unwrap } from "@/lib/supabase-result";
 import type { Locale } from "@/lib/locale";
@@ -23,8 +24,38 @@ const MAX_KEY_LENGTH = 512;
 const PUSH_SERVICE_HOSTS = new Set(["fcm.googleapis.com", "updates.push.services.mozilla.com"]);
 const PUSH_SERVICE_HOST_SUFFIXES = [".push.apple.com", ".notify.windows.com"];
 
+// What web-push needs to encrypt a notice (RFC 8291): the browser's P-256 public key, 65 bytes, and
+// an auth secret of at least 16 bytes, both base64url.
+const P256DH_BYTES = 65;
+const MIN_AUTH_BYTES = 16;
+// Strict alphabet first: Buffer's base64url decoding skips characters it doesn't know instead of
+// failing, so "abc!!!def" would otherwise decode to 4 bytes.
+const BASE64URL = /^[A-Za-z0-9_-]+={0,2}$/;
+
 function isBoundedString(value: unknown, maxLength: number): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= maxLength;
+}
+
+function decodeBase64Url(value: string): Buffer | null {
+  return BASE64URL.test(value) ? Buffer.from(value, "base64url") : null;
+}
+
+// 65 bytes isn't enough on its own: a value that isn't a point on the curve passes web-push's
+// length check and then fails when the notice is encrypted.
+function isUsableP256dh(value: string): boolean {
+  const bytes = decodeBase64Url(value);
+  if (!bytes || bytes.length !== P256DH_BYTES) return false;
+  try {
+    ECDH.convertKey(bytes, "prime256v1", undefined, undefined, "uncompressed");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isUsableAuthSecret(value: string): boolean {
+  const bytes = decodeBase64Url(value);
+  return bytes !== null && bytes.length >= MIN_AUTH_BYTES;
 }
 
 // A well-formed https URL on one of the push services above: default port, no credentials. The
@@ -41,13 +72,15 @@ export function isAllowedPushEndpoint(endpoint: string): boolean {
 }
 
 // A browser's PushSubscription as JSON ({ endpoint, keys: { p256dh, auth } }), or null when it
-// isn't one. The table repeats the https and non-empty checks; this answers 400 before that.
+// isn't one a notice could be sent to. The table repeats the https and non-empty checks; this
+// answers 400 before that, so unusable keys are never saved, nor replace a device's good ones.
 export function parsePushSubscription(value: unknown): PushSubscriptionKeys | null {
   if (typeof value !== "object" || value === null) return null;
   const { endpoint, keys } = value as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } };
   if (!isBoundedString(endpoint, MAX_ENDPOINT_LENGTH) || !isAllowedPushEndpoint(endpoint)) return null;
   if (typeof keys !== "object" || keys === null) return null;
   if (!isBoundedString(keys.p256dh, MAX_KEY_LENGTH) || !isBoundedString(keys.auth, MAX_KEY_LENGTH)) return null;
+  if (!isUsableP256dh(keys.p256dh) || !isUsableAuthSecret(keys.auth)) return null;
   return { endpoint, p256dh: keys.p256dh, auth: keys.auth };
 }
 
