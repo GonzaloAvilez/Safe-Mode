@@ -35,7 +35,7 @@ minimization**, **explicit double opt-in**, **defense in depth**.
 | 4 | **Application (API / route handlers)** | `POST /connect` creates a request from `matched_phrase_id`. `POST /letters`, `GET /mailbox` (authorized by return key) | Thin controllers. Idempotent writes. Rate limiting |
 | 5 | **Domain (business rules, `src/lib`)** | Two-level lifecycle: each letter's status, plus the correspondence state derived from its letters (see [Letter rules](#letter-rules)) | **Finite state machine**. Domain rules isolated from transport |
 | 6 | **Safety pipeline (cross-cutting)** | Every letter goes through `moderateText` + crisis flow. Contact info (email/phone/URL/@handle) is blocked. Human review queue in `/admin` before delivery | **Defense in depth**, fail-closed moderation, reuse of existing gate |
-| 7 | **Delivery / notification (infrastructure)** | Letter waits in a mailbox until the author returns. Push/email notifications are deferred | Pull-based delivery (polling on return). Notifications can be added later via an outbox |
+| 7 | **Delivery / notification (infrastructure)** | Letter waits in a mailbox until the author returns. Push/email notifications are deferred | Pull-based delivery (polling on return). Notifications can be added later via an outbox. **Push notifications: see [ADR-005](./ADR-005-push-notifications-tied-to-identity.md) (2026-11-23)** |
 | 8 | **Observability** | Count requests, deliveries, rejections. No message content in logs | Privacy-preserving metrics (ADR-001) |
 
 Order: 0 → 2 → 3 → 5/6 → 4 → 1 → 7 → 8. Data and rules come before UI, and the UI copy ships last
