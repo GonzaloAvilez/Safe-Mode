@@ -1,7 +1,7 @@
 import "server-only";
 import webpush from "web-push";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/locale";
-import { listPushSubscriptions, removePushEndpoint } from "@/lib/notifications/push-subscriptions";
+import { isAllowedPushEndpoint, listPushSubscriptions, removePushEndpoint } from "@/lib/notifications/push-subscriptions";
 import type { NotificationChannel } from "@/lib/notifications/notify";
 
 // ADR-005: notices through the browsers' own push services (Apple, Google, Mozilla), signed with
@@ -43,6 +43,12 @@ export const webPushChannel: NotificationChannel = {
     // after() keeps the function alive only until this promise settles.
     const results = await Promise.allSettled(
       subscriptions.map(async ({ endpoint, p256dh, auth, locale: storedLocale }) => {
+        // Checked again here, not only when subscribing: the server only ever calls the
+        // browsers' push services, whatever the table holds (SSRF).
+        if (!isAllowedPushEndpoint(endpoint)) {
+          console.error("web-push: skipped a device outside the allowed push services");
+          return;
+        }
         const locale = isLocale(storedLocale) ? storedLocale : DEFAULT_LOCALE;
         // The service worker's contract (public/sw.js): { title, body, locale }, nothing else.
         const payload = JSON.stringify({ ...noticeIn(locale), locale });

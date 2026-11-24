@@ -7,7 +7,9 @@ const { sendNotificationMock, listMock, removeEndpointMock } = vi.hoisted(() => 
 }));
 
 vi.mock("web-push", () => ({ default: { sendNotification: sendNotificationMock } }));
-vi.mock("@/lib/notifications/push-subscriptions", () => ({
+vi.mock("@/lib/supabase", () => ({ supabaseAdmin: {} }));
+vi.mock("@/lib/notifications/push-subscriptions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/notifications/push-subscriptions")>()),
   listPushSubscriptions: listMock,
   removePushEndpoint: removeEndpointMock,
 }));
@@ -16,8 +18,8 @@ const { webPushChannel, NOTICE_TOPIC, NOTICE_TTL_SECONDS } = await import("@/lib
 
 const IDENTITY = "identity-1";
 const VAPID = { publicKey: "public-key", privateKey: "private-key", subject: "https://refugiospace.com" };
-const phone = { endpoint: "https://push.example/phone", p256dh: "p1", auth: "a1", locale: "es" };
-const laptop = { endpoint: "https://push.example/laptop", p256dh: "p2", auth: "a2", locale: "en" };
+const phone = { endpoint: "https://fcm.googleapis.com/fcm/send/phone", p256dh: "p1", auth: "a1", locale: "es" };
+const laptop = { endpoint: "https://updates.push.services.mozilla.com/wpush/v2/laptop", p256dh: "p2", auth: "a2", locale: "en" };
 
 const noticeIn = (locale: string) => ({ title: "Refugio", body: `body-${locale}` });
 
@@ -143,6 +145,22 @@ describe("webPushChannel", () => {
 
     expect(laptopDone).toBe(true);
     expect(consoleError).toHaveBeenCalledWith("web-push: couldn't remove a gone device");
+    consoleError.mockRestore();
+  });
+
+  // SSRF: whatever the table holds, the server only ever calls the browsers' push services.
+  it("never sends to a stored endpoint outside the push services, and still sends to the others", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const internal = { ...phone, endpoint: "https://10.0.0.1/internal" };
+    listMock.mockResolvedValueOnce([internal, laptop]);
+
+    await webPushChannel.send(IDENTITY, noticeIn);
+
+    expect(sendNotificationMock).toHaveBeenCalledOnce();
+    expect(sendNotificationMock.mock.calls[0][0].endpoint).toBe(laptop.endpoint);
+    expect(removeEndpointMock).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith("web-push: skipped a device outside the allowed push services");
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain("10.0.0.1");
     consoleError.mockRestore();
   });
 
