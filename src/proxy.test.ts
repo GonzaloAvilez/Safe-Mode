@@ -27,7 +27,15 @@ afterEach(() => {
 });
 
 describe("locale routing proxy", () => {
-  it.each(["/api/phrases", "/closed", "/icon.png"])("keeps %s outside locale routing", async (pathname) => {
+  it.each([
+    "/api/phrases",
+    "/closed",
+    "/icon.png",
+    "/apple-icon.png",
+    "/icons/icon-512.png",
+    "/manifest.webmanifest",
+    "/sw.js",
+  ])("keeps %s outside locale routing", async (pathname) => {
     const response = await proxy(request(pathname));
 
     expect(response.headers.get("x-intl")).toBeNull();

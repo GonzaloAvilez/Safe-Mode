@@ -46,8 +46,20 @@ const SESSION_PAYLOAD = "admin";
 // shared with Leave a Trace's own submit — gating it on contribute_open would break the
 // main flow when Contribute is off, and gating it on site_public alone would break
 // Contribute while the main site is closed. Its own rate limiting/moderation are the
-// real defense here, not this proxy check.
-const ALWAYS_ALLOWED_PREFIXES = ["/admin", "/closed", "/api/cron", "/api/phrases", "/icon.png"];
+// real defense here, not this proxy check. The installable-app files (ADR-005) are here
+// too: locale routing would send /sw.js to /en/sw.js, and a service worker must be served
+// from its own path.
+const ALWAYS_ALLOWED_PREFIXES = [
+  "/admin",
+  "/closed",
+  "/api/cron",
+  "/api/phrases",
+  "/icon.png",
+  "/apple-icon.png",
+  "/icons/",
+  "/manifest.webmanifest",
+  "/sw.js",
+];
 
 function isValidAdminCookie(value: string | undefined): boolean {
   if (!value) return false;
