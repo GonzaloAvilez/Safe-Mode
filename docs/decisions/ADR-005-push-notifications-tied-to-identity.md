@@ -3,7 +3,7 @@
 **Status:** Proposed 2026-11-23. Direction chosen by the founder. Revised 2026-11-24 after review (where opt-in is offered, `after()`, per-identity opt-out, one notice per delivery, names). The notice's title is still open.
 **Date:** 2026-11-23
 **Context owner:** product/eng
-**Related:** [ADR-004](./ADR-004-mutual-connection-between-strangers.md) (layer 7, identity model), [ADR-003](./ADR-003-bilingual-routing-and-matching.md), `docs/feedback-convergence-protocol.md`
+**Related:** [ADR-004](./ADR-004-mutual-connection-between-strangers.md) (layer 7, identity model), [ADR-003](./ADR-003-bilingual-routing-and-matching.md)
 
 ## Context
 
@@ -219,15 +219,3 @@ Off by default. It's offered, never asked for on arrival.
 
 Verification follows the usual rules: `next build` + `next start`, a real end-to-end push in local
 Chrome against a local database, and desktop plus phone widths.
-
-## Convergence protocol
-
-Run as a sanity check, per `docs/feedback-convergence-protocol.md`:
-- **Norman level:** behavioral (knowing something is waiting) and reflective (feeling answered
-  rather than forgotten).
-- **Tension with existing decisions:** none with this design. The login half of the original
-  suggestion would have been in tension with "never persistent usernames or profiles"; that
-  half is not built.
-- **Triangulation:** one outside source (2026-11-11), plus the product's own gap: delivered
-  letters nobody hears about. That's not a triangulated pattern. **This is the founder's call,
-  made knowingly.**
