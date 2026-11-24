@@ -1,6 +1,6 @@
 # ADR-005: Push notifications tied to an identity, no accounts
 
-**Status:** Proposed 2026-11-23. Direction chosen by the founder. Open decisions below are resolved in review, before any code.
+**Status:** Proposed 2026-11-23. Direction chosen by the founder. Revised 2026-11-24 after review (where opt-in is offered, `after()`, per-identity opt-out, one notice per delivery, names). The notice's title is still open.
 **Date:** 2026-11-23
 **Context owner:** product/eng
 **Related:** [ADR-004](./ADR-004-mutual-connection-between-strangers.md) (layer 7, identity model), [ADR-003](./ADR-003-bilingual-routing-and-matching.md), `docs/feedback-convergence-protocol.md`
@@ -53,10 +53,18 @@ approveLetter ──► notify(identityId, "letter_delivered")
   identity, and existing subscriptions keep working, with no data migration.
 - **A channel is one file with one contract:** `send(identityId, message)`. Email, if it ever
   exists, is another file under `channels/`. `approveLetter` and the mailbox never change for it.
-- **Domain code never waits on a notice.** `notify()` is best-effort: a failed notice is logged
-  (never with letter content) and the letter stays delivered. If retries are ever needed,
-  `notify()` can write to an outbox table internally without changing its callers, which is
-  the outbox ADR-004 anticipated.
+- **Domain code never waits on a notice, and never loses it to the response ending.** An
+  unawaited promise can be cut off once the response is sent, so the notice is scheduled with
+  Next's `after()`, which runs on Vercel's `waitUntil`. `after()` is supported in Server
+  Functions, and `/api/phrases` already uses it for phrase moderation.
+  - `approveLetter` stays free of Next and of notices: it only reports whether the delivery was
+    applied.
+  - The caller, the admin's `approveLetterAction`, schedules
+    `after(() => notify(recipient, "letter_delivered"))` when it was.
+  - `notify()` is best-effort. A failed notice is logged, never with letter content, and the
+    letter stays delivered.
+  - No outbox and no retries now. If they're ever needed, `notify()` can write to an outbox table
+    internally without changing its callers, which is the outbox ADR-004 anticipated.
 
 ### Data
 
@@ -83,6 +91,11 @@ When `approveLetter` delivers a letter, only the **person receiving it** gets a 
 - a letter from the author notifies the visitor;
 - a seed phrase the founder answers has no identity to notify.
 
+**One notice per delivery that actually happened.** `approveLetter` only moves a letter from `held`
+to `delivered` if it's still held (`.eq("status", "held")`). With two approvals at once (a double
+click, two tabs), one wins and the other gets `already_decided`. The notice is scheduled only for
+the one that won, so concurrent approvals send a single notice.
+
 Rejections and "your letter was delivered" don't send anything in v1. Each would be one more
 event in `messages.ts` and one more `notify()` call.
 
@@ -99,14 +112,35 @@ event in `messages.ts` and one more `notify()` call.
 
 ### Subscribing and unsubscribing
 
-- `POST /api/notifications/subscription` requires the seal as a Bearer token, the same as
-  `/api/mailbox`, and links this device to that identity. It's only offered where the seal is
-  already in memory: inside the opened mailbox, and right after sending a letter.
-- `DELETE /api/notifications/subscription` requires only the `endpoint`, so a device can opt out
-  without the seal.
-- When a push service answers 404 or 410 (the person revoked permission, or the subscription
-  expired), that row is deleted on the spot.
-- Off by default. It's offered, never asked for on arrival.
+Both routes require the seal as a Bearer token, the same as `/api/mailbox`:
+- `POST /api/notifications/subscription` links this device to that identity.
+- `DELETE /api/notifications/subscription` removes only the `(identity, endpoint)` row.
+
+**Where it's offered.** Only where the seal is already in memory, so nobody is asked to choose the
+picture again just to opt in:
+1. **The Leave a Trace closing ("sealed").** The phrase's author is the person who most needs a
+   notice, because they wait for a first letter that may never come. Their seal is only in memory
+   during the ritual.
+2. **The Mirror closing ("sent")**, after the first letter.
+3. **Inside the opened mailbox.**
+
+Today both closings drop the seal from memory the moment they're reached: `finishSealing()` in
+Leave a Trace, and `phase: "sent", key: null` in `FirstLetterFlow`. They will instead drop it when
+the person leaves the closing. It's still memory only, never browser storage, and returning home
+still clears it (`clearRitualState`).
+
+**Opting out is per identity.**
+- Turning `LetterNotificationsToggle` off removes only that identity's row. It does **not**
+  unsubscribe the browser, because another identity on the same device may still use the same
+  endpoint.
+- When a push service answers 404 or 410 (the person revoked permission in the browser, or the
+  subscription expired), **every** row with that endpoint is deleted on the spot. Other failures
+  (429, 5xx) keep the rows.
+- There is no endpoint-only delete. Someone without their seal opts out by revoking the
+  permission in the browser, which the 404/410 rule then cleans up. That's one less route to
+  protect.
+
+Off by default. It's offered, never asked for on arrival.
 
 ### Installable app (minimum PWA)
 
@@ -143,11 +177,13 @@ event in `messages.ts` and one more `notify()` call.
 1. **The notice's title:** "Refugio", or something neutral that doesn't name the app? Showing the
    name of an emotional-support space on a lock screen says something about the person.
    - Body proposed: ES "Tienes una carta esperándote." / EN "A letter is waiting for you."
-2. **Names:**
+2. ~~Names~~ **Resolved in review (2026-11-24):**
    - table: `push_subscriptions`;
    - module: `src/lib/notifications/` (`notify`, `messages`, `channels/web-push`);
    - routes: `/api/notifications/subscription`;
-   - browser code: `src/lib/push-client.ts`, with the `NotifyMeToggle` component;
+   - browser code: `src/lib/push-client.ts`;
+   - component: `LetterNotificationsToggle`, renamed from `NotifyMeToggle` so the name says which
+     notices it controls;
    - event: `letter_delivered`.
 
 ## Deferred
@@ -162,10 +198,27 @@ event in `messages.ts` and one more `notify()` call.
 
 ## Build order
 
-Docs (this ADR) → PR 1 migration (`push_subscriptions`, alone) → PR 2 server (`notifications/`,
-routes, the `approveLetter` hook; dark without keys) → PR 3 browser (manifest, icons, service
-worker, `NotifyMeToggle`). Verification follows the usual rules: `next build` + `next start`, a real
-end-to-end push in local Chrome against a local database, and desktop plus phone widths.
+1. **Docs:** this ADR.
+2. **PR 1, migration:** `push_subscriptions`, alone.
+3. **PR 2, server:** `notifications/`, the routes, and the `approveLetter` hook. It stays dark
+   without the keys.
+4. **PR 3, browser:** the manifest, icons, service worker and `LetterNotificationsToggle`, with
+   the seal kept until the closing is left.
+
+**The implementation PRs must test:**
+- **PR 2:**
+  - opting out with several identities on one endpoint: only that identity's row goes, and the
+    others still get notices;
+  - a 404/410 deletes every row for that endpoint, while 429/5xx delete nothing;
+  - two concurrent approvals of one letter schedule exactly one notice;
+  - a failed notice leaves the letter delivered;
+  - no notice ever carries letter text.
+- **PR 3:**
+  - the seal is still available in both closings;
+  - leaving a closing, or returning home, clears it.
+
+Verification follows the usual rules: `next build` + `next start`, a real end-to-end push in local
+Chrome against a local database, and desktop plus phone widths.
 
 ## Convergence protocol
 
