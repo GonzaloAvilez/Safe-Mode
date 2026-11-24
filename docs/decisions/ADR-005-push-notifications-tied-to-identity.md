@@ -1,6 +1,6 @@
 # ADR-005: Push notifications tied to an identity, no accounts
 
-**Status:** Proposed 2026-11-23. Direction chosen by the founder. Revised 2026-11-24 after review (where opt-in is offered, `after()`, per-identity opt-out, one notice per delivery, names). The notice's text was decided by the founder on 2026-11-24 (see "Open decisions").
+**Status:** Proposed 2026-11-23. Direction chosen by the founder. Revised 2026-11-24 after review (where opt-in is offered, `after()`, per-identity opt-out, one notice per delivery, names). The notice's text was decided by the founder on 2026-11-24 (see "Open decisions"). **Accepted for the server part 2026-11-24** (#272). The browser part (PR 3b, #273) is still to build.
 **Date:** 2026-11-23
 **Context owner:** product/eng
 **Related:** [ADR-004](./ADR-004-mutual-connection-between-strangers.md) (layer 7, identity model), [ADR-003](./ADR-003-bilingual-routing-and-matching.md)
