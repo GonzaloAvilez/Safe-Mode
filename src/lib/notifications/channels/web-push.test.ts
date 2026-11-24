@@ -14,7 +14,7 @@ vi.mock("@/lib/notifications/push-subscriptions", async (importOriginal) => ({
   removePushEndpoint: removeEndpointMock,
 }));
 
-const { webPushChannel, NOTICE_TOPIC, NOTICE_TTL_SECONDS } = await import("@/lib/notifications/channels/web-push");
+const { webPushChannel, NOTICE_TOPIC, NOTICE_TTL_SECONDS, PUSH_REQUEST_TIMEOUT_MS } = await import("@/lib/notifications/channels/web-push");
 
 const IDENTITY = "identity-1";
 const VAPID = { publicKey: "public-key", privateKey: "private-key", subject: "https://refugiospace.com" };
@@ -47,7 +47,7 @@ describe("webPushChannel", () => {
     await webPushChannel.send(IDENTITY, noticeIn);
 
     expect(listMock).toHaveBeenCalledWith(IDENTITY);
-    const options = { TTL: NOTICE_TTL_SECONDS, topic: NOTICE_TOPIC, vapidDetails: VAPID };
+    const options = { TTL: NOTICE_TTL_SECONDS, topic: NOTICE_TOPIC, timeout: PUSH_REQUEST_TIMEOUT_MS, vapidDetails: VAPID };
     expect(sendNotificationMock).toHaveBeenCalledWith(
       { endpoint: phone.endpoint, keys: { p256dh: "p1", auth: "a1" } },
       JSON.stringify({ title: "Refugio", body: "body-es", locale: "es" }),
@@ -60,6 +60,7 @@ describe("webPushChannel", () => {
     );
     expect(NOTICE_TTL_SECONDS).toBe(604800);
     expect(NOTICE_TOPIC).toBe("mailbox");
+    expect(PUSH_REQUEST_TIMEOUT_MS).toBe(10_000);
   });
 
   // The service worker's whole contract: no other field can ride along, letter text included.
@@ -114,6 +115,24 @@ describe("webPushChannel", () => {
     expect(removeEndpointMock).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith("web-push: a notice couldn't be delivered", status);
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain(phone.endpoint);
+    consoleError.mockRestore();
+  });
+
+  // web-push's own timeout error: a stalled push service settles like a network failure, and the
+  // other devices still get theirs.
+  it("lets a timed-out request settle without the device being removed, and still delivers to the others", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    listMock.mockResolvedValueOnce([phone, laptop]);
+    sendNotificationMock.mockImplementation(async ({ endpoint }) => {
+      if (endpoint === phone.endpoint) throw new Error("Socket timeout");
+      return { statusCode: 201 };
+    });
+
+    await webPushChannel.send(IDENTITY, noticeIn);
+
+    expect(sendNotificationMock).toHaveBeenCalledTimes(2);
+    expect(removeEndpointMock).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith("web-push: a notice couldn't be delivered", "no status");
     consoleError.mockRestore();
   });
 

@@ -13,6 +13,11 @@ export const NOTICE_TTL_SECONDS = 7 * 24 * 60 * 60;
 // Several pending notices for one device collapse into the last one, where the push service
 // supports it (RFC 8030). They'd all say the same thing.
 export const NOTICE_TOPIC = "mailbox";
+// A push service that holds the connection open without answering must not keep the whole batch,
+// and the after() task waiting on it, pending until the platform ends the invocation. This is a
+// socket inactivity timeout: once it fires, web-push destroys the request and the send rejects
+// like a network error (device kept, status logged as "no status").
+export const PUSH_REQUEST_TIMEOUT_MS = 10_000;
 
 // The push service's answer for a device that no longer exists.
 const GONE_STATUSES = new Set([404, 410]);
@@ -57,6 +62,7 @@ export const webPushChannel: NotificationChannel = {
           await webpush.sendNotification({ endpoint, keys: { p256dh, auth } }, payload, {
             TTL: NOTICE_TTL_SECONDS,
             topic: NOTICE_TOPIC,
+            timeout: PUSH_REQUEST_TIMEOUT_MS,
             vapidDetails,
           });
         } catch (error) {
