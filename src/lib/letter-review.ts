@@ -84,19 +84,37 @@ export async function countLettersAwaitingReview(): Promise<number> {
 
 export type LetterReviewResult = { ok: true } | { ok: false; reason: "already_decided" };
 
+// Approving also says who the letter is for, so the caller can notify them (ADR-005). null when
+// nobody can be notified: a seed phrase the founder answers has no identity.
+export type LetterApprovalResult = { ok: true; recipientIdentityId: string | null } | { ok: false; reason: "already_decided" };
+
+type ApprovedLetterRow = {
+  sender: LetterSender;
+  correspondence_id: string;
+  correspondences: { visitor_identity_id: string; phrases: { identity_id: string | null } };
+};
+
+// A letter goes to the other side: the visitor's to the phrase's author, the author's to the
+// visitor.
+export function letterRecipient(letter: ApprovedLetterRow): string | null {
+  return letter.sender === "visitor" ? letter.correspondences.phrases.identity_id : letter.correspondences.visitor_identity_id;
+}
+
 // Every decision updates the letter only if it's STILL held. That condition is the
 // held → delivered/rejected transition guard, and it makes a double click (or two open
 // tabs) harmless: the second update matches no row and answers "already_decided".
 
-export async function approveLetter(letterId: string): Promise<LetterReviewResult> {
+// Only the approval that actually moves the letter out of "held" gets ok: true, so only it can
+// lead to a notice. Concurrent approvals send one notice, not several.
+export async function approveLetter(letterId: string): Promise<LetterApprovalResult> {
   const now = new Date().toISOString();
   const { data, error } = await supabaseAdmin
     .from("letters")
     .update({ status: "delivered", delivered_at: now })
     .eq("id", letterId)
     .eq("status", "held")
-    .select("correspondence_id")
-    .maybeSingle();
+    .select("sender, correspondence_id, correspondences(visitor_identity_id, phrases(identity_id))")
+    .maybeSingle<ApprovedLetterRow>();
   if (error) throw error;
   if (!data) return { ok: false, reason: "already_decided" };
 
@@ -107,7 +125,7 @@ export async function approveLetter(letterId: string): Promise<LetterReviewResul
   } catch (error) {
     console.error("approveLetter: couldn't set closed_at, correspondence still reads as closed", error);
   }
-  return { ok: true };
+  return { ok: true, recipientIdentityId: letterRecipient(data) };
 }
 
 export async function rejectLetter(letterId: string): Promise<LetterReviewResult> {

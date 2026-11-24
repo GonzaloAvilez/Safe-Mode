@@ -64,17 +64,39 @@ describe("getReviewUrgency", () => {
 describe("approveLetter", () => {
   const delivered = (sender: Letter["sender"]): Letter => ({ sender, status: "delivered" });
 
+  // The delivered letter's row, with what's needed to know who it's for.
+  const approved = (sender: Letter["sender"], { author = "author-1" as string | null, visitor = "visitor-1" } = {}) => ({
+    data: {
+      sender,
+      correspondence_id: "c1",
+      correspondences: { visitor_identity_id: visitor, phrases: { identity_id: author } },
+    },
+    error: null,
+  });
+
   it("delivers a held letter, only if it's still held", async () => {
-    const update = query({ data: { correspondence_id: "c1" }, error: null });
+    const update = query(approved("visitor"));
     mockQueries(update, query({ data: [delivered("visitor")], error: null }));
 
-    expect(await approveLetter("l1")).toEqual({ ok: true });
+    expect(await approveLetter("l1")).toEqual({ ok: true, recipientIdentityId: "author-1" });
     expect(update.calls).toEqual([
       ["update", [{ status: "delivered", delivered_at: expect.any(String) }]],
       ["eq", ["id", "l1"]],
       ["eq", ["status", "held"]],
-      ["select", ["correspondence_id"]],
+      ["select", ["sender, correspondence_id, correspondences(visitor_identity_id, phrases(identity_id))"]],
     ]);
+  });
+
+  // ADR-005: the caller notifies whoever the letter is for.
+  it.each([
+    ["the visitor's letter goes to the phrase's author", "visitor", {}, "author-1"],
+    ["the author's letter goes to the visitor", "author", {}, "visitor-1"],
+    ["a letter to a seed phrase's author has nobody to notify", "visitor", { author: null }, null],
+    ["the founder's reply to a seed phrase still reaches the visitor", "author", { author: null }, "visitor-1"],
+  ] as const)("%s", async (_, sender, ids, recipient) => {
+    mockQueries(query(approved(sender, ids)), query({ data: [delivered(sender)], error: null }));
+
+    expect(await approveLetter("l1")).toEqual({ ok: true, recipientIdentityId: recipient });
   });
 
   it("answers already_decided when the letter is no longer held (double click)", async () => {
@@ -89,9 +111,9 @@ describe("approveLetter", () => {
       delivered(sender as Letter["sender"])
     );
     const close = query({ error: null });
-    mockQueries(query({ data: { correspondence_id: "c1" }, error: null }), query({ data: sixDelivered, error: null }), close);
+    mockQueries(query(approved("author")), query({ data: sixDelivered, error: null }), close);
 
-    expect(await approveLetter("l6")).toEqual({ ok: true });
+    expect(await approveLetter("l6")).toEqual({ ok: true, recipientIdentityId: "visitor-1" });
     expect(close.calls).toEqual([
       ["update", [{ closed_at: expect.any(String) }]],
       ["eq", ["id", "c1"]],
@@ -101,7 +123,7 @@ describe("approveLetter", () => {
 
   it("doesn't close a correspondence that isn't complete", async () => {
     mockQueries(
-      query({ data: { correspondence_id: "c1" }, error: null }),
+      query(approved("visitor")),
       query({ data: [delivered("visitor"), delivered("author"), delivered("visitor")], error: null })
     );
 
@@ -112,12 +134,9 @@ describe("approveLetter", () => {
 
   it("still reports the approval as done if closing fails afterwards", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockQueries(
-      query({ data: { correspondence_id: "c1" }, error: null }),
-      query({ data: null, error: { message: "connection failure" } })
-    );
+    mockQueries(query(approved("author")), query({ data: null, error: { message: "connection failure" } }));
 
-    expect(await approveLetter("l6")).toEqual({ ok: true });
+    expect(await approveLetter("l6")).toEqual({ ok: true, recipientIdentityId: "visitor-1" });
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });
