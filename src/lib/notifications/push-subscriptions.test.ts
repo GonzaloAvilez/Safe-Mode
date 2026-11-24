@@ -10,16 +10,24 @@ const endpointOfLength = (length: number) => {
   const prefix = "https://fcm.googleapis.com/fcm/send/";
   return prefix + "x".repeat(length - prefix.length);
 };
+// A real browser's keys: a P-256 public key (65 bytes) and a 16-byte auth secret, base64url.
+const P256DH = "BOurom9kflp01No-zioM65hciEAM-MMRCQa7ay_DYcyWH5WaXuRf5Dt13EGdKGZhxZV4eZPWKu2UVtNxoeh-eak";
+const AUTH = "1uAPnazz4eYyz1AHnTEuhA";
+// The same key with its last bit flipped: still 65 bytes, but not a point on the curve.
+const P256DH_OFF_CURVE = "BOurom9kflp01No-zioM65hciEAM-MMRCQa7ay_DYcyWH5WaXuRf5Dt13EGdKGZhxZV4eZPWKu2UVtNxoeh-eag";
+// The same point compressed (33 bytes): on the curve, but web-push only takes the 65-byte form.
+const P256DH_COMPRESSED = "A-urom9kflp01No-zioM65hciEAM-MMRCQa7ay_DYcyW";
 const browserSubscription = (overrides: Record<string, unknown> = {}) => ({
   endpoint: ENDPOINT,
   expirationTime: null,
-  keys: { p256dh: "p256dh-key", auth: "auth-secret" },
+  keys: { p256dh: P256DH, auth: AUTH },
   ...overrides,
 });
+const withKeys = (keys: Record<string, unknown>) => browserSubscription({ keys: { p256dh: P256DH, auth: AUTH, ...keys } });
 
 describe("parsePushSubscription", () => {
   it("reads a browser's PushSubscription JSON, keeping only what's stored", () => {
-    expect(parsePushSubscription(browserSubscription())).toEqual({ endpoint: ENDPOINT, p256dh: "p256dh-key", auth: "auth-secret" });
+    expect(parsePushSubscription(browserSubscription())).toEqual({ endpoint: ENDPOINT, p256dh: P256DH, auth: AUTH });
   });
 
   it.each([
@@ -32,17 +40,24 @@ describe("parsePushSubscription", () => {
     ["an endpoint that isn't a push service", browserSubscription({ endpoint: "https://example.com/push/1" })],
     ["no keys", browserSubscription({ keys: undefined })],
     ["keys that aren't an object", browserSubscription({ keys: "keys" })],
-    ["an empty p256dh", browserSubscription({ keys: { p256dh: "", auth: "auth-secret" } })],
-    ["an empty auth", browserSubscription({ keys: { p256dh: "p256dh-key", auth: "" } })],
-    ["a key over 512 characters", browserSubscription({ keys: { p256dh: "k".repeat(513), auth: "auth-secret" } })],
-    ["a key that isn't a string", browserSubscription({ keys: { p256dh: 42, auth: "auth-secret" } })],
+    ["an empty p256dh", withKeys({ p256dh: "" })],
+    ["an empty auth", withKeys({ auth: "" })],
+    ["a key over 512 characters", withKeys({ auth: "k".repeat(513) })],
+    ["a key that isn't a string", withKeys({ p256dh: 42 })],
+    // What web-push needs to encrypt (RFC 8291): anything else would be saved and fail at send.
+    ["a p256dh that isn't base64url", withKeys({ p256dh: "p256dh-key!" })],
+    ["a p256dh that isn't 65 bytes", withKeys({ p256dh: P256DH.slice(0, -2) })],
+    ["a p256dh that isn't a point on the curve", withKeys({ p256dh: P256DH_OFF_CURVE })],
+    ["a compressed p256dh (33 bytes)", withKeys({ p256dh: P256DH_COMPRESSED })],
+    ["an auth secret under 16 bytes", withKeys({ auth: AUTH.slice(0, -2) })],
+    ["an auth secret that isn't base64url", withKeys({ auth: "auth secret, 16+ bytes long" })],
   ])("rejects %s", (_, value) => {
     expect(parsePushSubscription(value)).toBeNull();
   });
 
   it("accepts the longest endpoint and keys it allows", () => {
     const endpoint = endpointOfLength(2048);
-    expect(parsePushSubscription(browserSubscription({ endpoint, keys: { p256dh: "k".repeat(512), auth: "a" } }))).not.toBeNull();
+    expect(parsePushSubscription(browserSubscription({ endpoint, keys: { p256dh: P256DH, auth: "k".repeat(512) } }))).not.toBeNull();
   });
 });
 

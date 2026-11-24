@@ -23,7 +23,10 @@ const { POST, DELETE } = await import("@/app/api/notifications/subscription/rout
 const SEAL = "482133901756229";
 const IDENTITY = "identity-1";
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-1";
-const SUBSCRIPTION = { endpoint: ENDPOINT, expirationTime: null, keys: { p256dh: "p256dh-key", auth: "auth-secret" } };
+// A real browser's keys: a P-256 public key (65 bytes) and a 16-byte auth secret, base64url.
+const P256DH = "BOurom9kflp01No-zioM65hciEAM-MMRCQa7ay_DYcyWH5WaXuRf5Dt13EGdKGZhxZV4eZPWKu2UVtNxoeh-eak";
+const AUTH = "1uAPnazz4eYyz1AHnTEuhA";
+const SUBSCRIPTION = { endpoint: ENDPOINT, expirationTime: null, keys: { p256dh: P256DH, auth: AUTH } };
 
 function call(handler: typeof POST, body: unknown, authorization: string | null = `Bearer ${SEAL}`) {
   const headers = new Headers({ "content-type": "application/json" });
@@ -54,7 +57,7 @@ describe("POST /api/notifications/subscription", () => {
 
     expect(response.status).toBe(204);
     expect(resolveIdentityMock).toHaveBeenCalledWith(SEAL);
-    expect(saveMock).toHaveBeenCalledWith(IDENTITY, { endpoint: ENDPOINT, p256dh: "p256dh-key", auth: "auth-secret" }, "es");
+    expect(saveMock).toHaveBeenCalledWith(IDENTITY, { endpoint: ENDPOINT, p256dh: P256DH, auth: AUTH }, "es");
   });
 
   it("answers 429 when rate limited, before reading the seal", async () => {
@@ -82,6 +85,9 @@ describe("POST /api/notifications/subscription", () => {
     ["no subscription", { locale: "es" }],
     ["an http endpoint", { subscription: { ...SUBSCRIPTION, endpoint: "http://push.example/1" }, locale: "es" }],
     ["no keys", { subscription: { endpoint: ENDPOINT }, locale: "es" }],
+    // Keys web-push can't encrypt with: a 204 here would save them, or replace a device's good ones.
+    ["a p256dh that isn't 65 bytes", { subscription: { ...SUBSCRIPTION, keys: { p256dh: "p256dh-key", auth: AUTH } }, locale: "es" }],
+    ["an auth secret under 16 bytes", { subscription: { ...SUBSCRIPTION, keys: { p256dh: P256DH, auth: "c2hvcnQ" } }, locale: "es" }],
     ["no locale", { subscription: SUBSCRIPTION }],
     ["an unsupported locale", { subscription: SUBSCRIPTION, locale: "fr" }],
   ])("answers 400 for %s, without looking the seal up", async (_, body) => {
