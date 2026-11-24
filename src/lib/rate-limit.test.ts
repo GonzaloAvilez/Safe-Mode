@@ -50,6 +50,7 @@ const {
   isMailboxRateLimited,
   isReturnKeyConfirmRateLimited,
   isReturnKeyCreateRateLimited,
+  isNotificationSubscriptionRateLimited,
 } = await import("@/lib/rate-limit");
 
 const identifiers = { ip: "203.0.113.10", sessionId: "session-1" };
@@ -277,5 +278,30 @@ describe("isReturnKeyCreateRateLimited", () => {
     expect(await isReturnKeyCreateRateLimited(identifiers)).toBe(false);
     expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "rate_limit_unavailable");
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("isNotificationSubscriptionRateLimited", () => {
+  it("uses its own Ratelimit instance at 10 per minute, so toggling notices never uses up the mailbox's", () => {
+    const index = constructorConfigs.findIndex((config) => config.prefix === "ratelimit:notification-subscription");
+
+    expect(index).toBeGreaterThan(-1);
+    expect(slidingWindowArgs[index]).toEqual([10, "60 s"]);
+  });
+
+  it("checks both the IP and the session", async () => {
+    limitMock.mockResolvedValueOnce(rateLimitAllowedFixture).mockResolvedValueOnce(rateLimitBlockedFixture);
+
+    expect(await isNotificationSubscriptionRateLimited(identifiers)).toBe(true);
+    expect(limitMock).toHaveBeenCalledWith("ip:203.0.113.10");
+    expect(limitMock).toHaveBeenCalledWith("session:session-1");
+  });
+
+  it("fails open when Upstash is unreachable", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    limitMock.mockRejectedValue(new Error("unreachable"));
+
+    expect(await isNotificationSubscriptionRateLimited(identifiers)).toBe(false);
+    expect(logRequestOutcomeMock).toHaveBeenCalledWith("203.0.113.10", "rate_limit_unavailable");
   });
 });
