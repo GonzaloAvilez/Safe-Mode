@@ -169,3 +169,26 @@ export async function isReturnKeyCreateRateLimited({ ip, sessionId }: RateLimitI
     return false;
   }
 }
+
+// Turning notices on or off (POST/DELETE /api/notifications/subscription, ADR-005). It checks a
+// seal like the mailbox, so it slows down guessing the same way. Its own budget, so toggling
+// notices never uses up the mailbox's.
+const notificationSubscriptionRatelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW),
+  prefix: "ratelimit:notification-subscription",
+});
+
+export async function isNotificationSubscriptionRateLimited({ ip, sessionId }: RateLimitIdentifiers): Promise<boolean> {
+  try {
+    const [ipResult, sessionResult] = await Promise.all([
+      notificationSubscriptionRatelimit.limit(`ip:${ip}`),
+      notificationSubscriptionRatelimit.limit(`session:${sessionId}`),
+    ]);
+    return !ipResult.success || !sessionResult.success;
+  } catch (error) {
+    logRequestOutcome(ip, "rate_limit_unavailable");
+    console.error("Upstash rate limit check failed, failing open:", error);
+    return false;
+  }
+}
