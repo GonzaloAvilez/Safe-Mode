@@ -119,9 +119,14 @@ event in `messages.ts` and one more `notify()` call.
 
 ### Subscribing and unsubscribing
 
-Both routes require the seal as a Bearer token, the same as `/api/mailbox`:
+Every route requires the seal as a Bearer token, the same as `/api/mailbox`:
 - `POST /api/notifications/subscription` links this device to that identity.
 - `DELETE /api/notifications/subscription` removes only the `(identity, endpoint)` row.
+- `POST /api/notifications/subscription/status` answers whether that `(identity, endpoint)` row
+  exists (added in #273). The mailbox opens an identity that may have opted in on an earlier visit,
+  and the browser alone can't tell, since one push subscription is shared by every identity on the
+  device. It's a POST so the endpoint travels in the body, never in the URL. It never registers a
+  service worker: with no subscription in the browser, nothing is asked.
 
 **Only the browsers' push services are accepted** (added in review of #280). An endpoint must be
 https, on the default port and without credentials, on `fcm.googleapis.com`,

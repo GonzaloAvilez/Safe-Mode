@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
+  isPushSubscribed,
   listPushSubscriptions,
   removePushEndpoint,
   removePushSubscription,
@@ -47,6 +48,18 @@ describe("push subscriptions (integration)", () => {
     const listed = await listPushSubscriptions(identityId);
 
     expect(listed.map((row) => row.endpoint).sort()).toEqual([phone.endpoint, laptop.endpoint].sort());
+  });
+
+  // What the toggle shows (ADR-005): only this identity's row on this device counts.
+  it("says whether an identity asked for notices on a device, not whether anyone on it did", async () => {
+    const [identityId, someoneElse] = [await createIdentity(), await createIdentity()];
+    const [shared, other] = [device(), device()];
+    await savePushSubscription(someoneElse, shared, "es");
+
+    expect(await isPushSubscribed(identityId, shared.endpoint)).toBe(false);
+    await savePushSubscription(identityId, shared, "es");
+    expect(await isPushSubscribed(identityId, shared.endpoint)).toBe(true);
+    expect(await isPushSubscribed(identityId, other.endpoint)).toBe(false);
   });
 
   // Opting out is per identity (ADR-005): two identities on one device are independent.
