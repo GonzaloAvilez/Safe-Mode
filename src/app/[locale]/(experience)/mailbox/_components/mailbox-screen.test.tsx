@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import es from "../../../../../../messages/es.json";
 
 const { readSealFromImageMock } = vi.hoisted(() => ({ readSealFromImageMock: vi.fn() }));
@@ -57,13 +57,20 @@ describe("MailboxScreen, before it's open", () => {
 });
 
 describe("MailboxScreen, leaving while the mailbox is still opening", () => {
-  const sealField = () => screen.getByLabelText(T.show.fieldLabel);
+  const choosePicture = () =>
+    fireEvent.change(screen.getByLabelText(T.show.chooseImage), { target: { files: [new File(["png"], "sello.png")] } });
   const expectClosed = () => {
     expect(screen.getByTestId("key").textContent).toBe("");
     expect(screen.getByTestId("opened").textContent).toBe("");
     expect(screen.getByTestId("phase").textContent).toBe("showing_seal");
     expect(screen.getByText(T.show.headline)).toBeTruthy();
   };
+
+  // With reduced motion the door opens as soon as the server answers: these tests are about who
+  // is still waiting for it, not about its animation.
+  beforeEach(() => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce"), media: query }));
+  });
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -72,10 +79,10 @@ describe("MailboxScreen, leaving while the mailbox is still opening", () => {
 
   it("a mailbox that arrives after “Volver al inicio” stays closed", async () => {
     let answer: (response: Response) => void = () => {};
+    readSealFromImageMock.mockResolvedValue(SEAL);
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((resolve) => (answer = resolve))));
     renderMailbox(<MailboxScreen />);
-    fireEvent.change(sealField(), { target: { value: SEAL } });
-    fireEvent.click(screen.getByRole("button", { name: T.show.submit }));
+    choosePicture();
     await screen.findByText(T.show.opening);
 
     fireEvent.click(screen.getByText(T.backToStart));
@@ -91,7 +98,7 @@ describe("MailboxScreen, leaving while the mailbox is still opening", () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ correspondences: [correspondence()] }));
     vi.stubGlobal("fetch", fetchMock);
     renderMailbox(<MailboxScreen />);
-    fireEvent.change(screen.getByLabelText(T.show.chooseImage), { target: { files: [new File(["png"], "sello.png")] } });
+    choosePicture();
     await screen.findByText(T.show.reading);
 
     fireEvent.click(screen.getByText(T.backToStart));
@@ -109,15 +116,15 @@ describe("MailboxScreen, leaving while the mailbox is still opening", () => {
       .mockReturnValueOnce(new Promise<Response>((resolve) => (answer = resolve)))
       .mockResolvedValueOnce(Response.json({ correspondences: [correspondence()] }));
     vi.stubGlobal("fetch", fetchMock);
+    readSealFromImageMock.mockResolvedValue(SEAL);
     renderMailbox(<MailboxScreen />);
-    fireEvent.change(sealField(), { target: { value: SEAL } });
-    fireEvent.click(screen.getByRole("button", { name: T.show.submit }));
+    choosePicture();
     await screen.findByText(T.show.opening);
     fireEvent.click(screen.getByText(T.backToStart));
     await act(async () => answer(Response.json({ correspondences: [] })));
 
-    fireEvent.change(sealField(), { target: { value: SEAL } });
-    fireEvent.click(screen.getByRole("button", { name: T.show.submit }));
+    await waitFor(() => expect((screen.getByLabelText(T.show.chooseImage) as HTMLInputElement).disabled).toBe(false));
+    choosePicture();
 
     await screen.findByText(T.list.headline);
     expect(screen.getByTestId("key").textContent).toBe(SEAL);

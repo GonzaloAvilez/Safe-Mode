@@ -81,7 +81,14 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
   five), which the founder found confusing and tiring. The digits were visible only so they
   could be typed or written down, and that's the load being removed. Trade-off accepted: a
   lost picture is a lost seal, and writing it down by hand is no longer offered. The mailbox
-  still accepts typed digits, for seals kept before this change.
+  kept accepting typed digits for seals kept before this change, until 2026-11-25 (below).
+- **The mailbox opens with the picture only (decided 2026-11-25, #288, design C).** The typed
+  digits field is gone from the mailbox. Every picture saved before 2026-11-23 already carried
+  the QR, so those seals still open it. Trade-off accepted: a seal only written down by hand,
+  with no picture, no longer opens a mailbox. The picture is chosen by tapping a drawn mailbox,
+  or dropped anywhere on the page. While it's checked, a light runs around the mailbox's door,
+  the same light as the envelope leaving. The door opens only once the server has opened the
+  mailbox.
 - About 50 bits is too few for a plain hash, so a seal is stored as HMAC-SHA256 with a server
   secret (`RETURN_KEY_HASH_SECRET`, a "pepper") that lives only in Vercel. A stolen database
   alone can't be used to guess keys. Guessing through the API is rate-limited. The secret can
