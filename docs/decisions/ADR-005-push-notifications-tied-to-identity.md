@@ -182,6 +182,16 @@ Off by default. It's offered, never asked for on arrival.
     window already open (Android, Windows) — navigating away from a draft. So `openWindow()` is
     only ever called when no Refugio window exists, where there is nothing to lose. Only the page
     knows whether it holds an unsent draft, so the page decides what the intent does.
+  - **Only windows of the experience (`/en/…`, `/es/…`) are sent the intent** (#286 review): they're
+    the pages that listen for it. A focused admin or `/closed` tab would swallow the tap and the
+    mailbox would never open, so the worker picks the focused experience window, or any experience
+    window. With none open, it opens one: the admin and `/closed` hold no ritual in memory.
+  - **What the page does** (`OpenMailboxFromNotice`, #273): it only accepts `/{locale}/mailbox` on
+    this site. With nothing being written, it goes there. If there are words not yet sent anywhere
+    (an entry, a trace before the letters choice, a first letter, a reply, a Contribute phrase), or
+    a send on its way, it stays where it is: nobody is pulled away from what they're writing. On
+    the mailbox already, it does nothing. It never skips the mailbox's own door: the seal's picture
+    is still asked for, unless this visit already opened it.
   - The worker is served with `Cache-Control: no-cache`, so a fix to it reaches people on their
     next visit, and with its own CSP.
 - The proxy lets `/sw.js`, `/manifest.webmanifest`, `/icons/` and `/apple-icon.png` through
