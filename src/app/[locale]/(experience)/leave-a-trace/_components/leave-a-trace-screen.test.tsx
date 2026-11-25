@@ -15,6 +15,11 @@ vi.mock("@/lib/return-key-card", async (importOriginal) => ({
 vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: () => {}, isIosDevice: () => false }));
 vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: () => Promise.resolve("482133901756229") }));
 
+// ADR-005: stands in for the toggle, carrying the seal it was given (as an attribute, never as text).
+vi.mock("../../_shared/notifications/letter-notifications-toggle", () => ({
+  LetterNotificationsToggle: ({ returnKey }: { returnKey: string }) => <div data-testid="notifications-toggle" data-seal={returnKey} />,
+}));
+
 import { LeaveATraceScreen } from "./leave-a-trace-screen";
 import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 
@@ -69,6 +74,23 @@ describe("LeaveATraceScreen", () => {
     expect(screen.getByText(sealedSeal)).toBeTruthy();
     expect(screen.getByText(sealedMailbox)).toBeTruthy();
     expect(sealedMailbox).toBe("Tu buzón está en el sobre del inicio.");
+  });
+
+  // ADR-005: whoever sealed it waits for a first letter, so the sealed closing offers notices.
+  it("the sealed closing offers letter notices with the seal still in memory", () => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "sealed", key: { returnKey: SEAL, sentence: SENTENCE } });
+
+    expect(screen.getByTestId("notifications-toggle").getAttribute("data-seal")).toBe(SEAL);
+  });
+
+  it.each([
+    ["a submitted trace", { phase: "submitted" as const }],
+    ["a skipped trace", { phase: "skipped" as const }],
+    ["a sealed closing whose seal is no longer in memory", { phase: "sealed" as const, key: null }],
+  ])("offers no notices on %s", (_, seed) => {
+    renderStep(<LeaveATraceScreen lettersOpen={true} />, seed);
+
+    expect(screen.queryByTestId("notifications-toggle")).toBeNull();
   });
 
   it("the skipped closing carries its own line", () => {

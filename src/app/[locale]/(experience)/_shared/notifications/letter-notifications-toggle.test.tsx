@@ -1,0 +1,278 @@
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import en from "../../../../../../messages/en.json";
+import es from "../../../../../../messages/es.json";
+
+const { availabilityMock, blockedMock, statusMock, subscribeMock, unsubscribeMock, isIosMock } = vi.hoisted(() => ({
+  availabilityMock: vi.fn(),
+  blockedMock: vi.fn(),
+  statusMock: vi.fn(),
+  subscribeMock: vi.fn(),
+  unsubscribeMock: vi.fn(),
+  isIosMock: vi.fn(),
+}));
+
+vi.mock("@/lib/push-client", () => ({
+  getPushAvailability: availabilityMock,
+  isPushBlocked: blockedMock,
+  getPushSubscriptionStatus: statusMock,
+  subscribeToPush: subscribeMock,
+  unsubscribeFromPush: unsubscribeMock,
+}));
+vi.mock("../return-key/download-blob", () => ({ isIosDevice: isIosMock }));
+
+import { LetterNotificationsToggle } from "./letter-notifications-toggle";
+
+const SEAL = "482133901756229";
+const T = es.letterNotifications;
+
+function renderToggle(locale: "es" | "en" = "es") {
+  return render(
+    <NextIntlClientProvider locale={locale} messages={locale === "es" ? es : en}>
+      <LetterNotificationsToggle returnKey={SEAL} />
+    </NextIntlClientProvider>
+  );
+}
+
+// Lets the status check (and any request a click started) finish.
+const settle = () => act(async () => {});
+
+beforeEach(() => {
+  availabilityMock.mockReturnValue("available");
+  blockedMock.mockReturnValue(false);
+  statusMock.mockResolvedValue({ type: "not_subscribed" });
+  subscribeMock.mockResolvedValue({ type: "subscribed" });
+  unsubscribeMock.mockResolvedValue({ type: "unsubscribed" });
+  isIosMock.mockReturnValue(false);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.resetAllMocks();
+});
+
+describe("LetterNotificationsToggle", () => {
+  it("offers notices, off by default, saying they're only for this device and never say what was written", async () => {
+    renderToggle();
+    await settle();
+
+    const button = screen.getByRole("button", { name: T.turnOn });
+    expect(button.getAttribute("aria-describedby")).toBeTruthy();
+    expect(screen.getByText(T.hint)).toBeTruthy();
+    expect(statusMock).toHaveBeenCalledWith(SEAL);
+    expect(subscribeMock).not.toHaveBeenCalled();
+  });
+
+  it("shows notices as on when this identity already gets them on this device", async () => {
+    statusMock.mockResolvedValueOnce({ type: "subscribed" });
+    renderToggle();
+    await settle();
+
+    expect(screen.getByText(T.on)).toBeTruthy();
+    expect(screen.getByRole("button", { name: T.turnOff })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: T.turnOn })).toBeNull();
+  });
+
+  // Someone who has notices on must never see an offer to turn them on just because the check failed.
+  it.each([
+    ["failed", T.statusUnknown],
+    ["too_many", es.letterNotice.tooMany],
+    ["offline", es.common.errors.couldntConnect],
+  ])("says it couldn't tell, and offers neither on nor off, when the check fails (%s)", async (reason, text) => {
+    statusMock.mockResolvedValueOnce({ type: "unknown", reason });
+    renderToggle();
+    await settle();
+
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: T.turnOn })).toBeNull();
+    expect(screen.queryByRole("button", { name: T.turnOff })).toBeNull();
+    expect(screen.getByRole("button", { name: T.checkAgain })).toBeTruthy();
+  });
+
+  it("asks again, and shows what's true once it can tell", async () => {
+    statusMock.mockResolvedValueOnce({ type: "unknown", reason: "offline" }).mockResolvedValueOnce({ type: "subscribed" });
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.checkAgain }));
+    await settle();
+
+    expect(statusMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(T.on)).toBeTruthy();
+    expect(screen.queryByText(es.common.errors.couldntConnect)).toBeNull();
+  });
+
+  it("offers nothing where notices can't be offered", async () => {
+    availabilityMock.mockReturnValue("unavailable");
+    const { container } = renderToggle();
+    await settle();
+
+    expect(container.textContent).toBe("");
+    expect(statusMock).not.toHaveBeenCalled();
+  });
+
+  // iOS only delivers web push to an app added to the Home Screen.
+  it("tells an iPhone outside the installed app how to install it, and nothing more", async () => {
+    isIosMock.mockReturnValue(true);
+    availabilityMock.mockImplementation(({ isIos }: { isIos: boolean }) => (isIos ? "install_first" : "available"));
+    renderToggle();
+    await settle();
+
+    expect(screen.getByText(T.installFirst)).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(statusMock).not.toHaveBeenCalled();
+  });
+
+  it("says notices are blocked when the browser already refused them", async () => {
+    blockedMock.mockReturnValue(true);
+    renderToggle();
+    await settle();
+
+    expect(screen.getByText(T.blocked)).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("turns notices on with the seal, in the page's language", async () => {
+    renderToggle("en");
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: en.letterNotifications.turnOn }));
+    await settle();
+
+    expect(subscribeMock).toHaveBeenCalledWith(SEAL, "en");
+    expect(screen.getByText(en.letterNotifications.on)).toBeTruthy();
+  });
+
+  it("can't be pressed twice while turning on", async () => {
+    let finish!: (value: unknown) => void;
+    subscribeMock.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOn }));
+    const busy = screen.getByRole("button", { name: T.turningOn }) as HTMLButtonElement;
+    expect(busy.disabled).toBe(true);
+
+    await act(async () => finish({ type: "subscribed" }));
+    expect(subscribeMock).toHaveBeenCalledOnce();
+  });
+
+  it("says notices are blocked when the person refuses the prompt", async () => {
+    subscribeMock.mockResolvedValueOnce({ type: "blocked" });
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOn }));
+    await settle();
+
+    expect(screen.getByText(T.blocked)).toBeTruthy();
+  });
+
+  it("stays off, without a message, when the prompt is closed without an answer", async () => {
+    subscribeMock.mockResolvedValueOnce({ type: "dismissed" });
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOn }));
+    await settle();
+
+    expect(screen.getByRole("button", { name: T.turnOn })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it.each([
+    ["failed", T.turnOnFailed],
+    ["not_recognized", T.turnOnFailed],
+    ["too_many", es.letterNotice.tooMany],
+    ["offline", es.common.errors.couldntConnect],
+  ])("stays off and says why when turning on fails (%s)", async (reason, text) => {
+    subscribeMock.mockResolvedValueOnce({ type: "failed", reason });
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOn }));
+    await settle();
+
+    expect(screen.getByRole("button", { name: T.turnOn })).toBeTruthy();
+    expect(screen.getByText(text)).toBeTruthy();
+  });
+
+  // #287 review: the browser rejects the permission request. Through the real push client, the
+  // toggle says so and can be pressed again.
+  it("says it failed and is enabled again when the browser rejects the permission request", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/push-client")>("@/lib/push-client");
+    vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "BOurom9kflp01No-zioM65hciEAM-MMRCQa7ay_DYcyWH5WaXuRf5Dt13EGdKGZhxZV4eZPWKu2UVtNxoeh-eak");
+    vi.stubGlobal("Notification", { permission: "default", requestPermission: () => Promise.reject(new DOMException("not allowed", "NotAllowedError")) });
+    subscribeMock.mockImplementationOnce(actual.subscribeToPush);
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOn }));
+    await settle();
+
+    expect(screen.getByText(T.turnOnFailed)).toBeTruthy();
+    expect((screen.getByRole("button", { name: T.turnOn }) as HTMLButtonElement).disabled).toBe(false);
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ["turning on", false, T.turnOn, T.turnOnFailed],
+    ["turning off", true, T.turnOff, T.turnOffFailed],
+  ])("never stays disabled when %s throws unexpectedly", async (_, startsOn, label, failed) => {
+    if (startsOn) statusMock.mockResolvedValueOnce({ type: "subscribed" });
+    subscribeMock.mockRejectedValueOnce(new Error("unexpected"));
+    unsubscribeMock.mockRejectedValueOnce(new Error("unexpected"));
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    await settle();
+
+    expect(screen.getByText(failed)).toBeTruthy();
+    expect((screen.getByRole("button", { name: label }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("turns notices off for this identity only", async () => {
+    statusMock.mockResolvedValueOnce({ type: "subscribed" });
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOff }));
+    await settle();
+
+    expect(unsubscribeMock).toHaveBeenCalledWith(SEAL);
+    expect(screen.getByRole("button", { name: T.turnOn })).toBeTruthy();
+  });
+
+  it("stays on and says so when turning off fails", async () => {
+    statusMock.mockResolvedValueOnce({ type: "subscribed" });
+    unsubscribeMock.mockResolvedValueOnce({ type: "failed", reason: "failed" });
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOff }));
+    await settle();
+
+    expect(screen.getByText(T.on)).toBeTruthy();
+    expect(screen.getByText(T.turnOffFailed)).toBeTruthy();
+  });
+
+  // Leaving the closing mid-request: the answer has nowhere to go, and nothing breaks.
+  it("lets an answer that arrives after it's gone go", async () => {
+    let finish!: (value: unknown) => void;
+    subscribeMock.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    const consoleError = vi.spyOn(console, "error");
+    const view = renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOn }));
+    view.unmount();
+    await act(async () => finish({ type: "subscribed" }));
+
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});

@@ -117,7 +117,14 @@ export async function subscribeToPush(returnKey: string, locale: Locale): Promis
   const key = vapidPublicKey();
   if (!key) return { type: "failed", reason: "failed" };
 
-  const permission = await Notification.requestPermission();
+  // Still the first thing awaited, so the tap counts for the prompt. A browser can reject it
+  // instead of answering (#287 review): that's a failure, never an exception for the caller.
+  let permission: NotificationPermission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch {
+    return { type: "failed", reason: "failed" };
+  }
   if (permission === "denied") return { type: "blocked" };
   if (permission !== "granted") return { type: "dismissed" };
 

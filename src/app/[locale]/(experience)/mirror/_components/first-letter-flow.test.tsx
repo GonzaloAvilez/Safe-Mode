@@ -83,6 +83,10 @@ vi.mock("@/lib/return-key-card", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/return-key-card")>()),
   drawReturnKeyCardImage: () => Promise.resolve(new Blob(["png"], { type: "image/png" })),
 }));
+// ADR-005: stands in for the toggle, carrying the seal it was given (as an attribute, never as text).
+vi.mock("../../_shared/notifications/letter-notifications-toggle", () => ({
+  LetterNotificationsToggle: ({ returnKey }: { returnKey: string }) => <div data-testid="notifications-toggle" data-seal={returnKey} />,
+}));
 vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: () => {}, isIosDevice: () => false }));
 vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: () => Promise.resolve("482133901756229") }));
 
@@ -637,9 +641,21 @@ describe("Writing and sending the first letter", () => {
     expect(screen.getByText(PHRASE)).toBeTruthy();
     expect(screen.getByText(L.onItsWay)).toBeTruthy();
     expect(door()).toBeNull();
-    // Leaving the closing lets go of the seal it kept (ADR-005).
+    // Leaving the closing lets go of the seal it kept (ADR-005), and with it the notices offered.
     expect(state("key")).toBe("");
     expect(state("phase")).toBe("sent");
+    expect(screen.queryByTestId("notifications-toggle")).toBeNull();
+  });
+
+  // ADR-005: the reply may take days, so the closing offers letter notices with the seal.
+  it("offers letter notices on the closing, with the seal, once the envelope has left", async () => {
+    renderMirror(WRITING);
+    await settle();
+    expect(screen.queryByTestId("notifications-toggle")).toBeNull();
+
+    await writeAndSend("Gracias.");
+
+    expect(screen.getByTestId("notifications-toggle").getAttribute("data-seal")).toBe(SEAL);
   });
 
   it("a letter already on its way (another tab) ends on the envelope that left, without sending twice", async () => {

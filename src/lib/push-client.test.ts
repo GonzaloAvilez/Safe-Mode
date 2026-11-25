@@ -152,6 +152,15 @@ describe("subscribeToPush", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // #287 review: a browser can reject the permission request instead of answering it.
+  it("fails, registering and sending nothing, when the browser rejects the permission request", async () => {
+    requestPermission.mockRejectedValueOnce(new DOMException("not allowed", "NotAllowedError"));
+
+    expect(await subscribeToPush(SEAL, "es")).toEqual({ type: "failed", reason: "failed" });
+    expect(serviceWorker.register).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("changes nothing when the prompt is closed without an answer", async () => {
     expect(await subscribeToPush(SEAL, "es")).toEqual({ type: "dismissed" });
     expect(serviceWorker.register).not.toHaveBeenCalled();
