@@ -100,6 +100,17 @@ export async function removePushSubscription(identityId: string, endpoint: strin
   unwrap(null, error);
 }
 
+// Whether this identity asked for notices on this device, so the toggle shows what's true.
+export async function isPushSubscribed(identityId: string, endpoint: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("endpoint")
+    .eq("identity_id", identityId)
+    .eq("endpoint", endpoint)
+    .maybeSingle();
+  return unwrap(data, error) !== null;
+}
+
 export async function listPushSubscriptions(identityId: string): Promise<StoredPushSubscription[]> {
   const { data, error } = await supabaseAdmin
     .from("push_subscriptions")
