@@ -151,6 +151,32 @@ describe("ritual state, a closing's seal", () => {
     expect(result.current.mirrorLetter).toMatchObject({ phase: "sent", key: null, entryId: "entry-1" });
   });
 
+  // #285 review: the closing can be reached after the person already left its page.
+  it("lets go of Mirror's seal when the letter finishes sending after the person left Mirror", () => {
+    const { result, goTo } = renderOn("/es/mirror");
+    act(() => result.current.setMirrorLetter(mirrorLetter("sending")));
+
+    goTo("/es");
+    expect(result.current.mirrorLetter?.key).toEqual(MIRROR_SEAL);
+
+    act(() => result.current.setMirrorLetter((letter) => (letter ? { ...letter, phase: "sent" } : letter)));
+    expect(result.current.mirrorLetter).toMatchObject({ phase: "sent", key: null });
+  });
+
+  it("lets go of Leave a Trace's seal when sealing lands after the person left", () => {
+    const { result, goTo } = renderOn("/es/leave-a-trace");
+    act(() => {
+      result.current.setLeaveATracePhase("keeping");
+      result.current.setLeaveATraceKey(TRACE_SEAL);
+    });
+
+    goTo("/es/observe");
+    expect(result.current.leaveATraceKey).toEqual(TRACE_SEAL);
+
+    act(() => result.current.setLeaveATracePhase("sealed"));
+    expect(result.current.leaveATraceKey).toBeNull();
+  });
+
   it("isn't touched for a Mirror letter that hasn't left yet", () => {
     const { result, goTo } = renderOn("/es/mirror");
     act(() => result.current.setMirrorLetter(mirrorLetter("writing")));

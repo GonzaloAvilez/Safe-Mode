@@ -114,17 +114,19 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
   // let it go once the person leaves them. Leaving by the closing's own buttons is handled there;
   // this covers every other way out (another page, the browser's back button). Only the closings:
   // a seal still being kept ("keeping") waits for whoever comes back to it, as before.
-  // Checked when the page changes, during render (React's pattern for reacting to a change),
-  // so the seal is gone before anything on the new page can read it.
+  //
+  // It's a rule on the current state, not on the page change: a closing's seal is never in memory
+  // outside its page. That also covers a closing reached after the person had already left, like a
+  // letter that finishes sending, or a seal whose confirmation lands, once they're on another page
+  // (#285 review). Checked during render, so the seal is gone before anything can read it. Each
+  // update makes its own condition false, so it settles in one pass.
   const pathname = usePathname();
   const page = pathname === null ? null : pageOf(pathname);
-  const [pageSeen, setPageSeen] = useState(page);
-  if (page !== pageSeen) {
-    setPageSeen(page);
-    if (page !== null && page !== "/leave-a-trace" && leaveATracePhase === "sealed") setLeaveATraceKey(null);
-    if (page !== null && page !== "/mirror" && mirrorLetter?.phase === "sent" && mirrorLetter.key) {
-      setMirrorLetter({ ...mirrorLetter, key: null });
-    }
+  if (page !== null && page !== "/leave-a-trace" && leaveATracePhase === "sealed" && leaveATraceKey) {
+    setLeaveATraceKey(null);
+  }
+  if (page !== null && page !== "/mirror" && mirrorLetter?.phase === "sent" && mirrorLetter.key) {
+    setMirrorLetter({ ...mirrorLetter, key: null });
   }
 
   const clearRitualState = useCallback(() => {
