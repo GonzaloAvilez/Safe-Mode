@@ -511,15 +511,19 @@ describe("Writing and sending the first letter", () => {
     expect(state("phase")).toBe("sent");
   });
 
-  it("lets go of the seal and the draft once the letter has left", async () => {
+  // ADR-005: the closing offers letter notices with the seal, so only the draft goes.
+  it("lets go of the draft once the letter has left, and keeps the seal for the closing", async () => {
     renderMirror(WRITING);
     await settle();
 
     await writeAndSend("Gracias por dejarla aquí.");
 
-    expect(state("key")).toBe("");
+    expect(state("key")).toBe(SEAL);
     expect(state("draft")).toBe("");
-    expect(document.body.textContent).not.toContain(SEAL);
+    // In memory only: the closing never shows its digits (the test's own hidden readout aside).
+    const visible = document.body.cloneNode(true) as HTMLElement;
+    visible.querySelectorAll("[hidden]").forEach((node) => node.remove());
+    expect(visible.textContent).not.toContain(SEAL);
   });
 
   it("holds the language switch while sending, and lets it go after", async () => {
@@ -580,6 +584,9 @@ describe("Writing and sending the first letter", () => {
     expect(screen.getByText(PHRASE)).toBeTruthy();
     expect(screen.getByText(L.onItsWay)).toBeTruthy();
     expect(door()).toBeNull();
+    // Leaving the closing lets go of the seal it kept (ADR-005).
+    expect(state("key")).toBe("");
+    expect(state("phase")).toBe("sent");
   });
 
   it("a letter already on its way (another tab) ends on the envelope that left, without sending twice", async () => {

@@ -125,7 +125,8 @@ describe("KeepTraceSealStep", () => {
     expect((screen.getByRole("button", { name: KEEP.save }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("choosing the saved picture seals the trace: the closing follows, and the seal leaves memory", async () => {
+  // ADR-005: the closing offers letter notices with the seal, so it stays in memory there.
+  it("choosing the saved picture seals the trace: the closing follows, with the seal still in memory", async () => {
     renderStep(<KeepTraceSealStep />, KEPT);
     fireEvent.click(screen.getByRole("button", { name: KEEP.save }));
     const choose = (await screen.findByLabelText(KEEP.chooseImage)) as HTMLInputElement;
@@ -136,7 +137,7 @@ describe("KeepTraceSealStep", () => {
 
     await holdElapses();
     expect(phase()).toBe("sealed");
-    expect(screen.getByTestId("key").textContent).toBe("");
+    expect(screen.getByTestId("key").textContent).toBe(SEAL);
   });
 
   it("if the trace can't be sealed, it says so in Leave a Trace's words and keeps the seal", async () => {
