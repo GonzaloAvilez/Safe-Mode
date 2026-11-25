@@ -24,10 +24,16 @@ afterEach(async () => {
   identityIds = [];
 });
 
-async function createCorrespondence(): Promise<string> {
+async function createIdentity(): Promise<string> {
   const identity = await supabaseAdmin.from("identities").insert({}).select("id").single();
   if (identity.error) throw identity.error;
   identityIds.push(identity.data.id);
+  return identity.data.id;
+}
+
+// The phrase has no author unless one is given (like a seed phrase), and a visitor always.
+async function createCorrespondence({ authorIdentityId = null as string | null } = {}): Promise<string> {
+  const visitorIdentityId = await createIdentity();
 
   const phrase = await supabaseAdmin
     .from("phrases")
@@ -38,6 +44,7 @@ async function createCorrespondence(): Promise<string> {
       active: false,
       origin: LEAVE_A_TRACE_ORIGIN,
       moderation_status: "approved",
+      identity_id: authorIdentityId,
     })
     .select("id")
     .single();
@@ -46,7 +53,7 @@ async function createCorrespondence(): Promise<string> {
 
   const correspondence = await supabaseAdmin
     .from("correspondences")
-    .insert({ phrase_id: phrase.data.id, visitor_identity_id: identity.data.id })
+    .insert({ phrase_id: phrase.data.id, visitor_identity_id: visitorIdentityId })
     .select("id")
     .single();
   if (correspondence.error) throw correspondence.error;
@@ -113,7 +120,7 @@ describe("letter review (integration)", () => {
   it("approving delivers the letter and takes it out of the queue", async () => {
     const heldId = await insertLetter(await createCorrespondence(), "visitor", "held", "hola");
 
-    expect(await approveLetter(heldId)).toEqual({ ok: true });
+    expect(await approveLetter(heldId)).toEqual({ ok: true, recipientIdentityId: null }); // no author: nobody to notify
     expect(await letterStatus(heldId)).toEqual({ status: "delivered", rejection_reason: null, delivered_at: expect.any(String) });
     expect((await listLettersAwaitingReview()).some((letter) => letter.id === heldId)).toBe(false);
   });
@@ -133,6 +140,20 @@ describe("letter review (integration)", () => {
     expect((await letterStatus(heldId)).status).toBe("delivered");
   });
 
+  // ADR-005: the nested select (letter → correspondence → phrase) through PostgREST names the
+  // person the letter is for, so the caller can notify them.
+  it("names the recipient: the author for a visitor's letter, the visitor for the author's", async () => {
+    const authorIdentityId = await createIdentity();
+    const correspondenceId = await createCorrespondence({ authorIdentityId });
+    const { data } = await supabaseAdmin.from("correspondences").select("visitor_identity_id").eq("id", correspondenceId).single();
+
+    const visitorLetter = await insertLetter(correspondenceId, "visitor", "held", "hola");
+    expect(await approveLetter(visitorLetter)).toEqual({ ok: true, recipientIdentityId: authorIdentityId });
+
+    const authorLetter = await insertLetter(correspondenceId, "author", "held", "gracias");
+    expect(await approveLetter(authorLetter)).toEqual({ ok: true, recipientIdentityId: data!.visitor_identity_id });
+  });
+
   // Double click or two open tabs: only one decision may take effect.
   it("lets exactly one of several concurrent decisions through", async () => {
     const heldId = await insertLetter(await createCorrespondence(), "visitor", "held", "hola");
@@ -144,6 +165,18 @@ describe("letter review (integration)", () => {
       { ok: false, reason: "already_decided" },
       { ok: false, reason: "already_decided" },
     ]);
+  });
+
+  // ADR-005: one notice per delivery. Only the approval that delivered the letter names a
+  // recipient, so two concurrent approvals can't notify twice.
+  it("names the recipient for exactly one of two concurrent approvals", async () => {
+    const authorIdentityId = await createIdentity();
+    const heldId = await insertLetter(await createCorrespondence({ authorIdentityId }), "visitor", "held", "hola");
+
+    const results = await Promise.all([approveLetter(heldId), approveLetter(heldId)]);
+
+    expect(results.filter((result) => result.ok && result.recipientIdentityId === authorIdentityId)).toHaveLength(1);
+    expect(results.filter((result) => !result.ok)).toEqual([{ ok: false, reason: "already_decided" }]);
   });
 
   it("approving the 6th letter closes the correspondence; earlier ones don't", async () => {
