@@ -300,7 +300,9 @@
     "blocked": "Notices are blocked for Refugio in this browser. You can allow them in its settings.",
     "installFirst": "On iPhone, notices reach Refugio once it's installed: tap Share, then “Add to Home Screen”.",
     "turnOnFailed": "Notices couldn't be turned on. Try again.",
-    "turnOffFailed": "Notices couldn't be turned off. Try again."
+    "turnOffFailed": "Notices couldn't be turned off. Try again.",
+    "statusUnknown": "We couldn't tell whether notices are on for this device.",
+    "checkAgain": "Try again"
   },
   "notifications": {
     "letterDelivered": {

@@ -5,8 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { isLocale, DEFAULT_LOCALE } from "@/lib/locale";
 import {
   getPushAvailability,
+  getPushSubscriptionStatus,
   isPushBlocked,
-  isSubscribedToPush,
   subscribeToPush,
   unsubscribeFromPush,
   type PushAvailability,
@@ -25,9 +25,11 @@ import { isIosDevice } from "../return-key/download-blob";
 //   on            "Recibirás un aviso…", with a way to stop
 //   turning_off   removing this identity's row
 //   blocked       notices were refused for this site; only the browser's settings can undo it
-type ToggleState = "checking" | "off" | "turning_on" | "on" | "turning_off" | "blocked";
+//   unknown       the check failed: it says so and offers to ask again, never showing notices as
+//                 off to someone who may have them on
+type ToggleState = "checking" | "off" | "turning_on" | "on" | "turning_off" | "blocked" | "unknown";
 
-type ToggleMessage = "turnOnFailed" | "turnOffFailed" | "tooMany" | "offline";
+type ToggleMessage = "turnOnFailed" | "turnOffFailed" | "statusUnknown" | "tooMany" | "offline";
 
 const noSubscription = () => () => {};
 
@@ -52,6 +54,8 @@ export function LetterNotificationsToggle({ returnKey, className = "" }: { retur
   );
   const [state, setState] = useState<ToggleState>("checking");
   const [message, setMessage] = useState<ToggleMessage | null>(null);
+  // Bumped to ask again after a failed check.
+  const [checkAttempt, setCheckAttempt] = useState(0);
   const mounted = useRef(false);
 
   useEffect(() => {
@@ -66,13 +70,23 @@ export function LetterNotificationsToggle({ returnKey, className = "" }: { retur
     if (availability !== "available") return;
     let current = true;
     void (async () => {
-      const next: ToggleState = isPushBlocked() ? "blocked" : (await isSubscribedToPush(returnKey)) ? "on" : "off";
-      if (current) setState(next);
+      if (isPushBlocked()) {
+        if (current) setState("blocked");
+        return;
+      }
+      const status = await getPushSubscriptionStatus(returnKey);
+      if (!current) return;
+      if (status.type === "unknown") {
+        setState("unknown");
+        setMessage(failureMessage(status.reason, "statusUnknown"));
+      } else {
+        setState(status.type === "subscribed" ? "on" : "off");
+      }
     })();
     return () => {
       current = false;
     };
-  }, [availability, returnKey]);
+  }, [availability, returnKey, checkAttempt]);
 
   if (availability === "unavailable") return null;
 
@@ -116,6 +130,27 @@ export function LetterNotificationsToggle({ returnKey, className = "" }: { retur
       {messageText}
     </p>
   );
+
+  function checkAgain() {
+    setMessage(null);
+    setState("checking");
+    setCheckAttempt((attempt) => attempt + 1);
+  }
+
+  if (state === "unknown") {
+    return (
+      <div className={`flex flex-col items-center gap-2.5 ${className}`}>
+        {status}
+        <button
+          type="button"
+          onClick={checkAgain}
+          className="min-h-11 text-[12px] tracking-[.5px] text-white/45 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/75"
+        >
+          {t("checkAgain")}
+        </button>
+      </div>
+    );
+  }
 
   if (state === "blocked") {
     return (

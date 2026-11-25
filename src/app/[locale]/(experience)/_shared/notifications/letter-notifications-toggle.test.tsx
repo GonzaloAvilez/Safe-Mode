@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../../../../../messages/en.json";
 import es from "../../../../../../messages/es.json";
 
-const { availabilityMock, blockedMock, isSubscribedMock, subscribeMock, unsubscribeMock, isIosMock } = vi.hoisted(() => ({
+const { availabilityMock, blockedMock, statusMock, subscribeMock, unsubscribeMock, isIosMock } = vi.hoisted(() => ({
   availabilityMock: vi.fn(),
   blockedMock: vi.fn(),
-  isSubscribedMock: vi.fn(),
+  statusMock: vi.fn(),
   subscribeMock: vi.fn(),
   unsubscribeMock: vi.fn(),
   isIosMock: vi.fn(),
@@ -17,7 +17,7 @@ const { availabilityMock, blockedMock, isSubscribedMock, subscribeMock, unsubscr
 vi.mock("@/lib/push-client", () => ({
   getPushAvailability: availabilityMock,
   isPushBlocked: blockedMock,
-  isSubscribedToPush: isSubscribedMock,
+  getPushSubscriptionStatus: statusMock,
   subscribeToPush: subscribeMock,
   unsubscribeFromPush: unsubscribeMock,
 }));
@@ -42,7 +42,7 @@ const settle = () => act(async () => {});
 beforeEach(() => {
   availabilityMock.mockReturnValue("available");
   blockedMock.mockReturnValue(false);
-  isSubscribedMock.mockResolvedValue(false);
+  statusMock.mockResolvedValue({ type: "not_subscribed" });
   subscribeMock.mockResolvedValue({ type: "subscribed" });
   unsubscribeMock.mockResolvedValue({ type: "unsubscribed" });
   isIosMock.mockReturnValue(false);
@@ -61,12 +61,12 @@ describe("LetterNotificationsToggle", () => {
     const button = screen.getByRole("button", { name: T.turnOn });
     expect(button.getAttribute("aria-describedby")).toBeTruthy();
     expect(screen.getByText(T.hint)).toBeTruthy();
-    expect(isSubscribedMock).toHaveBeenCalledWith(SEAL);
+    expect(statusMock).toHaveBeenCalledWith(SEAL);
     expect(subscribeMock).not.toHaveBeenCalled();
   });
 
   it("shows notices as on when this identity already gets them on this device", async () => {
-    isSubscribedMock.mockResolvedValueOnce(true);
+    statusMock.mockResolvedValueOnce({ type: "subscribed" });
     renderToggle();
     await settle();
 
@@ -75,13 +75,42 @@ describe("LetterNotificationsToggle", () => {
     expect(screen.queryByRole("button", { name: T.turnOn })).toBeNull();
   });
 
+  // Someone who has notices on must never see an offer to turn them on just because the check failed.
+  it.each([
+    ["failed", T.statusUnknown],
+    ["too_many", es.letterNotice.tooMany],
+    ["offline", es.common.errors.couldntConnect],
+  ])("says it couldn't tell, and offers neither on nor off, when the check fails (%s)", async (reason, text) => {
+    statusMock.mockResolvedValueOnce({ type: "unknown", reason });
+    renderToggle();
+    await settle();
+
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: T.turnOn })).toBeNull();
+    expect(screen.queryByRole("button", { name: T.turnOff })).toBeNull();
+    expect(screen.getByRole("button", { name: T.checkAgain })).toBeTruthy();
+  });
+
+  it("asks again, and shows what's true once it can tell", async () => {
+    statusMock.mockResolvedValueOnce({ type: "unknown", reason: "offline" }).mockResolvedValueOnce({ type: "subscribed" });
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.checkAgain }));
+    await settle();
+
+    expect(statusMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(T.on)).toBeTruthy();
+    expect(screen.queryByText(es.common.errors.couldntConnect)).toBeNull();
+  });
+
   it("offers nothing where notices can't be offered", async () => {
     availabilityMock.mockReturnValue("unavailable");
     const { container } = renderToggle();
     await settle();
 
     expect(container.textContent).toBe("");
-    expect(isSubscribedMock).not.toHaveBeenCalled();
+    expect(statusMock).not.toHaveBeenCalled();
   });
 
   // iOS only delivers web push to an app added to the Home Screen.
@@ -93,7 +122,7 @@ describe("LetterNotificationsToggle", () => {
 
     expect(screen.getByText(T.installFirst)).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
-    expect(isSubscribedMock).not.toHaveBeenCalled();
+    expect(statusMock).not.toHaveBeenCalled();
   });
 
   it("says notices are blocked when the browser already refused them", async () => {
@@ -171,7 +200,7 @@ describe("LetterNotificationsToggle", () => {
   });
 
   it("turns notices off for this identity only", async () => {
-    isSubscribedMock.mockResolvedValueOnce(true);
+    statusMock.mockResolvedValueOnce({ type: "subscribed" });
     renderToggle();
     await settle();
 
@@ -183,7 +212,7 @@ describe("LetterNotificationsToggle", () => {
   });
 
   it("stays on and says so when turning off fails", async () => {
-    isSubscribedMock.mockResolvedValueOnce(true);
+    statusMock.mockResolvedValueOnce({ type: "subscribed" });
     unsubscribeMock.mockResolvedValueOnce({ type: "failed", reason: "failed" });
     renderToggle();
     await settle();

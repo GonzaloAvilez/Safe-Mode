@@ -300,7 +300,9 @@
     "blocked": "Los avisos están bloqueados para Refugio en este navegador. Puedes permitirlos en su configuración.",
     "installFirst": "En iPhone, los avisos llegan a Refugio instalado: toca Compartir y luego «Agregar a inicio».",
     "turnOnFailed": "No se pudieron activar los avisos. Intenta de nuevo.",
-    "turnOffFailed": "No se pudieron desactivar los avisos. Intenta de nuevo."
+    "turnOffFailed": "No se pudieron desactivar los avisos. Intenta de nuevo.",
+    "statusUnknown": "No pudimos saber si los avisos están activos en este dispositivo.",
+    "checkAgain": "Volver a intentar"
   },
   "notifications": {
     "letterDelivered": {
