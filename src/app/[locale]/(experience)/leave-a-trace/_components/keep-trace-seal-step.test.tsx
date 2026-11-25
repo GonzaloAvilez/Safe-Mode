@@ -20,7 +20,7 @@ vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromIm
 vi.mock("../../_shared/return-key/confirm-return-key", () => ({ confirmReturnKey: confirmMock }));
 
 import { MAILBOX_CHECK_MS } from "../../_shared/mailbox-scene";
-import { KEEPING_SCENE_MS } from "../../_shared/return-key/keep-return-key-step";
+import { SEAL_CONFIRMATION_ANIMATION_MS } from "../../_shared/return-key/keep-return-key-step";
 import { KeepTraceSealStep } from "./keep-trace-seal-step";
 import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 
@@ -32,7 +32,7 @@ const phase = () => screen.getByTestId("phase").textContent;
 
 async function holdElapses() {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(KEEPING_SCENE_MS);
+    await vi.advanceTimersByTimeAsync(SEAL_CONFIRMATION_ANIMATION_MS);
   });
 }
 

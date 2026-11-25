@@ -23,7 +23,7 @@ vi.mock("./read-seal-from-image", () => ({ readSealFromImage: readSealMock }));
 vi.mock("./confirm-return-key", () => ({ confirmReturnKey: confirmMock }));
 
 import { MAILBOX_CHECK_MS, MAILBOX_FAIL_MS, MAILBOX_OPEN_MS } from "../mailbox-scene";
-import { KEEPING_SCENE_MS, KeepReturnKeyStep } from "./keep-return-key-step";
+import { SEAL_CONFIRMATION_ANIMATION_MS, KeepReturnKeyStep } from "./keep-return-key-step";
 
 // The step's contract with whichever screen shows it (Leave a Trace and Mirror): the seal and the
 // screen's own words go in; keeping the seal confirms it, and that, or leaving, comes back through
@@ -170,7 +170,7 @@ describe("KeepReturnKeyStep", () => {
       expect(cardShown()).toBe(false);
     });
 
-    it("says it's checking while the picture is read and the seal confirmed, and nothing can be pressed", async () => {
+    it("says it's checking while the picture is read and the seal confirmed, and only the way out can be pressed", async () => {
       let answer!: (result: { type: "confirmed" }) => void;
       confirmMock.mockReturnValue(new Promise((resolve) => (answer = resolve)));
       renderKeep();
@@ -181,10 +181,11 @@ describe("KeepReturnKeyStep", () => {
       expect(status()).toBe(K.checking);
       expect(pictureInput().disabled).toBe(true);
       expect((button(K.saveAgain) as HTMLButtonElement).disabled).toBe(true);
-      expect((button(PROPS.leaveLabel) as HTMLButtonElement).disabled).toBe(true);
+      // The way out stays open: a confirmation that never answers must not keep anyone here.
+      expect((button(PROPS.leaveLabel) as HTMLButtonElement).disabled).toBe(false);
 
       await act(async () => answer({ type: "confirmed" }));
-      await advance(KEEPING_SCENE_MS);
+      await advance(SEAL_CONFIRMATION_ANIMATION_MS);
       expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
     });
 
@@ -373,6 +374,57 @@ describe("KeepReturnKeyStep", () => {
     expect(confirmMock).not.toHaveBeenCalled();
   });
 
+  it("leaving while the seal is checked lets go of everything, and a confirmation that answers later moves nothing on", async () => {
+    let answer!: (result: { type: "confirmed" }) => void;
+    confirmMock.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    renderKeep();
+    await saveImage();
+    await choosePicture();
+    await advance(MAILBOX_CHECK_MS * 3);
+    expect(locked()).toBe("true");
+
+    fireEvent.click(button(PROPS.leaveLabel)!);
+
+    expect(callbacks.onLeave).toHaveBeenCalledOnce();
+    expect(locked()).toBe("false");
+    expect(stage()).toBeNull();
+    expect(cardShown()).toBe(true);
+
+    await act(async () => answer({ type: "confirmed" }));
+    await advance(SEAL_CONFIRMATION_ANIMATION_MS);
+
+    expect(callbacks.onConfirmed).not.toHaveBeenCalled();
+    expect(stage()).toBeNull();
+    expect(locked()).toBe("false");
+  });
+
+  it("a step still shown after leaving mid-check can keep the seal again", async () => {
+    let answer!: (result: { type: "error"; reason: "offline" }) => void;
+    confirmMock.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    renderKeep();
+    await saveImage();
+    await choosePicture();
+    fireEvent.click(button(PROPS.leaveLabel)!);
+    await act(async () => answer({ type: "error", reason: "offline" }));
+    await advance(SEAL_CONFIRMATION_ANIMATION_MS);
+
+    await choosePicture();
+    await advance(SEAL_CONFIRMATION_ANIMATION_MS);
+
+    expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
+  });
+
+  it("only the door's last moment holds the way out, once the seal is already confirmed", async () => {
+    renderKeep();
+    await saveImage();
+    await choosePicture();
+
+    await lightGoesRound();
+
+    expect(stage()).toBe("opening");
+    expect((button(PROPS.leaveLabel) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("a step that's gone before the seal is confirmed never moves anything on", async () => {
     let answer!: (result: { type: "confirmed" }) => void;
     confirmMock.mockReturnValue(new Promise((resolve) => (answer = resolve)));
@@ -382,7 +434,7 @@ describe("KeepReturnKeyStep", () => {
 
     unmount();
     await act(async () => answer({ type: "confirmed" }));
-    await advance(KEEPING_SCENE_MS);
+    await advance(SEAL_CONFIRMATION_ANIMATION_MS);
 
     expect(callbacks.onConfirmed).not.toHaveBeenCalled();
   });

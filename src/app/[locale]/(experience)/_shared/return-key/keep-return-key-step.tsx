@@ -38,9 +38,9 @@ import { ReturnKeyCard, readCardFonts } from "./return-key-card";
 //   not_kept  not confirmed: the light goes out, the reason is shown, then the card comes back
 type Progress = "checking" | "kept" | "not_kept";
 
-// The most it takes, once a picture is chosen and the server answers at once, before the step
-// moves on: the light's round, then the door opening.
-export const KEEPING_SCENE_MS = MAILBOX_CHECK_MS + MAILBOX_OPEN_MS;
+// What the animation adds to confirming a seal: the light's round, then the door opening. The whole
+// check also waits for the picture to be read and for the server to answer.
+export const SEAL_CONFIRMATION_ANIMATION_MS = MAILBOX_CHECK_MS + MAILBOX_OPEN_MS;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -88,7 +88,11 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
   const mounted = useRef(false);
   // Set as soon as a picture is chosen, before the next render: a second picture chosen meanwhile
   // never starts a second check.
-  const working = useRef(false);
+  const sealCheckInFlight = useRef(false);
+  // The person took the way out while a check was under way. Whatever that check brings back is
+  // for a step nobody is waiting on, even if the screen keeps it mounted.
+  const left = useRef(false);
+  const stillWanted = () => mounted.current && !left.current;
 
   useEffect(() => {
     mounted.current = true;
@@ -128,6 +132,19 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
     }
   }
 
+  // The way out stays open while the seal is checked: a confirmation that never answers must not
+  // keep anyone here, nor the language switch held. Only the door's last moment waits, once the
+  // seal is already confirmed.
+  function leave() {
+    if (sealCheckInFlight.current) {
+      left.current = true;
+      unlockLocaleSwitch();
+    }
+    setProgress(null);
+    setMessage(null);
+    onLeave();
+  }
+
   // The reason is shown at once; the light goes out and the stamp falls before the card comes back.
   async function notKept(reason: Message, motion: boolean) {
     setMessage(reason);
@@ -141,9 +158,10 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
     const file = event.target.files?.[0];
     // Cleared so that choosing the same picture again is noticed too.
     event.target.value = "";
-    if (!file || working.current) return;
+    if (!file || sealCheckInFlight.current) return;
 
-    working.current = true;
+    sealCheckInFlight.current = true;
+    left.current = false;
     const motion = !prefersReducedMotion();
     setProgress("checking");
     setMessage(null);
@@ -153,23 +171,23 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
       const lightWentRound = wait(motion ? MAILBOX_CHECK_MS : 0);
 
       const seal = await readSealFromImage(file);
-      if (!mounted.current) return;
+      if (!stillWanted()) return;
       if (seal !== returnKey) {
         setImageUnread(true);
         await lightWentRound;
-        if (!mounted.current) return;
+        if (!stillWanted()) return;
         await notKept(seal === null ? { text: tm("noSealInImage"), hint: tm("noSealInImageHint") } : { text: t("keep.otherSeal") }, motion);
         return;
       }
 
       const [result] = await Promise.all([confirmReturnKey(returnKey), lightWentRound]);
-      if (!mounted.current) return;
+      if (!stillWanted()) return;
 
       if (result.type === "confirmed") {
         // Only now, with the server's answer, does the door open.
         setProgress("kept");
         await wait(motion ? MAILBOX_OPEN_MS : 0);
-        if (mounted.current) onConfirmed();
+        if (stillWanted()) onConfirmed();
         return;
       }
 
@@ -185,8 +203,9 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
         motion
       );
     } finally {
-      unlockLocaleSwitch();
-      working.current = false;
+      // Leaving already let go of the language switch.
+      if (!left.current) unlockLocaleSwitch();
+      sealCheckInFlight.current = false;
       // A kept seal stays on its open mailbox while the screen moves on; anything else gives the
       // card back.
       if (mounted.current) setProgress((current) => (current === "kept" ? current : null));
@@ -267,8 +286,8 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
 
         <button
           type="button"
-          onClick={onLeave}
-          disabled={busy}
+          onClick={leave}
+          disabled={progress === "kept"}
           className="mt-1 text-[12px] tracking-[.5px] text-white/35 underline decoration-white/10 underline-offset-4 transition-colors duration-300 hover:text-white/60 disabled:pointer-events-none disabled:opacity-30"
         >
           {leaveLabel}

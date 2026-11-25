@@ -65,7 +65,7 @@ export function ShowSealStep() {
   const mounted = useRef(false);
   // Set as soon as a picture is taken, before the next render: two pictures given in a row (a drop
   // and a tap, a double drop) never start two openings.
-  const working = useRef(false);
+  const sealCheckInFlight = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -80,8 +80,8 @@ export function ShowSealStep() {
   // not open it. The language switch is held for the whole operation, so changing language never
   // counts as leaving.
   async function openWithPicture(file: Blob) {
-    if (working.current) return;
-    working.current = true;
+    if (sealCheckInFlight.current) return;
+    sealCheckInFlight.current = true;
     const isCurrentMailbox = startMailboxOperation();
     const isStillWanted = () => mounted.current && isCurrentMailbox();
     const motion = !prefersReducedMotion();
@@ -130,7 +130,7 @@ export function ShowSealStep() {
       );
     } finally {
       unlockLocaleSwitch();
-      working.current = false;
+      sealCheckInFlight.current = false;
       // Whatever happened, this step can be used again (it's gone anyway if the mailbox opened).
       if (mounted.current) setProgress(null);
     }
