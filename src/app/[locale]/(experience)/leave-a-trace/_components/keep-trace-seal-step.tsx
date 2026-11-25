@@ -25,10 +25,10 @@ export function KeepTraceSealStep() {
   }, [key, phase, setPhase]);
   if (!key) return null;
 
-  // The seal is confirmed: it leaves memory as the ritual moves on to the sealed closing. From
-  // here only whoever kept it has it.
+  // The seal is confirmed and the ritual moves on to the sealed closing. The seal stays in memory
+  // there, so the closing can offer letter notices with it (ADR-005); it's let go once the person
+  // leaves the closing (RitualStateProvider) or returns home.
   function finishSealing() {
-    setKey(null);
     setPhase("sealed");
   }
 

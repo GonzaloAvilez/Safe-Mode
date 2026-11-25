@@ -107,7 +107,8 @@ describe("LeaveATraceScreen", () => {
     await screen.findByText(sealedMailbox, {}, { timeout: 4000 });
     expect(screen.getByTestId("closing-scene")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/return-key/confirm", expect.objectContaining({ headers: { Authorization: `Bearer ${SEAL}` } }));
-    expect(screen.getByTestId("key").textContent).toBe("");
+    // Kept on the closing, which offers letter notices with it (ADR-005).
+    expect(screen.getByTestId("key").textContent).toBe(SEAL);
   });
 
   it("with letters closed, a trace goes straight to the closing, never asking about letters", async () => {

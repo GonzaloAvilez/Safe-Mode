@@ -240,8 +240,9 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
   if (!letter) return null;
   const { key } = letter;
 
+  // Back on the phrase. From the closing, that's leaving it: the seal is let go.
   function backToPhrase() {
-    updateMirrorLetter({ backOnPhrase: true });
+    updateMirrorLetter(letter?.phase === "sent" ? { backOnPhrase: true, key: null } : { backOnPhrase: true });
   }
 
   async function send(event: SubmitEvent) {
@@ -261,8 +262,9 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
       ]);
 
       if (result.type === "held" || result.type === "already_on_its_way") {
-        // The letter is on its way: the seal leaves memory, only whoever kept it has it now.
-        updateMirrorLetter({ phase: "sent", key: null, draft: "", outcome: null });
+        // The letter is on its way. The seal stays in memory on the closing, so it can offer letter
+        // notices with it (ADR-005); it's let go once the person leaves the closing.
+        updateMirrorLetter({ phase: "sent", draft: "", outcome: null });
         if (mounted.current) setStage(result.type === "held" ? "leaving" : "left");
         return;
       }

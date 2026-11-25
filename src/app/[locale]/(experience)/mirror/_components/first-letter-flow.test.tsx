@@ -12,6 +12,33 @@ import es from "../../../../../../messages/es.json";
 
 // The real router is the same object on every render; so is this one.
 const { handoffMock, router } = vi.hoisted(() => ({ handoffMock: vi.fn(), router: { replace: () => {} } }));
+// The page the ritual provider sees: null (outside the app router) unless a test goes somewhere.
+// Like Next's, a change re-renders whoever reads it.
+const navigation = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  return {
+    pathname: null as string | null,
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    goTo(pathname: string | null) {
+      navigation.pathname = pathname;
+      listeners.forEach((listener) => listener());
+    },
+  };
+});
+vi.mock("next/navigation", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    usePathname: () =>
+      useSyncExternalStore(
+        navigation.subscribe,
+        () => navigation.pathname,
+        () => navigation.pathname
+      ),
+  };
+});
 
 vi.mock("../../_shared/mirror-handoff", () => ({ readMirrorHandoff: handoffMock }));
 vi.mock("../mirror-canvas", () => ({ MirrorCanvas: () => <div data-testid="mirror-canvas" /> }));
@@ -511,15 +538,19 @@ describe("Writing and sending the first letter", () => {
     expect(state("phase")).toBe("sent");
   });
 
-  it("lets go of the seal and the draft once the letter has left", async () => {
+  // ADR-005: the closing offers letter notices with the seal, so only the draft goes.
+  it("lets go of the draft once the letter has left, and keeps the seal for the closing", async () => {
     renderMirror(WRITING);
     await settle();
 
     await writeAndSend("Gracias por dejarla aquí.");
 
-    expect(state("key")).toBe("");
+    expect(state("key")).toBe(SEAL);
     expect(state("draft")).toBe("");
-    expect(document.body.textContent).not.toContain(SEAL);
+    // In memory only: the closing never shows its digits (the test's own hidden readout aside).
+    const visible = document.body.cloneNode(true) as HTMLElement;
+    visible.querySelectorAll("[hidden]").forEach((node) => node.remove());
+    expect(visible.textContent).not.toContain(SEAL);
   });
 
   it("holds the language switch while sending, and lets it go after", async () => {
@@ -537,6 +568,32 @@ describe("Writing and sending the first letter", () => {
     await act(async () => answer(started({ type: "held" })));
     await settle(LETTER_TRACE_MS);
     expect(state("locked")).toBe("false");
+  });
+
+  // #285 review: the send finishes after the person left Mirror, so the closing is reached without
+  // another page change. Its seal must not stay in memory outside Mirror.
+  it("lets go of the seal when the letter finishes sending after the person left Mirror", async () => {
+    act(() => navigation.goTo("/es/mirror"));
+    let answer!: (response: Response) => void;
+    answers["/api/correspondences"] = [() => new Promise<Response>((resolve) => (answer = resolve))];
+    renderMirror(WRITING);
+    await settle();
+    fireEvent.change(field(), { target: { value: "Hola." } });
+    fireEvent.click(button(P.send)!);
+    await settle();
+    expect(state("phase")).toBe("sending");
+
+    fireEvent.click(button("test: leave Mirror")!);
+    act(() => navigation.goTo("/es"));
+    await settle();
+    expect(state("key")).toBe(SEAL);
+
+    await act(async () => answer(started({ type: "held" })));
+    await settle(LETTER_TRACE_MS);
+
+    expect(state("phase")).toBe("sent");
+    expect(state("key")).toBe("");
+    act(() => navigation.goTo(null));
   });
 
   it("sends what a bot filled in the hidden field, for the server to catch", async () => {
@@ -580,6 +637,9 @@ describe("Writing and sending the first letter", () => {
     expect(screen.getByText(PHRASE)).toBeTruthy();
     expect(screen.getByText(L.onItsWay)).toBeTruthy();
     expect(door()).toBeNull();
+    // Leaving the closing lets go of the seal it kept (ADR-005).
+    expect(state("key")).toBe("");
+    expect(state("phase")).toBe("sent");
   });
 
   it("a letter already on its way (another tab) ends on the envelope that left, without sending twice", async () => {

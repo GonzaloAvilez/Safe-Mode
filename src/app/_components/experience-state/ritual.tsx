@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { usePathname } from "next/navigation";
+import { isLocale } from "@/lib/locale";
 import type { SendFirstLetterResult } from "@/app/[locale]/(experience)/_shared/letters/send-letter";
 import { createStrictContext } from "./create-strict-context";
 
@@ -80,6 +82,13 @@ const EMPTY_MIRROR_INTERACTION: MirrorInteraction = {
 
 const [RitualStateContext, useRitualState] = createStrictContext<RitualState>("useRitualState");
 
+// The page a path shows, without its locale: "/es/mirror" → "/mirror". Switching language keeps
+// the same page, so it never counts as leaving one.
+function pageOf(pathname: string): string {
+  const [, first, ...rest] = pathname.split("/");
+  return isLocale(first) ? `/${rest.join("/")}` : pathname;
+}
+
 // Vulnerable drafts and choices stay only in memory, above the locale segment.
 // They survive language changes but disappear on a full reload or closed tab.
 export function RitualStateProvider({ children }: { children: ReactNode }) {
@@ -100,6 +109,25 @@ export function RitualStateProvider({ children }: { children: ReactNode }) {
     const startedIn = generation.current;
     return () => startedIn === generation.current;
   }, []);
+
+  // ADR-005: both closings keep their seal in memory so they can offer letter notices with it, and
+  // let it go once the person leaves them. Leaving by the closing's own buttons is handled there;
+  // this covers every other way out (another page, the browser's back button). Only the closings:
+  // a seal still being kept ("keeping") waits for whoever comes back to it, as before.
+  //
+  // It's a rule on the current state, not on the page change: a closing's seal is never in memory
+  // outside its page. That also covers a closing reached after the person had already left, like a
+  // letter that finishes sending, or a seal whose confirmation lands, once they're on another page
+  // (#285 review). Checked during render, so the seal is gone before anything can read it. Each
+  // update makes its own condition false, so it settles in one pass.
+  const pathname = usePathname();
+  const page = pathname === null ? null : pageOf(pathname);
+  if (page !== null && page !== "/leave-a-trace" && leaveATracePhase === "sealed" && leaveATraceKey) {
+    setLeaveATraceKey(null);
+  }
+  if (page !== null && page !== "/mirror" && mirrorLetter?.phase === "sent" && mirrorLetter.key) {
+    setMirrorLetter({ ...mirrorLetter, key: null });
+  }
 
   const clearRitualState = useCallback(() => {
     generation.current += 1;
