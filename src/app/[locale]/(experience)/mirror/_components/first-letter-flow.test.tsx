@@ -91,7 +91,7 @@ vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: () => {
 vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: () => Promise.resolve("482133901756229") }));
 
 import { MirrorScreen } from "./mirror-screen";
-import { KEPT_MESSAGE_HOLD_MS } from "../../_shared/return-key/keep-return-key-step";
+import { KEEPING_SCENE_MS } from "../../_shared/return-key/keep-return-key-step";
 import { LETTER_FADE_MS, LETTER_TRACE_MS } from "../../_shared/letters/letter-send-scene";
 
 // ADR-004 #212, design B: writing a letter from Mirror, through the real screen and the real
@@ -214,7 +214,7 @@ async function keepThePicture() {
   fireEvent.change(screen.getByLabelText(es.returnKey.keep.chooseImage), {
     target: { files: [new File(["png"], "refugio-sello.png", { type: "image/png" })] },
   });
-  await settle(KEPT_MESSAGE_HOLD_MS);
+  await settle(KEEPING_SCENE_MS);
 }
 
 async function writeAndSend(text: string) {

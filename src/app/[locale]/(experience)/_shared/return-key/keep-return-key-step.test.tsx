@@ -22,7 +22,8 @@ vi.mock("./download-blob", () => ({ downloadBlob: downloadMock, isIosDevice: () 
 vi.mock("./read-seal-from-image", () => ({ readSealFromImage: readSealMock }));
 vi.mock("./confirm-return-key", () => ({ confirmReturnKey: confirmMock }));
 
-import { KEPT_MESSAGE_HOLD_MS, KeepReturnKeyStep } from "./keep-return-key-step";
+import { MAILBOX_CHECK_MS, MAILBOX_FAIL_MS, MAILBOX_OPEN_MS } from "../mailbox-scene";
+import { KEEPING_SCENE_MS, KeepReturnKeyStep } from "./keep-return-key-step";
 
 // The step's contract with whichever screen shows it (Leave a Trace and Mirror): the seal and the
 // screen's own words go in; keeping the seal confirms it, and that, or leaving, comes back through
@@ -74,11 +75,19 @@ async function choosePicture(name = K.chooseImage) {
   await act(async () => fireEvent.change(pictureInput(name), { target: { files: [PICTURE] } }));
 }
 
-async function holdElapses() {
+async function advance(ms: number) {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(KEPT_MESSAGE_HOLD_MS);
+    await vi.advanceTimersByTimeAsync(ms);
   });
 }
+// The light goes round the door once before any answer is shown, the door takes its time to open,
+// and a seal that isn't kept puts the light out before the card comes back.
+const lightGoesRound = () => advance(MAILBOX_CHECK_MS);
+const doorOpens = () => advance(MAILBOX_OPEN_MS);
+const lightGoesOut = () => advance(MAILBOX_FAIL_MS);
+
+const stage = () => document.querySelector("[data-stage]")?.getAttribute("data-stage") ?? null;
+const cardShown = () => document.querySelector("[data-card]")!.getAttribute("aria-hidden") === "false";
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -90,6 +99,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
 
@@ -144,13 +154,20 @@ describe("KeepReturnKeyStep", () => {
 
       expect(readSealMock).toHaveBeenCalledWith(PICTURE);
       expect(confirmMock).toHaveBeenCalledWith(SEAL);
+      expect(status()).toBe(K.checking);
+
+      await lightGoesRound();
       expect(status()).toBe(K.confirmed);
+      expect(stage()).toBe("opening");
       expect(callbacks.onConfirmed).not.toHaveBeenCalled();
       expect(locked()).toBe("true");
 
-      await holdElapses();
+      await doorOpens();
       expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
       expect(locked()).toBe("false");
+      // Until the screen moves on, the mailbox stays open: the card never flashes back.
+      expect(stage()).toBe("opening");
+      expect(cardShown()).toBe(false);
     });
 
     it("says it's checking while the picture is read and the seal confirmed, and nothing can be pressed", async () => {
@@ -167,7 +184,7 @@ describe("KeepReturnKeyStep", () => {
       expect((button(PROPS.leaveLabel) as HTMLButtonElement).disabled).toBe(true);
 
       await act(async () => answer({ type: "confirmed" }));
-      await holdElapses();
+      await advance(KEEPING_SCENE_MS);
       expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
     });
 
@@ -177,11 +194,13 @@ describe("KeepReturnKeyStep", () => {
       await saveImage();
 
       await choosePicture();
+      await lightGoesRound();
 
       expect(confirmMock).not.toHaveBeenCalled();
       expect(status()).toContain(es.mailbox.show.noSealInImage);
       expect(status()).toContain(es.mailbox.show.noSealInImageHint);
       expect(pictureInput(K.chooseAnother)).toBeTruthy();
+      await lightGoesOut();
       expect(locked()).toBe("false");
     });
 
@@ -191,6 +210,7 @@ describe("KeepReturnKeyStep", () => {
       await saveImage();
 
       await choosePicture();
+      await lightGoesRound();
 
       expect(confirmMock).not.toHaveBeenCalled();
       expect(status()).toBe(K.otherSeal);
@@ -202,8 +222,11 @@ describe("KeepReturnKeyStep", () => {
       renderKeep();
       await saveImage();
       await choosePicture();
+      await lightGoesRound();
+      await lightGoesOut();
 
       await choosePicture(K.chooseAnother);
+      await lightGoesRound();
 
       expect(confirmMock).toHaveBeenCalledWith(SEAL);
       expect(status()).toBe(K.confirmed);
@@ -219,11 +242,17 @@ describe("KeepReturnKeyStep", () => {
       await saveImage();
 
       await choosePicture();
+      await lightGoesRound();
 
       expect(status()).toBe(message);
+      expect(stage()).toBe("failing");
+      expect(pictureInput().disabled).toBe(true);
+
+      await lightGoesOut();
       expect(callbacks.onConfirmed).not.toHaveBeenCalled();
       expect(locked()).toBe("false");
       expect(pictureInput().disabled).toBe(false);
+      expect(status()).toBe(message);
     });
 
     it("checks only once while a check is under way", async () => {
@@ -235,6 +264,79 @@ describe("KeepReturnKeyStep", () => {
       await act(async () => fireEvent.change(pictureInput(), { target: { files: [PICTURE] } }));
 
       expect(readSealMock).toHaveBeenCalledOnce();
+    });
+
+    it("the card gives way to the mailbox, empty inside, while the seal is checked", async () => {
+      renderKeep();
+      await saveImage();
+      expect(stage()).toBeNull();
+      expect(cardShown()).toBe(true);
+
+      await choosePicture();
+
+      expect(stage()).toBe("checking");
+      expect(document.querySelector('[data-contents="empty"]')).toBeTruthy();
+      expect(document.querySelector('[data-contents="letters"]')).toBeNull();
+      expect(cardShown()).toBe(false);
+    });
+
+    it("brings the mailbox into view as it appears, the picture having been chosen further down", async () => {
+      const scrollIntoView = vi.fn();
+      Element.prototype.scrollIntoView = scrollIntoView;
+      renderKeep();
+      await saveImage();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      await choosePicture();
+
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+      expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "center" });
+      Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+    });
+
+    it("never opens the door before the server confirmed the seal, however long the light waits", async () => {
+      let answer!: (result: { type: "confirmed" }) => void;
+      confirmMock.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+      renderKeep();
+      await saveImage();
+      await choosePicture();
+
+      await advance(MAILBOX_CHECK_MS * 3);
+      expect(stage()).toBe("checking");
+      expect(status()).toBe(K.checking);
+
+      await act(async () => answer({ type: "confirmed" }));
+      expect(stage()).toBe("opening");
+      expect(status()).toBe(K.confirmed);
+    });
+
+    it("a seal that isn't kept gives the card back, with the reason, once the light is out", async () => {
+      readSealMock.mockResolvedValue(OTHER_SEAL);
+      renderKeep();
+      await saveImage();
+      await choosePicture();
+      await lightGoesRound();
+      expect(stage()).toBe("failing");
+      expect(cardShown()).toBe(false);
+
+      await lightGoesOut();
+
+      expect(stage()).toBeNull();
+      expect(cardShown()).toBe(true);
+      expect(status()).toBe(K.otherSeal);
+      expect(button(K.saveAgain)).toBeTruthy();
+    });
+
+    it("with reduced motion, moves on as soon as the server confirms", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce"), media: query }));
+      renderKeep();
+      await saveImage();
+
+      await choosePicture();
+      // Nothing to wait for but the answers themselves: well under the light's round.
+      await advance(10);
+
+      expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
     });
 
     it("does nothing when the picker is closed without a picture", async () => {
@@ -280,19 +382,20 @@ describe("KeepReturnKeyStep", () => {
 
     unmount();
     await act(async () => answer({ type: "confirmed" }));
-    await holdElapses();
+    await advance(KEEPING_SCENE_MS);
 
     expect(callbacks.onConfirmed).not.toHaveBeenCalled();
   });
 
-  it("a step that's gone while “your seal is kept” shows never moves anything on", async () => {
+  it("a step that's gone while the door opens never moves anything on", async () => {
     const { unmount } = renderKeep();
     await saveImage();
     await choosePicture();
+    await lightGoesRound();
     expect(status()).toBe(K.confirmed);
 
     unmount();
-    await holdElapses();
+    await doorOpens();
 
     expect(callbacks.onConfirmed).not.toHaveBeenCalled();
   });

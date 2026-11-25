@@ -89,6 +89,12 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
   or dropped anywhere on the page. While it's checked, a light runs around the mailbox's door,
   the same light as the envelope leaving. The door opens only once the server has opened the
   mailbox.
+- **Keeping the seal activates the mailbox (decided 2026-11-25, #289).** Leave a Trace and
+  Mirror show the same mailbox when the saved picture is chosen back, empty inside, since no
+  letter has arrived yet. The stamp goes into its door and the light runs around it while the
+  seal is confirmed. The door opens only once the server has confirmed it. When it isn't
+  confirmed, the card comes back with the reason. Choosing the picture stays the only gesture
+  here: no drag and drop, since this step happens almost always on a phone.
 - About 50 bits is too few for a plain hash, so a seal is stored as HMAC-SHA256 with a server
   secret (`RETURN_KEY_HASH_SECRET`, a "pepper") that lives only in Vercel. A stolen database
   alone can't be used to guess keys. Guessing through the API is rate-limited. The secret can
