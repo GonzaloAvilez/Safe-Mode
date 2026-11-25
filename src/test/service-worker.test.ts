@@ -192,6 +192,49 @@ describe("service worker: tapping the notice", () => {
     });
   });
 
+  // #286 review: only the experience's pages listen for the intent. An admin or /closed tab would
+  // swallow the tap, and the mailbox would never open.
+  describe("with windows that can't open the mailbox", () => {
+    it("sends the intent to the experience window, not to a focused admin tab", async () => {
+      const admin = windowAt(`${ORIGIN}/admin/letters`, true);
+      const writing = windowAt(`${ORIGIN}/es/write`);
+      const { self, dispatch } = loadWorker([admin, writing]);
+
+      await dispatch("notificationclick", tap("/es/mailbox").event);
+
+      expect(writing.focus).toHaveBeenCalledOnce();
+      expect(writing.postMessage).toHaveBeenCalledWith({ type: "refugio:open-mailbox", url: `${ORIGIN}/es/mailbox` });
+      expect(admin.focus).not.toHaveBeenCalled();
+      expect(admin.postMessage).not.toHaveBeenCalled();
+      expect(self.clients.openWindow).not.toHaveBeenCalled();
+    });
+
+    it("still prefers the focused experience window among several", async () => {
+      const admin = windowAt(`${ORIGIN}/admin`, true);
+      const background = windowAt(`${ORIGIN}/en/observe`);
+      const front = windowAt(`${ORIGIN}/es/write`, true);
+      const { dispatch } = loadWorker([admin, background, front]);
+
+      await dispatch("notificationclick", tap("/es/mailbox").event);
+
+      expect(front.postMessage).toHaveBeenCalledOnce();
+      expect(background.postMessage).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["only an admin tab", `${ORIGIN}/admin/letters`],
+      ["only the closed page", `${ORIGIN}/closed`],
+    ])("opens the mailbox in a window of its own with %s open", async (_, url) => {
+      const other = windowAt(url, true);
+      const { self, dispatch } = loadWorker([other]);
+
+      await dispatch("notificationclick", tap("/es/mailbox").event);
+
+      expect(self.clients.openWindow).toHaveBeenCalledWith(`${ORIGIN}/es/mailbox`);
+      expect(other.postMessage).not.toHaveBeenCalled();
+    });
+  });
+
   it("opens the English mailbox when the notice carries no url", async () => {
     const { self, dispatch } = loadWorker();
 

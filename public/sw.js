@@ -28,6 +28,16 @@ function mailboxUrl(locale) {
   return `/${SUPPORTED_LOCALES.includes(locale) ? locale : DEFAULT_LOCALE}/mailbox`;
 }
 
+// A window on one of the experience's pages: its first path segment is a supported locale. Those
+// are the pages that listen for OPEN_MAILBOX (OpenMailboxFromNotice, in their layout).
+function isExperienceWindow(client) {
+  try {
+    return SUPPORTED_LOCALES.includes(new URL(client.url).pathname.split("/")[1]);
+  } catch {
+    return false;
+  }
+}
+
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
@@ -57,18 +67,23 @@ self.addEventListener("notificationclick", (event) => {
   // from under someone. Three cases, in order:
   //
   //   1. A window already on the mailbox: focus it, nothing is lost.
-  //   2. Any other Refugio window: focus it and send OPEN_MAILBOX. It is NOT navigated, and
-  //      openWindow is NOT called — `clients.openWindow()` does not promise a *new* window. In an
-  //      installed app Chrome can reuse the standalone window that is already open (Android,
+  //   2. Any other window of the experience: focus it and send OPEN_MAILBOX. It is NOT navigated,
+  //      and openWindow is NOT called — `clients.openWindow()` does not promise a *new* window. In
+  //      an installed app Chrome can reuse the standalone window that is already open (Android,
   //      Windows), which would navigate away from a draft. Avoiding `client.navigate()` alone
   //      isn't enough to keep that promise.
-  //   3. No Refugio window at all: there is nothing to lose, so open one.
+  //   3. No window of the experience: open one. The admin and /closed hold no ritual in memory,
+  //      so there is nothing to lose there.
+  //
+  // Only the experience's pages (/en/…, /es/…) listen for OPEN_MAILBOX, so only they are sent it:
+  // a focused admin tab would swallow the tap, and the mailbox would never open (#286 review).
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const onMailbox = windows.find((client) => client.url === url);
       if (onMailbox) return onMailbox.focus();
 
-      const open = windows.find((client) => client.focused) || windows[0];
+      const experience = windows.filter(isExperienceWindow);
+      const open = experience.find((client) => client.focused) || experience[0];
       if (!open) return self.clients.openWindow(url);
 
       return Promise.resolve(open.focus()).then(() => open.postMessage({ type: OPEN_MAILBOX, url }));
