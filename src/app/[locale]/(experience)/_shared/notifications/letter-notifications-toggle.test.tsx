@@ -199,6 +199,42 @@ describe("LetterNotificationsToggle", () => {
     expect(screen.getByText(text)).toBeTruthy();
   });
 
+  // #287 review: the browser rejects the permission request. Through the real push client, the
+  // toggle says so and can be pressed again.
+  it("says it failed and is enabled again when the browser rejects the permission request", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/push-client")>("@/lib/push-client");
+    vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "BOurom9kflp01No-zioM65hciEAM-MMRCQa7ay_DYcyWH5WaXuRf5Dt13EGdKGZhxZV4eZPWKu2UVtNxoeh-eak");
+    vi.stubGlobal("Notification", { permission: "default", requestPermission: () => Promise.reject(new DOMException("not allowed", "NotAllowedError")) });
+    subscribeMock.mockImplementationOnce(actual.subscribeToPush);
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: T.turnOn }));
+    await settle();
+
+    expect(screen.getByText(T.turnOnFailed)).toBeTruthy();
+    expect((screen.getByRole("button", { name: T.turnOn }) as HTMLButtonElement).disabled).toBe(false);
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ["turning on", false, T.turnOn, T.turnOnFailed],
+    ["turning off", true, T.turnOff, T.turnOffFailed],
+  ])("never stays disabled when %s throws unexpectedly", async (_, startsOn, label, failed) => {
+    if (startsOn) statusMock.mockResolvedValueOnce({ type: "subscribed" });
+    subscribeMock.mockRejectedValueOnce(new Error("unexpected"));
+    unsubscribeMock.mockRejectedValueOnce(new Error("unexpected"));
+    renderToggle();
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    await settle();
+
+    expect(screen.getByText(failed)).toBeTruthy();
+    expect((screen.getByRole("button", { name: label }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("turns notices off for this identity only", async () => {
     statusMock.mockResolvedValueOnce({ type: "subscribed" });
     renderToggle();

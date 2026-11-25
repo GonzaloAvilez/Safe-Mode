@@ -11,6 +11,8 @@ import {
   unsubscribeFromPush,
   type PushAvailability,
   type PushRequestFailure,
+  type SubscribeResult,
+  type UnsubscribeResult,
 } from "@/lib/push-client";
 import { isIosDevice } from "../return-key/download-blob";
 
@@ -97,10 +99,12 @@ export function LetterNotificationsToggle({ returnKey, className = "" }: { retur
   // Keeps the place while checking, so nothing jumps when the answer arrives.
   if (state === "checking") return <div aria-hidden="true" className={`min-h-11 ${className}`} />;
 
+  // push-client answers every failure instead of throwing; the catches are a last guard so the
+  // button can never stay disabled.
   async function turnOn() {
     setState("turning_on");
     setMessage(null);
-    const result = await subscribeToPush(returnKey, locale);
+    const result = await subscribeToPush(returnKey, locale).catch((): SubscribeResult => ({ type: "failed", reason: "failed" }));
     if (!mounted.current) return;
     if (result.type === "subscribed") setState("on");
     else if (result.type === "blocked") setState("blocked");
@@ -113,7 +117,7 @@ export function LetterNotificationsToggle({ returnKey, className = "" }: { retur
   async function turnOff() {
     setState("turning_off");
     setMessage(null);
-    const result = await unsubscribeFromPush(returnKey);
+    const result = await unsubscribeFromPush(returnKey).catch((): UnsubscribeResult => ({ type: "failed", reason: "failed" }));
     if (!mounted.current) return;
     if (result.type === "unsubscribed") setState("off");
     else {
