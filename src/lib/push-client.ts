@@ -24,6 +24,18 @@ export type SubscribeResult =
 
 export type UnsubscribeResult = { type: "unsubscribed" } | { type: "failed"; reason: PushRequestFailure };
 
+// Whether this seal's identity gets notices on this device. "unknown" when it couldn't be told
+// (offline, rate limited, a server error): the toggle then says so and offers to ask again, rather
+// than showing notices as off to someone who may have them on.
+export type PushSubscriptionStatus =
+  | { type: "subscribed" }
+  | { type: "not_subscribed" }
+  | { type: "unknown"; reason: PushRequestFailure };
+
+// How long a newly registered service worker gets to become active. Registering can resolve before
+// the worker is active, and if it never activates, `navigator.serviceWorker.ready` never settles.
+export const SERVICE_WORKER_READY_TIMEOUT_MS = 10_000;
+
 // Read where it's used, as one literal: Next inlines NEXT_PUBLIC_ values at build time.
 function vapidPublicKey(): string | null {
   return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || null;
@@ -78,6 +90,20 @@ async function sendWithSeal(path: string, method: "POST" | "DELETE", returnKey: 
   }
 }
 
+// The active registration, or a rejection once SERVICE_WORKER_READY_TIMEOUT_MS has passed, so a
+// worker that never activates fails the subscription instead of leaving it pending.
+async function activeRegistration(): Promise<ServiceWorkerRegistration> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("service worker never became active")), SERVICE_WORKER_READY_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([navigator.serviceWorker.ready, expired]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function failureOf(response: Response | null): PushRequestFailure {
   if (!response) return "offline";
   if (response.status === 401) return "not_recognized";
@@ -98,7 +124,7 @@ export async function subscribeToPush(returnKey: string, locale: Locale): Promis
   let subscription: PushSubscription;
   try {
     await navigator.serviceWorker.register(SERVICE_WORKER_URL);
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await activeRegistration();
     const applicationServerKey = decodeBase64Url(key);
     let existing = await registration.pushManager.getSubscription();
     // A subscription made with another key (the keys were replaced) can't receive anything signed
@@ -132,23 +158,26 @@ export async function unsubscribeFromPush(returnKey: string): Promise<Unsubscrib
   return response?.ok ? { type: "unsubscribed" } : { type: "failed", reason: failureOf(response) };
 }
 
-// Whether this seal's identity gets notices on this device. False whenever it can't be told: the
-// toggle then offers to turn them on, and subscribing again only updates the row.
-export async function isSubscribedToPush(returnKey: string): Promise<boolean> {
+// Whether this seal's identity gets notices on this device. With no subscription in this browser,
+// it's certainly not: nothing is registered or asked.
+export async function getPushSubscriptionStatus(returnKey: string): Promise<PushSubscriptionStatus> {
   let subscription: PushSubscription | null;
   try {
     subscription = await currentSubscription();
   } catch {
-    return false;
+    return { type: "unknown", reason: "failed" };
   }
-  if (!subscription) return false;
+  if (!subscription) return { type: "not_subscribed" };
 
   const response = await sendWithSeal(`${SUBSCRIPTION_ROUTE}/status`, "POST", returnKey, { endpoint: subscription.endpoint });
-  if (!response?.ok) return false;
+  if (!response?.ok) return { type: "unknown", reason: failureOf(response) };
   try {
     const body: unknown = await response.json();
-    return typeof body === "object" && body !== null && (body as { subscribed?: unknown }).subscribed === true;
+    const subscribed = typeof body === "object" && body !== null ? (body as { subscribed?: unknown }).subscribed : undefined;
+    if (subscribed === true) return { type: "subscribed" };
+    if (subscribed === false) return { type: "not_subscribed" };
   } catch {
-    return false;
+    // An answer that isn't JSON tells nothing either.
   }
+  return { type: "unknown", reason: "failed" };
 }

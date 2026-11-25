@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getPushAvailability, isPushBlocked, isSubscribedToPush, subscribeToPush, unsubscribeFromPush } from "@/lib/push-client";
+import {
+  SERVICE_WORKER_READY_TIMEOUT_MS,
+  getPushAvailability,
+  getPushSubscriptionStatus,
+  isPushBlocked,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from "@/lib/push-client";
 
 const SEAL = "482133901756229";
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-1";
@@ -151,6 +158,22 @@ describe("subscribeToPush", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // Registering can resolve before the worker is active; one that never activates must not leave
+  // the toggle waiting forever.
+  it("fails, without subscribing or telling the server, when the worker never becomes active", async () => {
+    vi.useFakeTimers();
+    permission = "granted";
+    serviceWorker.ready = new Promise(() => {});
+
+    const result = subscribeToPush(SEAL, "es");
+    await vi.advanceTimersByTimeAsync(SERVICE_WORKER_READY_TIMEOUT_MS);
+
+    expect(await result).toEqual({ type: "failed", reason: "failed" });
+    expect(pushManager.subscribe).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
   it("fails without telling the server when the browser can't subscribe", async () => {
     permission = "granted";
     pushManager.subscribe.mockRejectedValueOnce(new Error("push service error"));
@@ -211,12 +234,12 @@ describe("unsubscribeFromPush", () => {
   });
 });
 
-describe("isSubscribedToPush", () => {
+describe("getPushSubscriptionStatus", () => {
   it("asks the server about this device's subscription, with the seal", async () => {
     pushManager.getSubscription.mockResolvedValueOnce(fakeSubscription());
     fetchMock.mockResolvedValueOnce(Response.json({ subscribed: true }));
 
-    expect(await isSubscribedToPush(SEAL)).toBe(true);
+    expect(await getPushSubscriptionStatus(SEAL)).toEqual({ type: "subscribed" });
     expect(requestTo()).toEqual({
       path: "/api/notifications/subscription/status",
       method: "POST",
@@ -225,23 +248,40 @@ describe("isSubscribedToPush", () => {
     });
   });
 
+  it("is not subscribed when the server says so", async () => {
+    pushManager.getSubscription.mockResolvedValueOnce(fakeSubscription());
+    fetchMock.mockResolvedValueOnce(Response.json({ subscribed: false }));
+
+    expect(await getPushSubscriptionStatus(SEAL)).toEqual({ type: "not_subscribed" });
+  });
+
   // People who never opted in never get a service worker, not even from checking.
-  it("is false without a subscription, without registering anything or asking the server", async () => {
+  it("is certainly not subscribed without a subscription, without registering anything or asking the server", async () => {
     serviceWorker.getRegistration.mockResolvedValueOnce(undefined);
 
-    expect(await isSubscribedToPush(SEAL)).toBe(false);
+    expect(await getPushSubscriptionStatus(SEAL)).toEqual({ type: "not_subscribed" });
     expect(serviceWorker.register).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // Someone who has notices on must never see them as off just because the check failed.
   it.each([
-    ["the server says no", () => Response.json({ subscribed: false })],
-    ["the server fails", () => new Response(null, { status: 500 })],
-    ["the answer isn't JSON", () => new Response("nope", { status: 200 })],
-  ])("is false when %s", async (_, response) => {
+    ["offline", () => Promise.reject(new TypeError("Failed to fetch")), "offline"],
+    ["rate limited", () => Promise.resolve(new Response(null, { status: 429 })), "too_many"],
+    ["a server error", () => Promise.resolve(new Response(null, { status: 500 })), "failed"],
+    ["an unknown seal", () => Promise.resolve(new Response(null, { status: 401 })), "not_recognized"],
+    ["an answer that isn't JSON", () => Promise.resolve(new Response("nope", { status: 200 })), "failed"],
+    ["an answer without a yes or no", () => Promise.resolve(Response.json({})), "failed"],
+  ] as const)("is unknown, not off, when %s", async (_, answer, reason) => {
     pushManager.getSubscription.mockResolvedValueOnce(fakeSubscription());
-    fetchMock.mockResolvedValueOnce(response());
+    fetchMock.mockImplementationOnce(answer);
 
-    expect(await isSubscribedToPush(SEAL)).toBe(false);
+    expect(await getPushSubscriptionStatus(SEAL)).toEqual({ type: "unknown", reason });
+  });
+
+  it("is unknown when the browser can't say which subscription it holds", async () => {
+    serviceWorker.getRegistration.mockRejectedValueOnce(new Error("storage error"));
+
+    expect(await getPushSubscriptionStatus(SEAL)).toEqual({ type: "unknown", reason: "failed" });
   });
 });
