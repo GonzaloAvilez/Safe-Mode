@@ -8,6 +8,7 @@ import { ScreenCta } from "../../_shared/screen-cta";
 import { ScreenHeader } from "../../_shared/screen-header";
 import { ScreenPrompt } from "../../_shared/screen-prompt";
 import { GratitudeCanvas } from "../../gratitude/gratitude-canvas";
+import { LetterNotificationsToggle } from "../../_shared/notifications/letter-notifications-toggle";
 import { KeepTraceSealStep } from "./keep-trace-seal-step";
 import { LettersChoiceStep } from "./letters-choice-step";
 import { TraceForm } from "./trace-form";
@@ -49,7 +50,7 @@ function TraceStepShell({
 // that closes meanwhile never leaves someone with a seal that opens nothing.
 export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
   const t = useTranslations("leaveATrace");
-  const { leaveATracePhase: phase, setLeaveATracePhase: setPhase } = useRitualState();
+  const { leaveATracePhase: phase, setLeaveATracePhase: setPhase, leaveATraceKey } = useRitualState();
   const resetRitual = useResetRitual();
 
   if (phase === "choosing") {
@@ -70,6 +71,9 @@ export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
 
   if (phase !== "writing") {
     const doneHeadlineLines = t("doneHeadline").split("\n");
+    // ADR-005: whoever sealed it waits for a first letter that may never come, so this is where
+    // letter notices are offered, with the seal still in memory.
+    const offersNotices = phase === "sealed" && leaveATraceKey !== null;
 
     return (
       <>
@@ -77,7 +81,11 @@ export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
 
         <ScreenHeader tagline={t("doneTagline")} />
 
-        <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8">
+        {/* With the notices offered, the centered words leave room at the bottom for "Volver al
+            inicio", which stays fixed there: on a short phone they'd otherwise meet. */}
+        <div
+          className={`pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center px-8 ${offersNotices ? "pb-16" : ""}`}
+        >
           <ScreenPrompt
             className="translate-y-[6vh]"
             headline={
@@ -104,6 +112,9 @@ export function LeaveATraceScreen({ lettersOpen }: { lettersOpen: boolean }) {
               ) : undefined
             }
           />
+          {offersNotices && (
+            <LetterNotificationsToggle returnKey={leaveATraceKey.returnKey} className="pointer-events-auto mt-6 translate-y-[6vh]" />
+          )}
         </div>
 
         <ScreenCta href="/" label={t("backToStart")} accentRgb="210,158,32" onClick={resetRitual} />

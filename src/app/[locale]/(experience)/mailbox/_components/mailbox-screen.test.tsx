@@ -22,6 +22,11 @@ vi.mock("@/i18n/navigation", () => ({
   ),
 }));
 
+// ADR-005: stands in for the toggle, carrying the seal it was given (as an attribute, never as text).
+vi.mock("../../_shared/notifications/letter-notifications-toggle", () => ({
+  LetterNotificationsToggle: ({ returnKey }: { returnKey: string }) => <div data-testid="notifications-toggle" data-seal={returnKey} />,
+}));
+
 import { MailboxScreen } from "./mailbox-screen";
 import { SEAL, correspondence, letter, renderMailbox } from "./mailbox-test-harness";
 
@@ -292,5 +297,27 @@ describe("MailboxScreen, every step starts at its top", () => {
     fireEvent.click(screen.getByText("“Lo que no dije también pesa.”"));
 
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+  });
+});
+
+// ADR-005: the mailbox is opened with the seal, so letter notices are offered there.
+describe("MailboxScreen, letter notices", () => {
+  it("are offered with the seal on the list of envelopes", () => {
+    renderMailbox(<MailboxScreen />, opened());
+    expect(screen.getByTestId("notifications-toggle").getAttribute("data-seal")).toBe(SEAL);
+  });
+
+  it("are offered with the seal in an empty mailbox too", () => {
+    renderMailbox(<MailboxScreen />, opened([]));
+    expect(screen.getByTestId("notifications-toggle").getAttribute("data-seal")).toBe(SEAL);
+  });
+
+  it("aren't offered before the mailbox is opened, nor while reading a letter", () => {
+    renderMailbox(<MailboxScreen />);
+    expect(screen.queryByTestId("notifications-toggle")).toBeNull();
+    cleanup();
+
+    renderMailbox(<MailboxScreen />, opened([correspondence({ id: "c1" })], "reading", "c1"));
+    expect(screen.queryByTestId("notifications-toggle")).toBeNull();
   });
 });

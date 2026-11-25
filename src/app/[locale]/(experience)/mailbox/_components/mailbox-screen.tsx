@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useMailboxState } from "@/app/_components/experience-state/mailbox";
 import { Link } from "@/i18n/navigation";
 import type { MailboxCorrespondence } from "@/lib/mailbox";
+import { LetterNotificationsToggle } from "../../_shared/notifications/letter-notifications-toggle";
 import { ScreenCta } from "../../_shared/screen-cta";
 import { ScreenHeader } from "../../_shared/screen-header";
 import { ScreenPrompt } from "../../_shared/screen-prompt";
@@ -183,6 +184,8 @@ export function MailboxScreen() {
         <MailboxShell tagline={t("insideTagline")}>
           <ScreenPrompt headline={t("empty.headline")} subcopy={t("empty.subcopy")} />
           <p className="text-center text-[11px] text-white/40">{t("empty.kept")}</p>
+          {/* ADR-005: the mailbox is opened with the seal, so letter notices can be offered here. */}
+          <LetterNotificationsToggle returnKey={mailboxReturnKey} />
         </MailboxShell>
         <ScreenCta href="/" label={t("backToStart")} accentRgb="210,158,32" onClick={clearMailboxState} />
       </>
@@ -229,6 +232,7 @@ export function MailboxScreen() {
           setPhase("reading");
         }}
       />
+      <LetterNotificationsToggle returnKey={mailboxReturnKey} />
       <CloseMailboxLink label={t("close")} />
     </MailboxShell>
   );

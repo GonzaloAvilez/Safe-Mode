@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } 
 import { useLocale, useTranslations } from "next-intl";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { useRitualState, type MirrorLetter } from "@/app/_components/experience-state/ritual";
+import { LetterNotificationsToggle } from "../../_shared/notifications/letter-notifications-toggle";
 import { HoneypotField, useHoneypot } from "../../_shared/honeypot-field";
 import { LetterDraftPaper } from "../../_shared/letter-draft-paper";
 import { LetterCrisisHelp } from "../../_shared/letters/letter-crisis-help";
@@ -304,6 +305,11 @@ export function FirstLetterFlow({ entryId, phraseText }: { entryId: string; phra
           stage={sent ? (stage === "leaving" ? "leaving" : "left") : stage === "fading" ? "fading" : "tracing"}
           comeBack={t("comeBack")}
         />
+        {/* ADR-005: the reply may take days, so letter notices are offered here, with the seal still
+            in memory. They appear with the words, once the envelope has left. */}
+        {sent && key && (
+          <LetterNotificationsToggle returnKey={key.returnKey} className={stage === "leaving" ? "letter-send-reveal-soft" : ""} />
+        )}
         {sent && (
           // The way back appears with the words, once the envelope has left.
           <button

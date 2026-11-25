@@ -290,6 +290,18 @@
     "submit": "Add phrase",
     "countLabel": "{count, plural, =1 {# phrase} other {# phrases}} added so far — thank you."
   },
+  "letterNotifications": {
+    "turnOn": "Let me know when a letter arrives",
+    "turningOn": "Turning on…",
+    "hint": "Only on this device. A notice never says what was written to you.",
+    "on": "You'll get a notice on this device when a letter arrives.",
+    "turnOff": "Stop letting me know",
+    "turningOff": "Turning off…",
+    "blocked": "Notices are blocked for Refugio in this browser. You can allow them in its settings.",
+    "installFirst": "On iPhone, notices reach Refugio once it's installed: tap Share, then “Add to Home Screen”.",
+    "turnOnFailed": "Notices couldn't be turned on. Try again.",
+    "turnOffFailed": "Notices couldn't be turned off. Try again."
+  },
   "notifications": {
     "letterDelivered": {
       "title": "Refugio",
