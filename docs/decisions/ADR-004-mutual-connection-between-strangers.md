@@ -82,19 +82,21 @@ identities (id)          ← owns phrases, letters (later: resonances, saved phr
   could be typed or written down, and that's the load being removed. Trade-off accepted: a
   lost picture is a lost seal, and writing it down by hand is no longer offered. The mailbox
   kept accepting typed digits for seals kept before this change, until 2026-11-25 (below).
-- **The mailbox opens with the picture only (decided 2026-11-25, #288, design C).** The typed
-  digits field is gone from the mailbox. Every picture saved before 2026-11-23 already carried
-  the QR, so those seals still open it. Trade-off accepted: a seal only written down by hand,
-  with no picture, no longer opens a mailbox. The picture is chosen by tapping a drawn mailbox,
-  or dropped anywhere on the page. While it's checked, a light runs around the mailbox's door,
-  the same light as the envelope leaving. The door opens only once the server has opened the
-  mailbox.
-- **Keeping the seal activates the mailbox (decided 2026-11-25, #289).** Leave a Trace and
-  Mirror show the same mailbox when the saved picture is chosen back, empty inside, since no
-  letter has arrived yet. The stamp goes into its door and the light runs around it while the
-  seal is confirmed. The door opens only once the server has confirmed it. When it isn't
-  confirmed, the card comes back with the reason. Choosing the picture stays the only gesture
-  here: no drag and drop, since this step happens almost always on a phone.
+- **The mailbox opens with the picture only (decided 2026-11-25, #288).** The typed digits
+  field is gone from the mailbox. Every picture saved before 2026-11-23 already carried the QR,
+  so those seals still open it. Trade-off accepted: a seal only written down by hand, with no
+  picture, no longer opens a mailbox. The picture is chosen by tapping the stamp frame, or
+  dropped anywhere on the page.
+- **A seal is checked on its stamp, in line only (decided 2026-11-25, #292).** A drawn mailbox
+  was tried first (#290 and #291): seen live it was too heavy, a cream block that was the
+  strongest contrast on the dark screen, with a lot of text around it. It was replaced the same
+  day by the stamp frame, drawn in thin gold lines like the rest of the site. The seal is the
+  person's key, so what's checked is always their own: on /mailbox, the picture they chose, shown
+  in the frame from a local blob: URL and never uploaded; when keeping the seal (Leave a Trace,
+  Mirror), the card's own stamp, in place. While it's checked, a light runs around the stamp, the
+  same light as the envelope leaving. A postmark lands on it only once the server has said yes.
+  When the answer is no, the light goes out and the reason is shown. Keeping the seal stays
+  pick-only: no drag and drop, since that step happens almost always on a phone.
 - About 50 bits is too few for a plain hash, so a seal is stored as HMAC-SHA256 with a server
   secret (`RETURN_KEY_HASH_SECRET`, a "pepper") that lives only in Vercel. A stolen database
   alone can't be used to guess keys. Guessing through the API is rate-limited. The secret can

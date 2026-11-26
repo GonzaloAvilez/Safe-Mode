@@ -387,62 +387,50 @@
   }
 }
 
-/* The mailbox opened with the stamp (ADR-004 #213, design C): the stamp flies into the slot on the
-   door, the light runs around the door (`letter-send-trace`), then the mailbox breathes and the
-   door swings open on what's inside. When the seal opens nothing the light goes out
-   (`letter-send-fade`) and the stamp falls away. As with the envelope, every element's resting
-   style is its END state, so with reduced motion only the light changes and the door is simply
-   open. */
-@keyframes mailbox-stamp-place {
+/* Checking a seal (ADR-004 #292): the person's own picture settles into the stamp frame, the
+   envelope's light runs around it (`letter-send-trace`), and once the server says yes a postmark
+   lands on it. When it says no the light goes out (`letter-send-fade`) and the picture fades. As
+   with the envelope, every element's resting style is its END state, so with reduced motion only
+   the light changes. */
+@keyframes stamp-picture-in {
   from {
     opacity: 0;
-    transform: translate(-60px, -140px) scale(2.6) rotate(-10deg);
-  }
-  30% {
-    opacity: 1;
+    transform: scale(1.06);
   }
 }
-@keyframes mailbox-stamp-fall {
+@keyframes stamp-picture-out {
   from {
     opacity: 1;
-    transform: none;
   }
 }
-@keyframes mailbox-door-open {
+@keyframes postmark-land {
   from {
-    transform: perspective(600px) rotateY(0deg);
+    opacity: 0;
+    transform: scale(1.7) rotate(-26deg);
   }
 }
-@keyframes mailbox-letters-peek {
-  from {
-    transform: translateY(8px);
-  }
+.stamp-picture-in {
+  animation: stamp-picture-in 500ms ease-out both;
 }
-.mailbox-stamp-place {
-  animation: mailbox-stamp-place 600ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
-}
-.mailbox-stamp-fall {
+.stamp-picture-out {
   opacity: 0;
-  transform: translate(8px, 24px) rotate(10deg);
-  animation: mailbox-stamp-fall 500ms ease-in 450ms both;
+  animation: stamp-picture-out 500ms ease-in 200ms both;
 }
-.mailbox-breathe {
-  animation: letter-send-breathe 1600ms ease-in-out both;
+.stamp-light-lit {
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 6px rgba(242, 192, 99, 0.6));
 }
-.mailbox-door-open {
-  transform: perspective(600px) rotateY(-112deg);
-  animation: mailbox-door-open 800ms cubic-bezier(0.4, 0, 0.2, 1) 1300ms both;
-}
-.mailbox-letters-peek {
-  animation: mailbox-letters-peek 500ms ease-out 1900ms both;
+.postmark-land {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: rotate(-12deg);
+  animation: postmark-land 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mailbox-stamp-place,
-  .mailbox-stamp-fall,
-  .mailbox-breathe,
-  .mailbox-door-open,
-  .mailbox-letters-peek {
+  .stamp-picture-in,
+  .stamp-picture-out,
+  .postmark-land {
     animation: none;
   }
 }

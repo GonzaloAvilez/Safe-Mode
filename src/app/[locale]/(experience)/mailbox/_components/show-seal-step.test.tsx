@@ -7,7 +7,7 @@ import es from "../../../../../../messages/es.json";
 const { readSealFromImageMock } = vi.hoisted(() => ({ readSealFromImageMock: vi.fn() }));
 vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: readSealFromImageMock }));
 
-import { MAILBOX_CHECK_MS, MAILBOX_FAIL_MS, MAILBOX_OPEN_MS } from "../../_shared/mailbox-scene";
+import { POSTMARK_MS, SEAL_CHECK_MS, SEAL_FAIL_MS } from "../../_shared/stamp-frame";
 import { ShowSealStep } from "./show-seal-step";
 import { SEAL, correspondence, renderMailbox } from "./mailbox-test-harness";
 
@@ -188,6 +188,53 @@ describe("ShowSealStep, the picture is the seal", () => {
   });
 });
 
+describe("ShowSealStep, the person's own picture in the frame", () => {
+  function stubObjectUrls() {
+    const create = vi.fn(() => "blob:seal-picture");
+    const revoke = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", { value: create, configurable: true });
+    Object.defineProperty(URL, "revokeObjectURL", { value: revoke, configurable: true });
+    return { create, revoke };
+  }
+  const shownPicture = () => document.querySelector<HTMLImageElement>("[data-seal-picture]");
+
+  afterEach(() => {
+    Reflect.deleteProperty(URL, "createObjectURL");
+    Reflect.deleteProperty(URL, "revokeObjectURL");
+  });
+
+  it("shows the chosen picture in the frame from this device only, and lets it go once done", async () => {
+    const { create, revoke } = stubObjectUrls();
+    let answer: (response: Response) => void = () => {};
+    readSealFromImageMock.mockResolvedValue(SEAL);
+    stubFetch(new Promise<Response>((resolve) => (answer = resolve)));
+    renderMailbox(<ShowSealStep />);
+
+    const file = choosePicture();
+
+    await waitFor(() => expect(shownPicture()?.getAttribute("src")).toBe("blob:seal-picture"));
+    expect(create).toHaveBeenCalledWith(file);
+    expect(revoke).not.toHaveBeenCalled();
+
+    await act(async () => answer(Response.json({}, { status: 401 })));
+
+    await waitFor(() => expect(shownPicture()).toBeNull());
+    expect(revoke).toHaveBeenCalledWith("blob:seal-picture");
+  });
+
+  it("lets the picture go when the step goes away mid-check", async () => {
+    const { revoke } = stubObjectUrls();
+    readSealFromImageMock.mockReturnValue(new Promise(() => {}));
+    const view = renderMailbox(<ShowSealStep />);
+    choosePicture();
+    await waitFor(() => expect(shownPicture()).toBeTruthy());
+
+    view.unmount();
+
+    expect(revoke).toHaveBeenCalledWith("blob:seal-picture");
+  });
+});
+
 describe("ShowSealStep, dropping the picture", () => {
   it("opens the mailbox with a picture dropped anywhere on the page, which the browser doesn't open", async () => {
     readSealFromImageMock.mockResolvedValue(SEAL);
@@ -260,14 +307,14 @@ describe("ShowSealStep, dropping the picture", () => {
   });
 });
 
-describe("ShowSealStep, the door's timing", () => {
+describe("ShowSealStep, the postmark's timing", () => {
   async function flush(ms: number) {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(ms);
     });
   }
 
-  it("never opens the door before the light went round, nor the mailbox before the door, even if the server answered at once", async () => {
+  it("never lands the postmark before the light went round, nor opens the mailbox before the postmark, even if the server answered at once", async () => {
     reduceMotion(false);
     vi.useFakeTimers();
     readSealFromImageMock.mockResolvedValue(SEAL);
@@ -276,18 +323,18 @@ describe("ShowSealStep, the door's timing", () => {
     await flush(10);
 
     choosePicture();
-    await flush(MAILBOX_CHECK_MS - 50);
+    await flush(SEAL_CHECK_MS - 50);
     expect(stage()).toBe("checking");
 
     await flush(100);
-    expect(stage()).toBe("opening");
+    expect(stage()).toBe("stamped");
     expect(phase()).toBe("showing_seal");
 
-    await flush(MAILBOX_OPEN_MS);
+    await flush(POSTMARK_MS);
     expect(phase()).toBe("correspondences");
   });
 
-  it("a seal that opens nothing puts the light out, then the door is as it was, with the reason", async () => {
+  it("a seal that opens nothing puts the light out, then the frame is as it was, with the reason", async () => {
     reduceMotion(false);
     vi.useFakeTimers();
     readSealFromImageMock.mockResolvedValue(SEAL);
@@ -296,12 +343,12 @@ describe("ShowSealStep, the door's timing", () => {
     await flush(10);
 
     choosePicture();
-    await flush(MAILBOX_CHECK_MS + 10);
+    await flush(SEAL_CHECK_MS + 10);
     expect(stage()).toBe("failing");
     expect(status().textContent).toBe(`${T.notRecognized}${T.notRecognizedHint}`);
     expect(imageInput().disabled).toBe(true);
 
-    await flush(MAILBOX_FAIL_MS);
+    await flush(SEAL_FAIL_MS);
     expect(stage()).toBe("closed");
     expect(imageInput().disabled).toBe(false);
     expect(status().textContent).toBe(`${T.notRecognized}${T.notRecognizedHint}`);
@@ -315,7 +362,7 @@ describe("ShowSealStep, the door's timing", () => {
     choosePicture();
 
     // Well under the light's round: nothing waits for an animation that isn't shown.
-    await waitFor(() => expect(phase()).toBe("correspondences"), { timeout: MAILBOX_CHECK_MS / 2 });
+    await waitFor(() => expect(phase()).toBe("correspondences"), { timeout: SEAL_CHECK_MS / 2 });
   });
 });
 
@@ -370,7 +417,7 @@ describe("ShowSealStep, leaving for another screen mid-way", () => {
     expect(screen.getByTestId("locked").textContent).toBe("false");
   });
 
-  it("leaving while the door is opening keeps the mailbox closed", async () => {
+  it("leaving while the postmark lands keeps the mailbox closed", async () => {
     reduceMotion(false);
     vi.useFakeTimers();
     readSealFromImageMock.mockResolvedValue(SEAL);
@@ -381,13 +428,13 @@ describe("ShowSealStep, leaving for another screen mid-way", () => {
     });
     choosePicture();
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(MAILBOX_CHECK_MS + 10);
+      await vi.advanceTimersByTimeAsync(SEAL_CHECK_MS + 10);
     });
-    expect(stage()).toBe("opening");
+    expect(stage()).toBe("stamped");
 
     fireEvent.click(screen.getByText("irse a otra pantalla"));
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(MAILBOX_OPEN_MS);
+      await vi.advanceTimersByTimeAsync(POSTMARK_MS);
     });
 
     expectClosed();
