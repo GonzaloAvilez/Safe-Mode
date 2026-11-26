@@ -101,13 +101,14 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
   }, []);
 
   // The picture is chosen at the bottom of the step, and on a phone the card is then above the fold,
-  // partly under the fixed header: it's brought into view as its stamp is checked.
+  // partly under the fixed header: it's brought into view while its stamp shows the check, from the
+  // light's round through the postmark or the light going out.
   const cardBox = useRef<HTMLDivElement>(null);
-  const checking = progress !== null;
+  const showingStampFeedback = progress !== null;
   useEffect(() => {
-    if (!checking) return;
+    if (!showingStampFeedback) return;
     cardBox.current?.scrollIntoView?.({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  }, [checking]);
+  }, [showingStampFeedback]);
 
   async function saveImage() {
     if (!cardRef.current) return;

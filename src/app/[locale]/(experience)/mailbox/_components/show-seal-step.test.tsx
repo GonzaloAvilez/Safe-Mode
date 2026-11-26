@@ -222,16 +222,21 @@ describe("ShowSealStep, the person's own picture in the frame", () => {
     expect(revoke).toHaveBeenCalledWith("blob:seal-picture");
   });
 
-  it("lets the picture go when the step goes away mid-check", async () => {
+  it("lets the picture go once when the step goes away mid-check, even after the check settles", async () => {
     const { revoke } = stubObjectUrls();
-    readSealFromImageMock.mockReturnValue(new Promise(() => {}));
+    let readSeal: (seal: string | null) => void = () => {};
+    readSealFromImageMock.mockReturnValue(new Promise((resolve) => (readSeal = resolve)));
     const view = renderMailbox(<ShowSealStep />);
     choosePicture();
     await waitFor(() => expect(shownPicture()).toBeTruthy());
 
     view.unmount();
 
-    expect(revoke).toHaveBeenCalledWith("blob:seal-picture");
+    expect(revoke).toHaveBeenCalledExactlyOnceWith("blob:seal-picture");
+
+    await act(async () => readSeal(SEAL));
+
+    expect(revoke).toHaveBeenCalledOnce();
   });
 });
 

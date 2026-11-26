@@ -70,7 +70,8 @@ export function Postmark({ cx, cy, r = 30 }: { cx: number; cy: number; r?: numbe
 }
 
 // /mailbox: the dashed frame where the seal's picture is shown. At rest it holds the invitation
-// (children); once a picture is given it holds that picture, read from this device only.
+// (children); once a picture is given it holds that picture, shown from `previewUrl`: a local
+// blob: URL of the person's own file, read from this device only.
 //   closed          dashed, at rest
 //   awaiting_drop   a picture is being dragged over the page: the frame turns gold
 export type StampFrameStage = "closed" | "awaiting_drop" | StampCheck;
@@ -78,9 +79,9 @@ export type StampFrameStage = "closed" | "awaiting_drop" | StampCheck;
 const FRAME_WIDTH = 170;
 const FRAME_HEIGHT = 210;
 
-export function StampFrame({ stage, picture, children }: { stage: StampFrameStage; picture: string | null; children: ReactNode }) {
+export function StampFrame({ stage, previewUrl, children }: { stage: StampFrameStage; previewUrl: string | null; children: ReactNode }) {
   const check = stage === "checking" || stage === "stamped" || stage === "failing" ? stage : null;
-  const showing = check !== null && picture !== null;
+  const showing = check !== null && previewUrl !== null;
 
   return (
     <div data-stage={stage} className="relative h-[210px] w-[170px]">
@@ -99,7 +100,7 @@ export function StampFrame({ stage, picture, children }: { stage: StampFrameStag
       {showing && (
         // eslint-disable-next-line @next/next/no-img-element -- a local blob: URL of the person's own picture; nothing for next/image to optimize, and it must never leave the device.
         <img
-          src={picture}
+          src={previewUrl}
           alt=""
           data-seal-picture
           className={`absolute inset-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)] object-contain ${check === "failing" ? "stamp-picture-out" : "stamp-picture-in"}`}

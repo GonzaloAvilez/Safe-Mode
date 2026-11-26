@@ -41,6 +41,13 @@ function carriesFiles(event: DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes("Files");
 }
 
+// Lets go of the picture's blob: URL. Safe to call more than once: the URL is revoked only the first
+// time, so the step going away and a check settling afterwards never revoke it twice.
+function releasePreviewUrl(previewUrlRef: { current: string | null }) {
+  if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  previewUrlRef.current = null;
+}
+
 function frameStage(progress: Progress | null, pictureOverPage: boolean): StampFrameStage {
   if (progress === "reading" || progress === "opening") return "checking";
   if (progress === "opened") return "stamped";
@@ -62,33 +69,32 @@ export function ShowSealStep() {
   // Set as soon as a picture is taken, before the next render: two pictures given in a row (a drop
   // and a tap, a double drop) never start two openings.
   const sealCheckInFlight = useRef(false);
-  // The picture being checked, shown in the frame: a blob: URL of this device's own file.
-  const [picture, setPicture] = useState<string | null>(null);
-  const pictureUrl = useRef<string | null>(null);
+  // The picture being checked, shown in the frame: a blob: URL of this device's own file. The ref
+  // holds the same URL for letting it go, which may happen after the step is gone.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   function showPicture(file: Blob) {
     releasePicture();
     // Showing it is only a courtesy: if this browser can't make a URL for it, the frame stays as it
     // is and the seal is still read and checked.
     try {
-      pictureUrl.current = URL.createObjectURL(file);
+      previewUrlRef.current = URL.createObjectURL(file);
     } catch {
-      pictureUrl.current = null;
+      previewUrlRef.current = null;
     }
-    setPicture(pictureUrl.current);
+    setPreviewUrl(previewUrlRef.current);
   }
 
-  function releasePicture() {
-    if (pictureUrl.current) URL.revokeObjectURL(pictureUrl.current);
-    pictureUrl.current = null;
-  }
+  const releasePicture = () => releasePreviewUrl(previewUrlRef);
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      // Whatever picture was still shown is let go of with the step.
-      if (pictureUrl.current) URL.revokeObjectURL(pictureUrl.current);
+      // Whatever picture was still shown is let go of with the step; a check still pending finds
+      // nothing left to release when it settles.
+      releasePreviewUrl(previewUrlRef);
     };
   }, []);
 
@@ -154,7 +160,7 @@ export function ShowSealStep() {
       releasePicture();
       if (mounted.current) {
         setProgress(null);
-        setPicture(null);
+        setPreviewUrl(null);
       }
     }
   }
@@ -235,7 +241,7 @@ export function ShowSealStep() {
           progress !== null ? "pointer-events-none" : ""
         }`}
       >
-        <StampFrame stage={frameStage(progress, pictureOverPage)} picture={picture}>
+        <StampFrame stage={frameStage(progress, pictureOverPage)} previewUrl={previewUrl}>
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="9" cy="9" r="2" />
