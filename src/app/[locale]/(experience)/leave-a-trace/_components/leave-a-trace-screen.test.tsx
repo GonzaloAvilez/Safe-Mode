@@ -116,6 +116,8 @@ describe("LeaveATraceScreen", () => {
       )
     );
     vi.stubGlobal("fetch", fetchMock);
+    // The way through the screens, not the mailbox's animation (covered in keep-return-key-step).
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce"), media: query }));
     renderStep(<LeaveATraceScreen lettersOpen={true} />, { phase: "writing" });
 
     fireEvent.change(screen.getByPlaceholderText(T.placeholder), { target: { value: "Una frase." } });

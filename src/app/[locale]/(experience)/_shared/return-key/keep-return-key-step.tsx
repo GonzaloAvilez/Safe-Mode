@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { drawReturnKeyCardImage } from "@/lib/return-key-card";
+import { MAILBOX_CHECK_MS, MAILBOX_FAIL_MS, MAILBOX_OPEN_MS, MailboxScene, type MailboxSceneStage } from "../mailbox-scene";
 import { confirmReturnKey } from "./confirm-return-key";
 import { downloadBlob, isIosDevice } from "./download-blob";
 import { readSealFromImage } from "./read-seal-from-image";
@@ -19,16 +20,41 @@ import { ReturnKeyCard, readCardFonts } from "./return-key-card";
 // phone, and it must be this seal. That proves the picture landed somewhere the person can find
 // it again, which is exactly what opening the mailbox will ask of them.
 //
+// Keeping the seal is where the mailbox is activated (#289): once the picture is chosen, the card
+// gives way to the same mailbox that /mailbox opens (MailboxScene), empty inside, since no letter
+// has arrived yet. The stamp goes into its door and the light runs around it while the seal is
+// confirmed. The door opens only once the server has confirmed it. When it isn't confirmed, the
+// light goes out, the stamp falls, and the card comes back with the reason.
+//
 // The seal's digits are never shown (decided 2026-11-23), so nobody is asked to read, copy or
 // type them: the old "missing light" step did, and it was tiring for exactly the people Refugio
 // is for. The picture is the seal.
 //
 // A way out is always there; what it says and where it goes belongs to the screen showing the step.
 
-// How long "your seal is kept" stays before moving on, even if the server answers sooner.
-export const KEPT_MESSAGE_HOLD_MS = 1000;
+// Where the step is, once a picture was chosen:
+//   checking  the picture is read and the seal confirmed: the light runs around the door
+//   kept      confirmed: the door opens on the empty mailbox, "your seal is kept"
+//   not_kept  not confirmed: the light goes out, the reason is shown, then the card comes back
+type Progress = "checking" | "kept" | "not_kept";
+
+// What the animation adds to confirming a seal: the light's round, then the door opening. The whole
+// check also waits for the picture to be read and for the server to answer.
+export const SEAL_CONFIRMATION_ANIMATION_MS = MAILBOX_CHECK_MS + MAILBOX_OPEN_MS;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
+}
+
+const SCENE_STAGE: Record<Progress, MailboxSceneStage> = {
+  checking: "checking",
+  kept: "opening",
+  not_kept: "failing",
+};
 
 type KeepReturnKeyStepProps = {
   returnKey: string;
@@ -39,7 +65,7 @@ type KeepReturnKeyStepProps = {
   failedMessage: string;
   // The way out without the seal ("Mejor sin cartas", "Volver a su frase").
   leaveLabel: string;
-  // The seal is confirmed and "your seal is kept" has stayed a moment.
+  // The seal is confirmed and the mailbox's door has opened.
   onConfirmed: () => void;
   onLeave: () => void;
 };
@@ -55,11 +81,18 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
   const cardRef = useRef<HTMLDivElement>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [busy, setBusy] = useState<"checking" | "confirmed" | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
   const [imageUnread, setImageUnread] = useState(false);
   const [iosHint, setIosHint] = useState(false);
   const mounted = useRef(false);
+  // Set as soon as a picture is chosen, before the next render: a second picture chosen meanwhile
+  // never starts a second check.
+  const sealCheckInFlight = useRef(false);
+  // The person took the way out while a check was under way. Whatever that check brings back is
+  // for a step nobody is waiting on, even if the screen keeps it mounted.
+  const left = useRef(false);
+  const stillWanted = () => mounted.current && !left.current;
 
   useEffect(() => {
     mounted.current = true;
@@ -67,6 +100,15 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
       mounted.current = false;
     };
   }, []);
+
+  // The picture is chosen at the bottom of the step, and on a phone the card's space is then above
+  // the fold, partly under the fixed header: the mailbox is brought into view as it appears.
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const sceneShown = progress !== null;
+  useEffect(() => {
+    if (!sceneShown) return;
+    sceneRef.current?.scrollIntoView?.({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }, [sceneShown]);
 
   async function saveImage() {
     if (!cardRef.current) return;
@@ -90,69 +132,107 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
     }
   }
 
+  // The way out stays open while the seal is checked: a confirmation that never answers must not
+  // keep anyone here, nor the language switch held. Only the door's last moment waits, once the
+  // seal is already confirmed.
+  function leave() {
+    if (sealCheckInFlight.current) {
+      left.current = true;
+      unlockLocaleSwitch();
+    }
+    setProgress(null);
+    setMessage(null);
+    onLeave();
+  }
+
+  // The reason is shown at once; the light goes out and the stamp falls before the card comes back.
+  async function notKept(reason: Message, motion: boolean) {
+    setMessage(reason);
+    setProgress("not_kept");
+    await wait(motion ? MAILBOX_FAIL_MS : 0);
+  }
+
   // Holds the language switch for the whole check, so changing language never interrupts it. A
   // step that's gone by the time an answer arrives (the ritual moved on) does nothing with it.
-  async function whileChecking(operation: () => Promise<void>) {
-    setBusy("checking");
-    setMessage(null);
-    lockLocaleSwitch();
-    try {
-      await operation();
-    } finally {
-      unlockLocaleSwitch();
-      if (mounted.current) setBusy((current) => (current === "checking" ? null : current));
-    }
-  }
-
-  async function confirm() {
-    const result = await confirmReturnKey(returnKey);
-    if (result.type === "confirmed") {
-      setBusy("confirmed");
-      await wait(KEPT_MESSAGE_HOLD_MS);
-      if (mounted.current) onConfirmed();
-      return;
-    }
-    setMessage({
-      text:
-        result.reason === "too_many"
-          ? t("keep.tooMany")
-          : result.reason === "offline"
-            ? tcommon("errors.couldntConnect")
-            : failedMessage,
-    });
-  }
-
   async function chooseImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     // Cleared so that choosing the same picture again is noticed too.
     event.target.value = "";
-    if (!file || busy) return;
+    if (!file || sealCheckInFlight.current) return;
 
-    await whileChecking(async () => {
+    sealCheckInFlight.current = true;
+    left.current = false;
+    const motion = !prefersReducedMotion();
+    setProgress("checking");
+    setMessage(null);
+    lockLocaleSwitch();
+    try {
+      // The light goes round the door at least once, however fast the answer: never a flicker.
+      const lightWentRound = wait(motion ? MAILBOX_CHECK_MS : 0);
+
       const seal = await readSealFromImage(file);
-      if (!mounted.current) return;
+      if (!stillWanted()) return;
       if (seal !== returnKey) {
         setImageUnread(true);
-        setMessage(
-          seal === null
-            ? { text: tm("noSealInImage"), hint: tm("noSealInImageHint") }
-            : { text: t("keep.otherSeal") }
-        );
+        await lightWentRound;
+        if (!stillWanted()) return;
+        await notKept(seal === null ? { text: tm("noSealInImage"), hint: tm("noSealInImageHint") } : { text: t("keep.otherSeal") }, motion);
         return;
       }
-      await confirm();
-    });
+
+      const [result] = await Promise.all([confirmReturnKey(returnKey), lightWentRound]);
+      if (!stillWanted()) return;
+
+      if (result.type === "confirmed") {
+        // Only now, with the server's answer, does the door open.
+        setProgress("kept");
+        await wait(motion ? MAILBOX_OPEN_MS : 0);
+        if (stillWanted()) onConfirmed();
+        return;
+      }
+
+      await notKept(
+        {
+          text:
+            result.reason === "too_many"
+              ? t("keep.tooMany")
+              : result.reason === "offline"
+                ? tcommon("errors.couldntConnect")
+                : failedMessage,
+        },
+        motion
+      );
+    } finally {
+      // Leaving already let go of the language switch.
+      if (!left.current) unlockLocaleSwitch();
+      sealCheckInFlight.current = false;
+      // A kept seal stays on its open mailbox while the screen moves on; anything else gives the
+      // card back.
+      if (mounted.current) setProgress((current) => (current === "kept" ? current : null));
+    }
   }
 
-  const working = busy !== null;
-  const status = busy === "checking" ? t("keep.checking") : busy === "confirmed" ? t("keep.confirmed") : message?.text;
+  const busy = progress !== null;
+  const status = progress === "checking" ? t("keep.checking") : progress === "kept" ? t("keep.confirmed") : message?.text;
+  const showHint = (progress === null || progress === "not_kept") && message?.hint;
 
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-5">
       <div className="relative h-[450px] w-[320px] max-[359px]:h-[383px] max-[359px]:w-[272px]">
-        <div className="origin-top-left max-[359px]:scale-[0.85]">
+        {/* The card stays in place (its fonts draw the picture) and steps back while the mailbox
+            is shown in its space, so nothing below moves. */}
+        <div
+          data-card
+          aria-hidden={progress !== null}
+          className={`origin-top-left transition-opacity duration-500 max-[359px]:scale-[0.85] ${progress !== null ? "opacity-0" : "opacity-100"}`}
+        >
           <ReturnKeyCard ref={cardRef} returnKey={returnKey} sentence={sentence} />
         </div>
+        {progress !== null && (
+          <div ref={sceneRef} className="absolute inset-0 flex items-center justify-center">
+            <MailboxScene stage={SCENE_STAGE[progress]} contents="empty" />
+          </div>
+        )}
       </div>
 
       <p className="max-w-[316px] text-center text-[13px] leading-[1.7] text-white/60">{body}</p>
@@ -167,17 +247,17 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
             {/* The picture just saved, chosen back: the gesture that keeps the seal. */}
             <label
               className={`mt-1 cursor-pointer rounded-full border text-center border-[rgba(210,158,32,0.6)] px-8 py-2.5 text-[13px] tracking-[1px] text-white/85 transition-colors duration-300 hover:text-white has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-offset-[3px] has-[:focus-visible]:outline-[rgba(242,192,99,0.8)] ${
-                working ? "pointer-events-none opacity-30" : ""
+                busy ? "pointer-events-none opacity-30" : ""
               }`}
             >
               {imageUnread ? t("keep.chooseAnother") : t("keep.chooseImage")}
-              <input type="file" accept="image/*" onChange={chooseImage} disabled={working} className="sr-only" />
+              <input type="file" accept="image/*" onChange={chooseImage} disabled={busy} className="sr-only" />
             </label>
             <p className="max-w-[260px] text-center text-[11px] leading-[1.5] text-white/40">{tm("imagePrivacy")}</p>
             <button
               type="button"
               onClick={saveImage}
-              disabled={saving || working}
+              disabled={saving || busy}
               className="text-[12px] tracking-[.5px] text-white/45 underline decoration-white/15 underline-offset-4 transition-colors duration-300 hover:text-white/75 disabled:pointer-events-none disabled:opacity-30"
             >
               {t("keep.saveAgain")}
@@ -187,7 +267,7 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
           <button
             type="button"
             onClick={saveImage}
-            disabled={saving || working}
+            disabled={saving || busy}
             className="rounded-full border border-[rgba(210,158,32,0.6)] px-8 py-2.5 text-[13px] tracking-[1px] text-white/85 transition-colors duration-300 hover:text-white disabled:pointer-events-none disabled:opacity-30"
           >
             {t("keep.save")}
@@ -196,18 +276,18 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
 
         <p role="status" className="min-h-[1.6em] max-w-[316px] text-center text-[13px] leading-[1.6] text-white/70">
           {status}
-          {!busy && message?.hint && (
+          {showHint && (
             <>
               <br />
-              <span className="text-white/50">{message.hint}</span>
+              <span className="text-white/50">{message?.hint}</span>
             </>
           )}
         </p>
 
         <button
           type="button"
-          onClick={onLeave}
-          disabled={working}
+          onClick={leave}
+          disabled={progress === "kept"}
           className="mt-1 text-[12px] tracking-[.5px] text-white/35 underline decoration-white/10 underline-offset-4 transition-colors duration-300 hover:text-white/60 disabled:pointer-events-none disabled:opacity-30"
         >
           {leaveLabel}

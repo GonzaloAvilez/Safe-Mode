@@ -19,7 +19,8 @@ vi.mock("../../_shared/return-key/download-blob", () => ({ downloadBlob: downloa
 vi.mock("../../_shared/return-key/read-seal-from-image", () => ({ readSealFromImage: readSealMock }));
 vi.mock("../../_shared/return-key/confirm-return-key", () => ({ confirmReturnKey: confirmMock }));
 
-import { KEPT_MESSAGE_HOLD_MS } from "../../_shared/return-key/keep-return-key-step";
+import { MAILBOX_CHECK_MS } from "../../_shared/mailbox-scene";
+import { SEAL_CONFIRMATION_ANIMATION_MS } from "../../_shared/return-key/keep-return-key-step";
 import { KeepTraceSealStep } from "./keep-trace-seal-step";
 import { SEAL, SENTENCE, renderStep } from "./trace-test-harness";
 
@@ -31,7 +32,7 @@ const phase = () => screen.getByTestId("phase").textContent;
 
 async function holdElapses() {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(KEPT_MESSAGE_HOLD_MS);
+    await vi.advanceTimersByTimeAsync(SEAL_CONFIRMATION_ANIMATION_MS);
   });
 }
 
@@ -147,6 +148,9 @@ describe("KeepTraceSealStep", () => {
     const choose = (await screen.findByLabelText(KEEP.chooseImage)) as HTMLInputElement;
 
     await act(async () => fireEvent.change(choose, { target: { files: [new File(["png"], "sello.png", { type: "image/png" })] } }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MAILBOX_CHECK_MS);
+    });
 
     expect(screen.getByText(KEEP.failed)).toBeTruthy();
     expect(phase()).toBe("keeping");
