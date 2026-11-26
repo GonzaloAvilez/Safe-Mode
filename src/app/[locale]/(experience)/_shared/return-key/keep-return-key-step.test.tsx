@@ -22,7 +22,7 @@ vi.mock("./download-blob", () => ({ downloadBlob: downloadMock, isIosDevice: () 
 vi.mock("./read-seal-from-image", () => ({ readSealFromImage: readSealMock }));
 vi.mock("./confirm-return-key", () => ({ confirmReturnKey: confirmMock }));
 
-import { MAILBOX_CHECK_MS, MAILBOX_FAIL_MS, MAILBOX_OPEN_MS } from "../mailbox-scene";
+import { POSTMARK_MS, SEAL_CHECK_MS, SEAL_FAIL_MS } from "../stamp-frame";
 import { SEAL_CONFIRMATION_ANIMATION_MS, KeepReturnKeyStep } from "./keep-return-key-step";
 
 // The step's contract with whichever screen shows it (Leave a Trace and Mirror): the seal and the
@@ -80,14 +80,16 @@ async function advance(ms: number) {
     await vi.advanceTimersByTimeAsync(ms);
   });
 }
-// The light goes round the door once before any answer is shown, the door takes its time to open,
-// and a seal that isn't kept puts the light out before the card comes back.
-const lightGoesRound = () => advance(MAILBOX_CHECK_MS);
-const doorOpens = () => advance(MAILBOX_OPEN_MS);
-const lightGoesOut = () => advance(MAILBOX_FAIL_MS);
+// The light goes round the card's stamp once before any answer is shown, the postmark takes its
+// moment to land, and a seal that isn't kept puts the light out.
+const lightGoesRound = () => advance(SEAL_CHECK_MS);
+const postmarkLands = () => advance(POSTMARK_MS);
+const lightGoesOut = () => advance(SEAL_FAIL_MS);
 
 const stage = () => document.querySelector("[data-stage]")?.getAttribute("data-stage") ?? null;
-const cardShown = () => document.querySelector("[data-card]")!.getAttribute("aria-hidden") === "false";
+// The card stays on screen the whole time: its own stamp is what's checked.
+const cardShown = () => screen.queryByRole("img", { name: es.returnKeyCard.qrLabel }) !== null;
+const postmark = () => document.querySelector("[data-postmark]");
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -158,16 +160,16 @@ describe("KeepReturnKeyStep", () => {
 
       await lightGoesRound();
       expect(status()).toBe(K.confirmed);
-      expect(stage()).toBe("opening");
+      expect(stage()).toBe("stamped");
       expect(callbacks.onConfirmed).not.toHaveBeenCalled();
       expect(locked()).toBe("true");
 
-      await doorOpens();
+      await postmarkLands();
       expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
       expect(locked()).toBe("false");
-      // Until the screen moves on, the mailbox stays open: the card never flashes back.
-      expect(stage()).toBe("opening");
-      expect(cardShown()).toBe(false);
+      // Until the screen moves on, the postmark stays on the stamp.
+      expect(stage()).toBe("stamped");
+      expect(postmark()).toBeTruthy();
     });
 
     it("says it's checking while the picture is read and the seal confirmed, and only the way out can be pressed", async () => {
@@ -267,21 +269,22 @@ describe("KeepReturnKeyStep", () => {
       expect(readSealMock).toHaveBeenCalledOnce();
     });
 
-    it("the card gives way to the mailbox, empty inside, while the seal is checked", async () => {
+    it("checks the card's own stamp in place: the card stays, and the light runs around its stamp", async () => {
       renderKeep();
       await saveImage();
       expect(stage()).toBeNull();
-      expect(cardShown()).toBe(true);
+      expect(document.querySelector("[data-stamp-light]")).toBeNull();
 
       await choosePicture();
 
       expect(stage()).toBe("checking");
-      expect(document.querySelector('[data-contents="empty"]')).toBeTruthy();
-      expect(document.querySelector('[data-contents="letters"]')).toBeNull();
-      expect(cardShown()).toBe(false);
+      expect(cardShown()).toBe(true);
+      const card = screen.getByRole("img", { name: es.returnKeyCard.qrLabel });
+      expect(card.querySelector("[data-stamp-light]")).toBeTruthy();
+      expect(postmark()).toBeNull();
     });
 
-    it("brings the mailbox into view as it appears, the picture having been chosen further down", async () => {
+    it("brings the card into view as its stamp is checked, the picture having been chosen further down", async () => {
       const scrollIntoView = vi.fn();
       Element.prototype.scrollIntoView = scrollIntoView;
       renderKeep();
@@ -295,30 +298,31 @@ describe("KeepReturnKeyStep", () => {
       Reflect.deleteProperty(Element.prototype, "scrollIntoView");
     });
 
-    it("never opens the door before the server confirmed the seal, however long the light waits", async () => {
+    it("never lands the postmark before the server confirmed the seal, however long the light waits", async () => {
       let answer!: (result: { type: "confirmed" }) => void;
       confirmMock.mockReturnValue(new Promise((resolve) => (answer = resolve)));
       renderKeep();
       await saveImage();
       await choosePicture();
 
-      await advance(MAILBOX_CHECK_MS * 3);
+      await advance(SEAL_CHECK_MS * 3);
       expect(stage()).toBe("checking");
       expect(status()).toBe(K.checking);
+      expect(postmark()).toBeNull();
 
       await act(async () => answer({ type: "confirmed" }));
-      expect(stage()).toBe("opening");
+      expect(stage()).toBe("stamped");
       expect(status()).toBe(K.confirmed);
     });
 
-    it("a seal that isn't kept gives the card back, with the reason, once the light is out", async () => {
+    it("a seal that isn't kept puts the stamp back as it was, with the reason, once the light is out", async () => {
       readSealMock.mockResolvedValue(OTHER_SEAL);
       renderKeep();
       await saveImage();
       await choosePicture();
       await lightGoesRound();
       expect(stage()).toBe("failing");
-      expect(cardShown()).toBe(false);
+      expect(postmark()).toBeNull();
 
       await lightGoesOut();
 
@@ -380,7 +384,7 @@ describe("KeepReturnKeyStep", () => {
     renderKeep();
     await saveImage();
     await choosePicture();
-    await advance(MAILBOX_CHECK_MS * 3);
+    await advance(SEAL_CHECK_MS * 3);
     expect(locked()).toBe("true");
 
     fireEvent.click(button(PROPS.leaveLabel)!);
@@ -414,14 +418,14 @@ describe("KeepReturnKeyStep", () => {
     expect(callbacks.onConfirmed).toHaveBeenCalledOnce();
   });
 
-  it("only the door's last moment holds the way out, once the seal is already confirmed", async () => {
+  it("only the postmark's moment holds the way out, once the seal is already confirmed", async () => {
     renderKeep();
     await saveImage();
     await choosePicture();
 
     await lightGoesRound();
 
-    expect(stage()).toBe("opening");
+    expect(stage()).toBe("stamped");
     expect((button(PROPS.leaveLabel) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -439,7 +443,7 @@ describe("KeepReturnKeyStep", () => {
     expect(callbacks.onConfirmed).not.toHaveBeenCalled();
   });
 
-  it("a step that's gone while the door opens never moves anything on", async () => {
+  it("a step that's gone while the postmark lands never moves anything on", async () => {
     const { unmount } = renderKeep();
     await saveImage();
     await choosePicture();
@@ -447,7 +451,7 @@ describe("KeepReturnKeyStep", () => {
     expect(status()).toBe(K.confirmed);
 
     unmount();
-    await doorOpens();
+    await postmarkLands();
 
     expect(callbacks.onConfirmed).not.toHaveBeenCalled();
   });

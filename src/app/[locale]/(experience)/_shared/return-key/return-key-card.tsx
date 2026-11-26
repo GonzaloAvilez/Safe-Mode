@@ -4,6 +4,7 @@ import { useMemo, type Ref } from "react";
 import { useTranslations } from "next-intl";
 import { CARD_COLORS } from "@/lib/return-key-card";
 import { returnKeyQrPath } from "@/lib/return-key-qr";
+import { Postmark, StampLight, type StampCheck } from "../stamp-frame";
 
 // ADR-004 #212: the private card with the seal. A gift sentence and the seal's QR inside a
 // postage stamp ("sello" is both the seal and the stamp that sends a letter). The seal's
@@ -19,10 +20,14 @@ const QR_SIZE_UNITS = (21 * 14) / 2.7;
 type ReturnKeyCardProps = {
   returnKey: string;
   sentence: string;
+  // Keeping the seal checks it on its own stamp (#292): the light runs around the stamp, and a
+  // postmark lands on it once it's confirmed. Only on screen: the saved picture is drawn apart
+  // (lib/return-key-card.ts), so it never carries either.
+  check?: StampCheck | null;
   ref?: Ref<HTMLDivElement>;
 };
 
-export function ReturnKeyCard({ returnKey, sentence, ref }: ReturnKeyCardProps) {
+export function ReturnKeyCard({ returnKey, sentence, check = null, ref }: ReturnKeyCardProps) {
   const t = useTranslations("returnKeyCard");
   const qr = useMemo(() => returnKeyQrPath(returnKey), [returnKey]);
 
@@ -84,6 +89,12 @@ export function ReturnKeyCard({ returnKey, sentence, ref }: ReturnKeyCardProps) 
             strokeWidth="1.2"
           />
         </g>
+        {check && (
+          <g data-stage={check} aria-hidden="true">
+            <StampLight x={47} y={4} width={166} height={202} check={check} />
+            {check === "stamped" && <Postmark cx={170} cy={118} r={30} />}
+          </g>
+        )}
       </svg>
 
       <span className="text-[11px] leading-[13px] tracking-[0.4px] text-white/[0.55]">{t("footer")}</span>

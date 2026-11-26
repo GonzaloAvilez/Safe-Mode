@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useLocaleTransition } from "@/app/_components/experience-state/locale-transition";
 import { drawReturnKeyCardImage } from "@/lib/return-key-card";
-import { MAILBOX_CHECK_MS, MAILBOX_FAIL_MS, MAILBOX_OPEN_MS, MailboxScene, type MailboxSceneStage } from "../mailbox-scene";
+import { POSTMARK_MS, SEAL_CHECK_MS, SEAL_FAIL_MS, type StampCheck } from "../stamp-frame";
 import { confirmReturnKey } from "./confirm-return-key";
 import { downloadBlob, isIosDevice } from "./download-blob";
 import { readSealFromImage } from "./read-seal-from-image";
@@ -20,11 +20,10 @@ import { ReturnKeyCard, readCardFonts } from "./return-key-card";
 // phone, and it must be this seal. That proves the picture landed somewhere the person can find
 // it again, which is exactly what opening the mailbox will ask of them.
 //
-// Keeping the seal is where the mailbox is activated (#289): once the picture is chosen, the card
-// gives way to the same mailbox that /mailbox opens (MailboxScene), empty inside, since no letter
-// has arrived yet. The stamp goes into its door and the light runs around it while the seal is
-// confirmed. The door opens only once the server has confirmed it. When it isn't confirmed, the
-// light goes out, the stamp falls, and the card comes back with the reason.
+// Once the picture is chosen (#289, #292), the card stays where it is and its own stamp, the one with
+// the QR, is checked in place: the light runs around it while the seal is confirmed, and a postmark
+// lands on it only once the server has confirmed it. When it isn't confirmed, the light goes out
+// and the reason is shown.
 //
 // The seal's digits are never shown (decided 2026-11-23), so nobody is asked to read, copy or
 // type them: the old "missing light" step did, and it was tiring for exactly the people Refugio
@@ -33,14 +32,14 @@ import { ReturnKeyCard, readCardFonts } from "./return-key-card";
 // A way out is always there; what it says and where it goes belongs to the screen showing the step.
 
 // Where the step is, once a picture was chosen:
-//   checking  the picture is read and the seal confirmed: the light runs around the door
-//   kept      confirmed: the door opens on the empty mailbox, "your seal is kept"
-//   not_kept  not confirmed: the light goes out, the reason is shown, then the card comes back
+//   checking  the picture is read and the seal confirmed: the light runs around the card's stamp
+//   kept      confirmed: the postmark lands on it, "your seal is kept"
+//   not_kept  not confirmed: the light goes out, the reason is shown
 type Progress = "checking" | "kept" | "not_kept";
 
-// What the animation adds to confirming a seal: the light's round, then the door opening. The whole
-// check also waits for the picture to be read and for the server to answer.
-export const SEAL_CONFIRMATION_ANIMATION_MS = MAILBOX_CHECK_MS + MAILBOX_OPEN_MS;
+// What the animation adds to confirming a seal: the light's round, then the postmark. The whole check
+// also waits for the picture to be read and for the server to answer.
+export const SEAL_CONFIRMATION_ANIMATION_MS = SEAL_CHECK_MS + POSTMARK_MS;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -50,9 +49,9 @@ function prefersReducedMotion(): boolean {
     : false;
 }
 
-const SCENE_STAGE: Record<Progress, MailboxSceneStage> = {
+const STAMP_CHECK: Record<Progress, StampCheck> = {
   checking: "checking",
-  kept: "opening",
+  kept: "stamped",
   not_kept: "failing",
 };
 
@@ -101,14 +100,15 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
     };
   }, []);
 
-  // The picture is chosen at the bottom of the step, and on a phone the card's space is then above
-  // the fold, partly under the fixed header: the mailbox is brought into view as it appears.
-  const sceneRef = useRef<HTMLDivElement>(null);
-  const sceneShown = progress !== null;
+  // The picture is chosen at the bottom of the step, and on a phone the card is then above the fold,
+  // partly under the fixed header: it's brought into view while its stamp shows the check, from the
+  // light's round through the postmark or the light going out.
+  const cardBox = useRef<HTMLDivElement>(null);
+  const showingStampFeedback = progress !== null;
   useEffect(() => {
-    if (!sceneShown) return;
-    sceneRef.current?.scrollIntoView?.({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  }, [sceneShown]);
+    if (!showingStampFeedback) return;
+    cardBox.current?.scrollIntoView?.({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }, [showingStampFeedback]);
 
   async function saveImage() {
     if (!cardRef.current) return;
@@ -149,7 +149,7 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
   async function notKept(reason: Message, motion: boolean) {
     setMessage(reason);
     setProgress("not_kept");
-    await wait(motion ? MAILBOX_FAIL_MS : 0);
+    await wait(motion ? SEAL_FAIL_MS : 0);
   }
 
   // Holds the language switch for the whole check, so changing language never interrupts it. A
@@ -167,8 +167,8 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
     setMessage(null);
     lockLocaleSwitch();
     try {
-      // The light goes round the door at least once, however fast the answer: never a flicker.
-      const lightWentRound = wait(motion ? MAILBOX_CHECK_MS : 0);
+      // The light goes round the stamp at least once, however fast the answer: never a flicker.
+      const lightWentRound = wait(motion ? SEAL_CHECK_MS : 0);
 
       const seal = await readSealFromImage(file);
       if (!stillWanted()) return;
@@ -184,9 +184,9 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
       if (!stillWanted()) return;
 
       if (result.type === "confirmed") {
-        // Only now, with the server's answer, does the door open.
+        // Only now, with the server's answer, does the postmark land.
         setProgress("kept");
-        await wait(motion ? MAILBOX_OPEN_MS : 0);
+        await wait(motion ? POSTMARK_MS : 0);
         if (stillWanted()) onConfirmed();
         return;
       }
@@ -206,8 +206,8 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
       // Leaving already let go of the language switch.
       if (!left.current) unlockLocaleSwitch();
       sealCheckInFlight.current = false;
-      // A kept seal stays on its open mailbox while the screen moves on; anything else gives the
-      // card back.
+      // A kept seal keeps its postmark while the screen moves on; anything else puts the stamp back
+      // as it was.
       if (mounted.current) setProgress((current) => (current === "kept" ? current : null));
     }
   }
@@ -218,21 +218,10 @@ export function KeepReturnKeyStep({ returnKey, sentence, body, failedMessage, le
 
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-5">
-      <div className="relative h-[450px] w-[320px] max-[359px]:h-[383px] max-[359px]:w-[272px]">
-        {/* The card stays in place (its fonts draw the picture) and steps back while the mailbox
-            is shown in its space, so nothing below moves. */}
-        <div
-          data-card
-          aria-hidden={progress !== null}
-          className={`origin-top-left transition-opacity duration-500 max-[359px]:scale-[0.85] ${progress !== null ? "opacity-0" : "opacity-100"}`}
-        >
-          <ReturnKeyCard ref={cardRef} returnKey={returnKey} sentence={sentence} />
+      <div ref={cardBox} className="relative h-[450px] w-[320px] max-[359px]:h-[383px] max-[359px]:w-[272px]">
+        <div className="origin-top-left max-[359px]:scale-[0.85]">
+          <ReturnKeyCard ref={cardRef} returnKey={returnKey} sentence={sentence} check={progress === null ? null : STAMP_CHECK[progress]} />
         </div>
-        {progress !== null && (
-          <div ref={sceneRef} className="absolute inset-0 flex items-center justify-center">
-            <MailboxScene stage={SCENE_STAGE[progress]} contents="empty" />
-          </div>
-        )}
       </div>
 
       <p className="max-w-[316px] text-center text-[13px] leading-[1.7] text-white/60">{body}</p>
